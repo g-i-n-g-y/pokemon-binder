@@ -660,7 +660,7 @@ const normNum = t => t.toLowerCase().replace(/^([a-z]*)0+(?=\d)/,"$1");
 function matchQ(c, q){
   // A search that's just a number ("2", "#2", "002", "2/105") matches the card number only,
   // so "2" finds card 2 and not every name with a 2 in it (like Porygon2).
-  const m=/^(?:no\.?\s*)?#?\s*([a-z]{0,2}\d+[a-z]?)\s*(?:\/\s*(\d+))?$/.exec(q);
+  const m=/^(?:no\.?\s*)?#?\s*([a-z]{0,2}\d+[a-z]?)\s*(?:\/\s*(\d*))?$/.exec(q);
   if(m && /\d/.test(q) && !/^[a-z]{3,}/.test(q)) return normNum(m[1])===normNum(c.n);
   return c.name.toLowerCase().includes(q);
 }
