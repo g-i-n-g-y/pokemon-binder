@@ -11,7 +11,7 @@ A self-hosted Pokémon TCG collection tracker. One small Python server (standard
 - Recent sales tab on each card: the last 5 sales for every condition, side by side
 - Prices from recent sales, Unlimited English only: pick any two per binder in Settings, raw conditions (NM to Damaged, from TCGplayer) or graded (PSA, BGS, CGC, SGC, TAG, ACE, from eBay sales on PriceCharting). LP and MP by default.
 - Daily automatic price refresh at a time you choose, plus a manual refresh button
-- Price history, biggest movers, shopping list with a budget
+- Price history, biggest movers, shopping list with a budget and your own drag-to-reorder priority
 - Purchase log with date, price, place, and seller handle (Instagram, TikTok, Whatnot, eBay, and more)
 - Front and back photos of your own copies
 - Privacy mode (eye button): shows every card in color with no Owned/Need tags, blurs cards owned and money totals, hides purchases
@@ -60,6 +60,8 @@ Stored in `data/` next to `server.py`:
 | `sets/<set id>/collection.json` | Copies owned, condition, purchases, sellers, notes |
 | `sets/<set id>/prices.json` | Latest prices, including per-condition averages |
 | `sets/<set id>/history.json` | One saved price per card per day |
+| `sets/<set id>/slots.json` | This binder's price options |
+| `sets/<set id>/shop.json` | Your shopping list order |
 | `sets/<set id>/images/` | Card images |
 | `sets/<set id>/photos/` | Your photos (front = `<number>`, back = `<number>_back`) |
 

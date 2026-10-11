@@ -4,6 +4,12 @@ Versions go up by 0.1 for each app update (new features or fixes) and by a whole
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v1.9 (October 11, 2026)
+
+- **Shopping list order:** Cheapest, Priciest, Set number, or My order. Drag the ⠿ handle (or focus it and use the arrow keys) to move a card, and the running total and budget update as you go.
+- Your order is saved on your server per set, so it's the same on your phone and computer. Newly needed cards join the end, cheapest first.
+- Shopping list fits on phone screens without sideways scrolling (card pictures hide on small screens)
+
 ## v1.8 (October 11, 2026)
 
 - Number search keeps working while you type the slash (`1/` shows card 1 before you finish `1/105`)

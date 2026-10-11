@@ -22,7 +22,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "1.8"   # bump for every app update: 1.0 -> 1.1 for features/fixes, 2.0 for big changes
+APP_VERSION = "1.9"   # bump for every app update: 1.0 -> 1.1 for features/fixes, 2.0 for big changes
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -1009,7 +1009,8 @@ class Handler(BaseHTTPRequestHandler):
             with lock:
                 body = {"set": sets_list()["meta"].get(sid, {}), "cards": cards,
                         "collection": read_json(sdir(sid, "collection.json"), {}),
-                        "prices": read_json(sdir(sid, "prices.json"), {}), "slots": set_slots(sid)}
+                        "prices": read_json(sdir(sid, "prices.json"), {}), "slots": set_slots(sid),
+                        "shop": read_json(sdir(sid, "shop.json"), {})}
             return self.send(200, body, cache="no-store")
         m = re.fullmatch(rf"/set/({SID_RE})/img/({NUM_RE})\.png", path)
         if m:
@@ -1027,6 +1028,9 @@ class Handler(BaseHTTPRequestHandler):
         m = re.fullmatch(rf"/api/set/({SID_RE})/slots", self.path)
         if m:
             return self.do_PUT_slots(m.group(1))
+        m = re.fullmatch(rf"/api/set/({SID_RE})/shop", self.path)
+        if m:
+            return self.do_PUT_shop(m.group(1))
         m = re.fullmatch(rf"/api/set/({SID_RE})/card/({NUM_RE})", self.path)
         raw = self.body(64 * 1024) if m else None
         if not m or raw is None or not self.in_binder(m.group(1)):
@@ -1042,6 +1046,23 @@ class Handler(BaseHTTPRequestHandler):
             coll[n] = rec
             write_json(sdir(sid, "collection.json"), coll)
         self.send(200, {"ok": True})
+
+    def do_PUT_shop(self, sid):
+        """Save the shopping list order: a sort mode, plus your own card order for "My order"."""
+        if not self.in_binder(sid):
+            return self.send(404, {"error": "Set not in binder"})
+        try:
+            new = json.loads(self.body(64 * 1024) or b"{}")
+            mode = new.get("mode")
+            order = new.get("order") or []
+            assert mode in ("lo", "hi", "num", "mine")
+            assert isinstance(order, list) and len(order) <= 1000
+            assert all(isinstance(n, str) and re.fullmatch(NUM_RE, n) for n in order)
+        except Exception:
+            return self.send(400, {"error": "Invalid shopping list order"})
+        with lock:
+            write_json(sdir(sid, "shop.json"), {"mode": mode, "order": list(dict.fromkeys(order))})
+        return self.send(200, {"ok": True})
 
     def do_PUT_slots(self, sid):
         """Save one binder's price options, then recalculate its prices from stored sales."""

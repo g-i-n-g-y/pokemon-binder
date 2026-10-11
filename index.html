@@ -176,6 +176,13 @@ table.shop .num{text-align:right;font-family:var(--f-mono)}
 table.shop tr.fits td{background:color-mix(in srgb,var(--good) 9%,transparent)}
 table.shop tr.over td{opacity:.6}
 table.shop .c-img{width:52px}
+table.shop .c-grip{width:28px;padding-left:4px;padding-right:0}
+.shop-sort{margin-top:10px;flex-wrap:wrap}
+.grip{border:0;background:none;color:var(--muted);font-size:20px;line-height:1;padding:8px 6px;cursor:grab;touch-action:none;border-radius:6px}
+.grip:hover,.grip:focus-visible{color:var(--ink);background:var(--sleeve)}
+table.shop tr.dragging td{background:color-mix(in srgb,var(--ink) 10%,transparent)}
+table.shop tr.dragging .grip{cursor:grabbing;color:var(--ink)}
+body.drag-shop{user-select:none;-webkit-user-select:none}
 table.shop .thumb{width:40px;aspect-ratio:63/88;border-radius:4px;object-fit:cover;background:var(--sleeve);display:block}
 table.shop .nm{font-weight:600;cursor:pointer;background:none;border:0;color:var(--ink);font:inherit;font-weight:600;padding:0;text-align:left}
 table.shop .sub{display:block;font-size:12px;color:var(--muted);font-family:var(--f-mono)}
@@ -348,6 +355,15 @@ dialog.left{margin:0 auto 0 0}
   .views button{flex:1;padding:10px 8px}
   table.shop th,table.shop td{padding:8px}
   table.shop .hide-sm{display:none}
+  table.shop th{white-space:normal;padding:8px 5px}
+  table.shop td{padding:6px 5px}
+  #shopTable .c-img{display:none}
+  table.shop .c-grip{width:24px;padding:0 0 0 2px}
+  .grip{padding:8px 3px}
+  table.shop .btn{padding:6px 8px}
+  table.shop td.num{font-size:13px}
+  table.shop .nm{font-size:14px}
+  table.shop .sub{font-size:11px}
   .stats-sum .stat .v{font-size:20px}
 }
 </style>
@@ -416,7 +432,13 @@ dialog.left{margin:0 auto 0 0}
     <div class="shop-head">
       <div>
         <h2 class="sec">Shopping list</h2>
-        <p class="note">Cards you still need in this set, cheapest first. The running total shows what it costs to get every card up to that row.</p>
+        <p class="note">Cards you still need in this set. The running total shows what it costs to get every card up to that row. Drag the ⠿ handle to put cards in your own order.</p>
+        <div class="seg shop-sort" id="shopSort" role="group" aria-label="Shopping list order">
+          <button type="button" data-m="lo" aria-pressed="true">Cheapest</button>
+          <button type="button" data-m="hi" aria-pressed="false">Priciest</button>
+          <button type="button" data-m="num" aria-pressed="false">Set number</button>
+          <button type="button" data-m="mine" aria-pressed="false">My order</button>
+        </div>
       </div>
       <label class="f budget">Budget ($)
         <input type="number" id="shopBudget" min="0" step="1" inputmode="decimal" placeholder="50">
@@ -425,7 +447,7 @@ dialog.left{margin:0 auto 0 0}
     <div class="budget-msg" id="shopMsg" aria-live="polite"></div>
     <div class="table-wrap">
       <table class="shop" id="shopTable">
-        <thead><tr><th class="c-img"><span class="sr">Card</span></th><th>Card</th><th class="num">Price</th><th class="num hide-sm">7 days</th><th class="num">Running total</th><th><span class="sr">Actions</span></th></tr></thead>
+        <thead><tr><th class="c-grip"><span class="sr">Move</span></th><th class="c-img"><span class="sr">Card</span></th><th>Card</th><th class="num">Price</th><th class="num hide-sm">7 days</th><th class="num">Running total</th><th><span class="sr">Actions</span></th></tr></thead>
         <tbody id="shopBody"></tbody>
       </table>
     </div>
@@ -1443,6 +1465,7 @@ function loadState(){
     const pr=s.prices||{}; state.prices={}; for(const k in (pr.p||{})) state.prices[k]=[pr.p[k][0]];
     state.info=pr.info||{}; state.updated=pr.updated||"";
     state.slots=s.slots||DEFAULT_SLOTS;
+    state.shop=s.shop||{};
     state.ready=true; header(); rarityOptions(); render(); renderView();
     fetch("api/set/"+enc(sid)+"/history").then(r=>r.json()).then(h=>{ if(seq!==loadSeq) return; state.hist=h||{}; state.histDates=Object.keys(state.hist).sort(); render(); renderView(); }).catch(()=>{});
     if(!wasRunning) $("sync").textContent="Saved on BEN · prices auto-refresh daily";
@@ -1497,15 +1520,102 @@ function renderView(){ if(state.view==="shop") drawShop(); else if(state.view===
 $("views").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b) setView(b.dataset.v); });
 
 // ---------- shopping list ----------
-function drawShop(){
-  const need=state.cards.filter(c=>qty(c.n)===0).sort((a,b)=>(basePrice(a.n)||1e9)-(basePrice(b.n)||1e9));
+// Order: "lo" cheapest, "hi" priciest, "num" set number, "mine" your own (saved on BEN, shared across devices).
+function shopList(){
+  const need=state.cards.filter(c=>qty(c.n)===0);
+  const pr=c=>basePrice(c.n)||0, mode=(state.shop||{}).mode||"lo";
+  if(mode==="hi") return need.sort((a,b)=>pr(b)-pr(a));
+  if(mode==="num") return need.sort(byNum);
+  const cheap=need.slice().sort((a,b)=>(pr(a)||1e9)-(pr(b)||1e9));
+  if(mode!=="mine") return cheap;
+  // Your order first; cards not placed yet (new needs, new sets) go at the end, cheapest first.
+  const pos=new Map(((state.shop||{}).order||[]).map((n,i)=>[n,i]));
+  return cheap.slice().sort((a,b)=>(pos.has(a.n)?pos.get(a.n):1e6+cheap.indexOf(a))-(pos.has(b.n)?pos.get(b.n):1e6+cheap.indexOf(b)));
+}
+function saveShop(){
+  if(!state.sid) return;
+  fetch("api/set/"+enc(state.sid)+"/shop",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(state.shop)})
+    .then(r=>{ if(!r.ok) throw 0; }).catch(()=>{ $("shopMsg").textContent="Couldn't save the order. Check that the container is running."; });
+}
+function setShopMode(m){
+  const order = m==="mine" && !((state.shop||{}).order||[]).length ? shopList().map(c=>c.n) : ((state.shop||{}).order||[]);
+  state.shop={mode:m, order}; saveShop(); drawShop();
+}
+$("shopSort").addEventListener("click",e=>{ const b=e.target.closest("button[data-m]"); if(b) setShopMode(b.dataset.m); });
+// Recalculate running totals and budget shading from the rows as they're currently arranged.
+function shopTotals(){
   const budget=Number($("shopBudget").value)||0;
+  let run=0, fit=0, fitCost=0, count=0;
+  for(const tr of $("shopBody").querySelectorAll("tr[data-n]")){
+    run+=basePrice(tr.dataset.n)||0; count++;
+    tr.querySelector(".run").textContent=money(run);
+    tr.classList.remove("fits","over");
+    if(budget){ if(run<=budget){ tr.classList.add("fits"); fit++; fitCost=run; } else tr.classList.add("over"); }
+  }
+  const msg=$("shopMsg"); msg.replaceChildren();
+  if(budget && count){
+    const b1=document.createElement("b"); b1.textContent=money(budget);
+    const b2=document.createElement("b"); b2.textContent=String(fit);
+    const b3=document.createElement("b"); b3.textContent=money(fitCost);
+    msg.append("With ",b1," you can get ",b2," card"+(fit===1?"":"s")+" for ",b3,".");
+  } else if(count){
+    msg.textContent=count+" cards needed · "+money(run)+" to finish the set.";
+  }
+}
+// Rows were rearranged by hand: switch to "My order" and save it.
+function shopReordered(){
+  const shown=[...$("shopBody").querySelectorAll("tr[data-n]")].map(tr=>tr.dataset.n);
+  const keep=((state.shop||{}).order||[]).filter(n=>!shown.includes(n));   // owned cards keep their old spot at the end
+  state.shop={mode:"mine", order:shown.concat(keep)}; saveShop(); markShopMode(); shopTotals();
+}
+function markShopMode(){
+  const m=(state.shop||{}).mode||"lo";
+  for(const b of $("shopSort").querySelectorAll("button")) b.setAttribute("aria-pressed", b.dataset.m===m ? "true" : "false");
+}
+function startDrag(e, tr){
+  if(e.button!==undefined && e.button!==0) return;
+  e.preventDefault();
+  // Listen on the window: moving the row in the page drops the handle's pointer capture.
+  const grip=window, id=e.pointerId;
+  tr.classList.add("dragging"); document.body.classList.add("drag-shop");
+  const body=$("shopBody"); let moved=false;
+  const move=ev=>{
+    if(ev.pointerId!==id) return;
+    if(ev.clientY<70) window.scrollBy(0,-14); else if(ev.clientY>window.innerHeight-70) window.scrollBy(0,14);
+    const over=document.elementFromPoint(ev.clientX, ev.clientY);
+    const row=over && over.closest && over.closest("#shopBody tr[data-n]");
+    if(!row || row===tr) return;
+    const r=row.getBoundingClientRect();
+    body.insertBefore(tr, ev.clientY < r.top + r.height/2 ? row : row.nextSibling);
+    moved=true; shopTotals();
+  };
+  const up=ev=>{
+    if(ev.pointerId!==id) return;
+    grip.removeEventListener("pointermove",move); grip.removeEventListener("pointerup",up); grip.removeEventListener("pointercancel",up);
+    tr.classList.remove("dragging"); document.body.classList.remove("drag-shop");
+    if(moved) shopReordered();
+  };
+  grip.addEventListener("pointermove",move); grip.addEventListener("pointerup",up); grip.addEventListener("pointercancel",up);
+}
+function gripKey(e, tr){
+  const body=$("shopBody");
+  if(e.key==="ArrowUp" && tr.previousElementSibling){ body.insertBefore(tr, tr.previousElementSibling); }
+  else if(e.key==="ArrowDown" && tr.nextElementSibling){ body.insertBefore(tr.nextElementSibling, tr); }
+  else return;
+  e.preventDefault(); e.currentTarget.focus(); shopReordered();
+}
+function drawShop(){
+  const need=shopList();
   const body=$("shopBody"); body.replaceChildren();
-  let run=0, fit=0, fitCost=0;
+  markShopMode();
   for(const c of need){
-    const pr=basePrice(c.n); run+=pr;
-    const tr=document.createElement("tr");
-    if(budget){ if(run<=budget){ tr.className="fits"; fit++; fitCost=run; } else tr.className="over"; }
+    const pr=basePrice(c.n);
+    const tr=document.createElement("tr"); tr.dataset.n=c.n;
+    const tdG=document.createElement("td"); tdG.className="c-grip";
+    const g=document.createElement("button"); g.type="button"; g.className="grip"; g.textContent="⠿";
+    g.setAttribute("aria-label","Move "+c.name+" (drag, or use the arrow keys)"); g.title="Drag to reorder";
+    g.addEventListener("pointerdown",e=>startDrag(e,tr)); g.addEventListener("keydown",e=>gripKey(e,tr));
+    tdG.append(g);
     const tdI=document.createElement("td"); tdI.className="c-img";
     const im=document.createElement("img"); im.className="thumb"; im.alt=""; im.loading="lazy"; im.src=base()+"/img/"+enc(c.n)+".png";
     im.onerror=()=>{ if(!im.dataset.r && c.img){ im.dataset.r=1; im.src=c.img; } else im.style.visibility="hidden"; };
@@ -1516,23 +1626,15 @@ function drawShop(){
     tdN.append(nb,sub);
     const tdP=document.createElement("td"); tdP.className="num"; tdP.textContent=pr?money(pr):"–";
     const tdT=document.createElement("td"); tdT.className="num hide-sm"; tdT.append(trendEl(trend(c.n)));
-    const tdR=document.createElement("td"); tdR.className="num"; tdR.textContent=money(run);
+    const tdR=document.createElement("td"); tdR.className="num run";
     const tdA=document.createElement("td");
     const bt=document.createElement("button"); bt.type="button"; bt.className="btn"; bt.textContent="Bought";
     bt.title="Mark as owned and log today's date"; bt.onclick=()=>{ quickToggle(c.n); };
     tdA.append(bt);
-    tr.append(tdI,tdN,tdP,tdT,tdR,tdA); body.append(tr);
+    tr.append(tdG,tdI,tdN,tdP,tdT,tdR,tdA); body.append(tr);
   }
-  if(!need.length){ const tr=document.createElement("tr"); const td=document.createElement("td"); td.colSpan=6; td.className="empty"; td.textContent="You own every card in this set."; tr.append(td); body.append(tr); }
-  const msg=$("shopMsg"); msg.replaceChildren();
-  if(budget && need.length){
-    const b1=document.createElement("b"); b1.textContent=money(budget);
-    const b2=document.createElement("b"); b2.textContent=String(fit);
-    const b3=document.createElement("b"); b3.textContent=money(fitCost);
-    msg.append("With ",b1," you can get ",b2," card"+(fit===1?"":"s")+" for ",b3,".");
-  } else if(need.length){
-    msg.textContent=need.length+" cards needed · "+money(run)+" to finish the set.";
-  }
+  if(!need.length){ const tr=document.createElement("tr"); const td=document.createElement("td"); td.colSpan=7; td.className="empty"; td.textContent="You own every card in this set."; tr.append(td); body.append(tr); }
+  shopTotals();
 }
 $("shopBudget").addEventListener("input",()=>{ store("nd-budget",$("shopBudget").value||undefined); drawShop(); });
 $("shopBudget").value=recall("nd-budget")||"";
