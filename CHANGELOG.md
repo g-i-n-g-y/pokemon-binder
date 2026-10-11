@@ -4,6 +4,10 @@ Versions go up by 0.1 for each app update (new features or fixes) and by a whole
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v1.1 (October 11, 2026)
+
+- Privacy mode blurs cards owned and % complete again, along with the money totals
+
 ## v1.0 (October 11, 2026)
 
 First numbered version.
