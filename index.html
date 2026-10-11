@@ -368,6 +368,22 @@ dialog.left{margin:0 auto 0 0}
   table.shop th,table.shop td{padding:8px}
   table.shop .hide-sm{display:none}
   .hide-xs{display:none}
+  .shop-sort button{padding:8px 10px;white-space:nowrap}
+  /* purchase log as stacked rows: card and price on top, details underneath */
+  #logTable,#logTable tbody{display:block}
+  #logTable thead{display:none}
+  #logTable tr{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+  #logTable tr:last-child{border-bottom:0}
+  #logTable td{padding:0;border:0;font-size:13px;color:var(--muted)}
+  #logTable td:nth-child(2){order:1;flex:1 1 60%;font-size:15px;color:var(--ink)}
+  #logTable td:nth-child(6){order:2;flex:0 0 auto;font-size:15px;color:var(--ink)}
+  #logTable td:nth-child(1){order:3}
+  #logTable td:nth-child(3){order:4}
+  #logTable td:nth-child(4){order:5}
+  #logTable td:nth-child(5){order:6}
+  #logTable td:nth-child(n+3):not(:nth-child(6))::before{content:"· ";color:var(--muted)}
+  #logTable td.empty{flex:1 1 100%;font-size:14px}
+  #logTable td.nil{display:none}
   table.shop th{white-space:normal;padding:8px 5px}
   table.shop td{padding:6px 5px}
   #shopTable .c-img,#upgTable .c-img{display:none}
@@ -1905,8 +1921,8 @@ function drawLog(log){
     const c2=document.createElement("td"); const nb=document.createElement("button"); nb.type="button"; nb.className="nm"; nb.textContent=r.name;
     nb.onclick=()=>{ if(r.set===state.sid) openCard(r.n); else { openSet(r.set).then(()=>openCard(r.n)); } }; c2.append(nb);
     const c3=document.createElement("td"); c3.textContent=r.setName;
-    const c4=document.createElement("td"); c4.textContent=r.where||"–";
-    const c6=document.createElement("td"); const se=sellerEl(r.seller); if(se) c6.append(se); else c6.textContent="–";
+    const c4=document.createElement("td"); c4.textContent=r.where||"–"; if(!r.where) c4.className="nil";
+    const c6=document.createElement("td"); const se=sellerEl(r.seller); if(se) c6.append(se); else { c6.textContent="–"; c6.className="nil"; }
     const c5=document.createElement("td"); c5.className="num"; c5.textContent=r.price?money(r.price):"Not set";
     tr.append(c1,c2,c3,c4,c6,c5); body.append(tr);
   }
