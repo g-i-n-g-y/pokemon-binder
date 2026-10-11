@@ -658,9 +658,11 @@ const year = s => (s||"").slice(0,4);
 // Search by name, or by the number printed on the card: "1", "001", "#1" or "1/105".
 const normNum = t => t.toLowerCase().replace(/^([a-z]*)0+(?=\d)/,"$1");
 function matchQ(c, q){
-  if(c.name.toLowerCase().includes(q)) return true;
-  const m=/^(?:no\.?\s*)?#?\s*([a-z]*\d+[a-z]?)\s*(?:\/\s*(\d+))?$/.exec(q);
-  return !!m && normNum(m[1])===normNum(c.n);
+  // A search that's just a number ("2", "#2", "002", "2/105") matches the card number only,
+  // so "2" finds card 2 and not every name with a 2 in it (like Porygon2).
+  const m=/^(?:no\.?\s*)?#?\s*([a-z]{0,2}\d+[a-z]?)\s*(?:\/\s*(\d+))?$/.exec(q);
+  if(m && /\d/.test(q) && !/^[a-z]{3,}/.test(q)) return normNum(m[1])===normNum(c.n);
+  return c.name.toLowerCase().includes(q);
 }
 const numVal = n => { const m=/^([A-Za-z]*)(\d+)/.exec(n); return m ? [m[1], +m[2]] : [n,0]; };
 const byNum = (a,b) => { const x=numVal(a.n), y=numVal(b.n); return x[0]<y[0]?-1:x[0]>y[0]?1:x[1]-y[1]; };

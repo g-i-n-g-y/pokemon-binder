@@ -4,6 +4,10 @@ Versions go up by 0.1 for each app update (new features or fixes) and by a whole
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v1.7 (October 11, 2026)
+
+- Searching a number (like `2`) now finds only that card number, not names with that digit in them (like Dark Porygon2)
+
 ## v1.6 (October 11, 2026)
 
 - **Custom tab icon:** Settings → Tab icon → Choose image. Your image is saved on your server only, never in this repository. "Use default" switches back.
