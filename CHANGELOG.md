@@ -4,6 +4,11 @@ Versions go up by 0.1 for each app update (new features or fixes) and by a whole
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v1.4 (October 11, 2026)
+
+- Fixed TCGplayer product lookups failing for cards the binder hasn't seen before (affects newly added sets)
+- The price test (`--test`) shows more detail when a lookup fails
+
 ## v1.3 (October 11, 2026)
 
 - **Each binder has its own price options.** Neo Destiny can use LP while Neo Genesis uses NM. Binders keep whatever you had set before until you change them.

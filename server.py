@@ -22,7 +22,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "1.3"   # bump for every app update: 1.0 -> 1.1 for features/fixes, 2.0 for big changes
+APP_VERSION = "1.4"   # bump for every app update: 1.0 -> 1.1 for features/fixes, 2.0 for big changes
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -208,25 +208,42 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
-def product_id(card_id, ids):
-    """TCGplayer product id, found by following pokemontcg.io's price link for the card."""
+APP_UA = "pokemon-binder (+https://github.com/g-i-n-g-y/pokemon-binder)"
+
+
+def product_id(card_id, ids, verbose=False):
+    """TCGplayer product id, found by following pokemontcg.io's price link for the card.
+    Tries a plain app user agent first: a browser-looking one can get blocked as a fake browser."""
     if card_id in ids:
         return ids[card_id]
+    for ua in (APP_UA, UA):
+        try:
+            pid = _product_id(card_id, ua)
+        except Exception as e:
+            pid = None
+            if verbose:
+                print(f"  lookup ({'app' if ua == APP_UA else 'browser'} user agent) failed: {e}")
+            continue
+        if pid:
+            ids[card_id] = pid
+            return pid
+        if verbose:
+            print(f"  lookup ({'app' if ua == APP_UA else 'browser'} user agent): no product link")
+    return None
+
+
+def _product_id(card_id, ua):
     opener = urllib.request.build_opener(_NoRedirect)
     url = f"https://prices.pokemontcg.io/tcgplayer/{card_id}"
     for _ in range(6):
         m = re.search(r"/product/(\d+)", urllib.parse.unquote(url))
         if m:
-            ids[card_id] = int(m.group(1))
-            return ids[card_id]
+            return int(m.group(1))
         try:
-            r = opener.open(urllib.request.Request(url, headers={"User-Agent": UA}), timeout=20)
+            r = opener.open(urllib.request.Request(url, headers={"User-Agent": ua}), timeout=20)
             body = r.read(200000).decode("utf-8", "ignore")
             m = re.search(r"tcgplayer\.com(?:%2F|/)product(?:%2F|/)(\d+)", body)
-            if m:
-                ids[card_id] = int(m.group(1))
-                return ids[card_id]
-            return None
+            return int(m.group(1)) if m else None
         except urllib.error.HTTPError as e:
             loc = e.headers.get("Location")
             if not loc:
@@ -1106,7 +1123,8 @@ class Handler(BaseHTTPRequestHandler):
 
 def test_card(card_id):
     try:
-        pid = product_id(card_id, {})
+        print(f"Card {card_id}: looking up the TCGplayer product (fresh, not the saved one)")
+        pid = product_id(card_id, {}, verbose=True)
         print(f"Card {card_id}: TCGplayer product id = {pid}")
         if pid:
             test_tcgplayer(pid)
