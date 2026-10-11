@@ -4,6 +4,11 @@ Versions go up by 0.1 for each app update (new features or fixes) and by a whole
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v1.5 (October 11, 2026)
+
+- Prices now ask TCGplayer for each condition separately (NM, LP, MP, HP, Damaged), so every condition gets up to its 5 newest sales. TCGplayer only returns 5 sales per request, which left NM and HP empty on many cards.
+- Same number of requests per card as before, so refreshes take about as long
+
 ## v1.4 (October 11, 2026)
 
 - Fixed TCGplayer product lookups failing for cards the binder hasn't seen before (affects newly added sets)

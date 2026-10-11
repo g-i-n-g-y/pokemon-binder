@@ -22,7 +22,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "1.4"   # bump for every app update: 1.0 -> 1.1 for features/fixes, 2.0 for big changes
+APP_VERSION = "1.5"   # bump for every app update: 1.0 -> 1.1 for features/fixes, 2.0 for big changes
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -302,6 +302,37 @@ COND_SHORT = {"Near Mint": "NM", "Lightly Played": "LP", "Moderately Played": "M
 
 def sale_key(x):
     return (x.get("orderDate"), x.get("purchasePrice"), x.get("condition"), x.get("variant"), x.get("title"))
+
+
+PAGING = {"works": None}   # TCGplayer has been returning the same 5 sales for every page; checked once per run
+
+
+def condition_sales(pid, verbose=False):
+    """Recent sales for each condition (NM, LP, MP, HP, DMG), asked for one condition at a time.
+    TCGplayer only returns the newest 5 sales per request, so this gets up to 5 per condition. For the
+    conditions your price options use, it also tries a second page in case paging starts working."""
+    found, seen = [], set()
+    for short, cid in COND_IDS.items():
+        offset = 0
+        for page in range(2 if (cid in LP_MP_IDS and PAGING["works"] is not False) else 1):
+            batch = latest_sales(pid, offset, [cid])
+            new = 0
+            for x in batch:
+                if sale_key(x) not in seen:
+                    seen.add(sale_key(x))
+                    found.append(x)
+                    new += 1
+            if verbose:
+                print(f"  {short:<3} page {page + 1}: {len(batch)} sales ({new} new): " +
+                      ", ".join(f"{(x.get('orderDate') or '')[:10]} ${x.get('purchasePrice')}" for x in batch))
+            if page == 1:
+                PAGING["works"] = new > 0
+            if len(batch) < 5:
+                break
+            offset += len(batch)
+            time.sleep(0.3)
+        time.sleep(0.3)
+    return found
 
 
 def lp_mp_sales(pid, verbose=False):
@@ -590,6 +621,7 @@ def refresh_prices(sid, reason="daily"):
         ids = read_json(sdir(sid, "tcg_ids.json"), {})
         slots = set_slots(sid)
         apply_slots(slots)
+        PAGING["works"] = None
         graded_on = wants_graded(slots)
         pc_cache = read_json(sdir(sid, "pc_urls.json"), {})
         with lock:
@@ -604,7 +636,7 @@ def refresh_prices(sid, reason="daily"):
             try:
                 pid = product_id(f"{sid}-{n}", ids)
                 if pid:
-                    sales = lp_mp_sales(pid)
+                    sales = condition_sales(pid)
                     inf["cond"] = by_condition(sales)
                     inf["recent"] = recent_by_condition(sales)
                 else:
@@ -1149,7 +1181,8 @@ def test_card(card_id):
 
 
 def test_tcgplayer(pid):
-    sales = lp_mp_sales(pid, verbose=True)
+    print("Sales by condition:")
+    sales = condition_sales(pid, verbose=True)
     print(f"Sales collected: {len(sales)}")
     for s in [x for x in sales if is_match(x)][:10]:
         print(f"  {s.get('orderDate', '')[:10]}  {s.get('condition')}  {s.get('variant')}  ${s.get('purchasePrice')}")
