@@ -15,6 +15,20 @@ A self-hosted Pokémon TCG collection tracker. One small Python server (standard
 - Privacy mode (eye button): shows every card in color with no Owned/Need tags, blurs cards owned and money totals, hides purchases
 - Five dark themes; works on phones
 
+## Screenshots
+
+**The binder.** Owned cards in color, cards you still need in greyscale, with totals at the top.
+
+![The binder's main page](screenshots/binder.png)
+
+**Privacy mode.** Tap the eye button: every card shows in color, Owned/Need tags disappear, and your totals blur, so nobody looking over your shoulder can tell what you own.
+
+![Privacy mode turned on](screenshots/privacy-mode.png)
+
+**Card details.** Tap a card for its LP and MP prices, copies owned, condition, purchase log with sellers, and photos of your own copy.
+
+<img src="screenshots/card-details.png" alt="Card details panel" width="360">
+
 Your collection, purchases, photos, and prices are stored only on the machine running the binder. This repository holds program files only.
 
 ## Program files
