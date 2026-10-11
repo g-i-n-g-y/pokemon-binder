@@ -1,5 +1,8 @@
 # Pokemon Binder
 
+> [!WARNING]
+> **This is a fully vibe-coded project.** I'm not a programmer. I had an idea for tracking my own card collection and built this with an AI assistant, for personal use on my home server. It works for me, but it hasn't been reviewed by an experienced developer, and it comes with no support or guarantees. Use it at your own risk, and don't expose it to the open internet.
+
 A self-hosted Pokémon TCG collection tracker. One small Python server (standard library only) and one web page.
 
 - Any English set: card lists from [PokemonTCG/pokemon-tcg-data](https://github.com/PokemonTCG/pokemon-tcg-data), card images downloaded locally
