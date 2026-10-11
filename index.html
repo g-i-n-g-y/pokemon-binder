@@ -231,9 +231,8 @@ dialog.confirm{margin:auto;height:fit-content;max-height:calc(100% - 32px);width
 :root[data-private] #privBtn{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 :root[data-private] #privBtn .eye-open{display:none}
 :root[data-private] #privBtn .eye-off{display:block}
-:root[data-private] #sOwned,:root[data-private] #sPct,:root[data-private] #sValue,:root[data-private] #sGain,
-:root[data-private] #sNeed,:root[data-private] #sNeedN,:root[data-private] .stat .bar,
-:root[data-private] .setrow .go span,:root[data-private] .setrow .mini{filter:blur(9px);user-select:none;pointer-events:none}
+:root[data-private] #sValue,:root[data-private] #sGain,
+:root[data-private] #sNeed,:root[data-private] #sNeedN{filter:blur(9px);user-select:none;pointer-events:none}
 :root[data-private] .sleeve.need{background:var(--surface);border-style:solid}
 :root[data-private] .sleeve.need .face{filter:none;opacity:1}
 :root[data-private] .sleeve .tag,:root[data-private] #fOwn,
@@ -540,7 +539,7 @@ dialog.left{margin:0 auto 0 0}
     <div class="skins" id="skins"></div>
     <div class="eyebrow">Privacy</div>
     <label class="toggle" for="stPriv"><input type="checkbox" id="stPriv"> Privacy mode</label>
-    <div class="note">Blurs cards owned, collection value and cost to finish, shows every card in color, and hides Owned/Need tags, the shopping list, stats, and your purchases. Only affects this device. The eye button at the top does the same thing.</div>
+    <div class="note">Blurs collection value and cost to finish, shows every card in color, and hides Owned/Need tags, the shopping list, stats, and your purchases. Only affects this device. The eye button at the top does the same thing.</div>
     <div class="eyebrow">Cards</div>
     <label class="toggle" for="stEd"><input type="checkbox" id="stEd" checked> Show "Unlimited" under each card</label>
     <div class="note">Card images come from the public card database, which uses 1st Edition scans for older sets. The label is a reminder that you collect Unlimited.</div>
