@@ -22,7 +22,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "1.2"   # bump for every app update: 1.0 -> 1.1 for features/fixes, 2.0 for big changes
+APP_VERSION = "1.3"   # bump for every app update: 1.0 -> 1.1 for features/fixes, 2.0 for big changes
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -303,6 +303,18 @@ def lp_mp_sales(pid, verbose=False):
     return sales
 
 
+def recent_by_condition(sales, keep=5):
+    """{"NM": [[date, price], ...], ...}: the newest Unlimited sales per condition, for the Recent sales tab."""
+    out = {}
+    for x in sorted(sales, key=lambda x: x.get("orderDate", ""), reverse=True):
+        short = COND_SHORT.get(x.get("condition"))
+        if short and "1st" not in str(x.get("variant", "")) and isinstance(x.get("purchasePrice"), (int, float)):
+            lst = out.setdefault(short, [])
+            if len(lst) < keep:
+                lst.append([x.get("orderDate", "")[:10], round(x["purchasePrice"], 2)])
+    return out
+
+
 def by_condition(sales):
     """{"NM": [avg, count, latest date], ...} from Unlimited sales, last 10 per condition."""
     groups = {}
@@ -381,6 +393,17 @@ def main_price(info_n, slots):
     return None
 
 
+def set_slots(sid):
+    """This binder's two price options. Sets without their own choice use the default from settings.json."""
+    own = read_json(sdir(sid, "slots.json"), None)
+    if own:
+        try:
+            return clean_slots(own)
+        except ValueError:
+            pass
+    return get_settings()["slots"]
+
+
 def wants_graded(slots):
     return any(sl["t"] == "graded" for sl in slots)
 
@@ -393,12 +416,12 @@ def apply_slots(slots):
     LP_MP_IDS = [COND_IDS[c] for c in raw]
 
 
-def recompute_prices():
-    """Recalculate every card's main price from stored sales after the slots change (no downloads).
+def recompute_prices(sids=None):
+    """Recalculate each card's main price from stored sales after the slots change (no downloads).
     Returns True if a graded slot needs data that hasn't been downloaded yet."""
-    slots = get_settings()["slots"]
     missing = False
-    for sid in list(sets_list()["order"]):
+    for sid in (sids or list(sets_list()["order"])):
+        slots = set_slots(sid)
         with lock:
             prices = read_json(sdir(sid, "prices.json"), {})
             p, info = prices.setdefault("p", {}), prices.get("info") or {}
@@ -493,6 +516,21 @@ def pc_sales(html):
     return sorted(uniq, key=lambda x: x["d"], reverse=True)
 
 
+def graded_recent(sales, keep=5):
+    """{"PSA 9": [[date, price, title], ...]}: newest graded sales per company and grade."""
+    out = {}
+    for x in sales:
+        if SKIP_RE.search(x["title"]):
+            continue
+        m = GRADE_RE.search(x["title"])
+        if m:
+            key = f"{m.group(1).upper().replace('BECKETT', 'BGS')} {m.group(2)}"
+            lst = out.setdefault(key, [])
+            if len(lst) < keep:
+                lst.append([x["d"], x["price"]])
+    return out
+
+
 def graded_groups(sales):
     """{"PSA 9": [avg, count, latest], ..., "Any 9": [...]} from graded Unlimited sales, last 10 each."""
     groups = {}
@@ -516,9 +554,10 @@ def graded_groups(sales):
 def graded_for(sid, card, cache):
     url = pc_url(sid, card, cache)
     if not url:
-        return None, ""
+        return None, "", {}
     _, html = pc_get(url)
-    return graded_groups(pc_sales(html)), url
+    sales = pc_sales(html)
+    return graded_groups(sales), url, graded_recent(sales)
 
 
 def refresh_prices(sid, reason="daily"):
@@ -532,7 +571,7 @@ def refresh_prices(sid, reason="daily"):
         job["total"] = len(cards)
         log(f"{sid}: price refresh started ({reason}).")
         ids = read_json(sdir(sid, "tcg_ids.json"), {})
-        slots = get_settings()["slots"]
+        slots = set_slots(sid)
         apply_slots(slots)
         graded_on = wants_graded(slots)
         pc_cache = read_json(sdir(sid, "pc_urls.json"), {})
@@ -548,7 +587,9 @@ def refresh_prices(sid, reason="daily"):
             try:
                 pid = product_id(f"{sid}-{n}", ids)
                 if pid:
-                    inf["cond"] = by_condition(lp_mp_sales(pid))
+                    sales = lp_mp_sales(pid)
+                    inf["cond"] = by_condition(sales)
+                    inf["recent"] = recent_by_condition(sales)
                 else:
                     log(f"{sid}-{n}: no TCGplayer product found")
             except Exception as e:
@@ -556,9 +597,9 @@ def refresh_prices(sid, reason="daily"):
             if graded_on:
                 try:
                     time.sleep(1)
-                    groups, url = graded_for(sid, c, pc_cache)
+                    groups, url, grecent = graded_for(sid, c, pc_cache)
                     if groups is not None:
-                        inf["graded"], inf["pc"] = groups, url
+                        inf["graded"], inf["pc"], inf["gradedRecent"] = groups, url, grecent
                     else:
                         inf["graded"] = {}
                         log(f"{sid}-{n}: no PriceCharting page found")
@@ -904,7 +945,7 @@ class Handler(BaseHTTPRequestHandler):
             with lock:
                 body = {"set": sets_list()["meta"].get(sid, {}), "cards": cards,
                         "collection": read_json(sdir(sid, "collection.json"), {}),
-                        "prices": read_json(sdir(sid, "prices.json"), {})}
+                        "prices": read_json(sdir(sid, "prices.json"), {}), "slots": set_slots(sid)}
             return self.send(200, body, cache="no-store")
         m = re.fullmatch(rf"/set/({SID_RE})/img/({NUM_RE})\.png", path)
         if m:
@@ -919,6 +960,9 @@ class Handler(BaseHTTPRequestHandler):
     def do_PUT(self):
         if self.path == "/api/settings":
             return self.do_PUT_settings()
+        m = re.fullmatch(rf"/api/set/({SID_RE})/slots", self.path)
+        if m:
+            return self.do_PUT_slots(m.group(1))
         m = re.fullmatch(rf"/api/set/({SID_RE})/card/({NUM_RE})", self.path)
         raw = self.body(64 * 1024) if m else None
         if not m or raw is None or not self.in_binder(m.group(1)):
@@ -934,6 +978,25 @@ class Handler(BaseHTTPRequestHandler):
             coll[n] = rec
             write_json(sdir(sid, "collection.json"), coll)
         self.send(200, {"ok": True})
+
+    def do_PUT_slots(self, sid):
+        """Save one binder's price options, then recalculate its prices from stored sales."""
+        if not self.in_binder(sid):
+            return self.send(404, {"error": "Set not in binder"})
+        try:
+            new = json.loads(self.body(4096) or b"{}")
+            assert isinstance(new, dict)
+        except Exception:
+            return self.send(400, {"error": "Invalid price options"})
+        try:
+            slots = clean_slots(new.get("slots"))
+        except ValueError as e:
+            return self.send(400, {"error": str(e) or "Invalid price options"})
+        except Exception:
+            return self.send(400, {"error": "Invalid price options"})
+        with lock:
+            write_json(sdir(sid, "slots.json"), slots)
+        return self.send(200, {"ok": True, "slots": slots, "needsRefresh": recompute_prices([sid])})
 
     def do_PUT_settings(self):
         raw = self.body(4096)
@@ -1055,7 +1118,7 @@ def test_card(card_id):
         return
     print("Graded (PriceCharting sold listings, Unlimited only):")
     try:
-        groups, url = graded_for(sid, card, {})
+        groups, url, _ = graded_for(sid, card, {})
     except Exception as e:
         print(f"  Couldn't reach PriceCharting: {e}")
         return

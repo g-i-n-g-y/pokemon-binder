@@ -7,7 +7,9 @@ A self-hosted Pokémon TCG collection tracker. One small Python server (standard
 
 - Any English set: card lists from [PokemonTCG/pokemon-tcg-data](https://github.com/PokemonTCG/pokemon-tcg-data), card images downloaded locally
 - Owned cards in color, needed cards in greyscale; tap **Need** to mark a card owned
-- Prices from recent sales, Unlimited English only: pick any two in Settings, raw conditions (NM to Damaged, from TCGplayer) or graded (PSA, BGS, CGC, SGC, TAG, ACE, from eBay sales on PriceCharting). LP and MP by default.
+- Search by name or by the number on the card (like `1/105`)
+- Recent sales tab on each card: the last 5 sales for every condition, side by side
+- Prices from recent sales, Unlimited English only: pick any two per binder in Settings, raw conditions (NM to Damaged, from TCGplayer) or graded (PSA, BGS, CGC, SGC, TAG, ACE, from eBay sales on PriceCharting). LP and MP by default.
 - Daily automatic price refresh at a time you choose, plus a manual refresh button
 - Price history, biggest movers, shopping list with a budget
 - Purchase log with date, price, place, and seller handle (Instagram, TikTok, Whatnot, eBay, and more)

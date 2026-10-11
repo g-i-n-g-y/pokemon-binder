@@ -108,6 +108,21 @@ dialog::backdrop{background:rgba(5,4,8,.6)}
 .lpmp .half+.half{border-left:1px solid var(--line);padding-left:14px}
 .lpmp .v{font-size:22px}
 .lpmp.one{grid-template-columns:1fr}
+.dtabs{align-self:flex-start}
+.dtabs button{white-space:nowrap}
+.tabpane{display:flex;flex-direction:column;gap:18px}
+.tabpane[hidden]{display:none}
+.rs{display:flex;flex-direction:column;gap:12px}
+.rs-cond{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--surface)}
+.rs-cond.mine{border-color:var(--accent,var(--ink))}
+.rs-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 8px;margin-bottom:6px}
+.rs-head b{font-size:15px}
+.rs-head .s{font-size:13px;color:var(--muted);white-space:nowrap}
+.rs-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.rs-list li{display:flex;justify-content:space-between;font-size:14px;font-variant-numeric:tabular-nums}
+.rs-list li span:first-child{color:var(--muted)}
+.rs-none{font-size:13px;color:var(--muted)}
+.rs-tag{font-size:11px;padding:1px 6px;border-radius:99px;border:1px solid var(--line);color:var(--muted);margin-left:6px;vertical-align:middle;white-space:nowrap;font-weight:400}
 .slotrow{display:grid;grid-template-columns:64px 1fr;gap:8px;align-items:center;margin:8px 0}
 .slotrow .k{font-size:13px;color:var(--muted)}
 .slotrow .sels{display:flex;flex-wrap:wrap;gap:6px}
@@ -387,7 +402,7 @@ dialog.left{margin:0 auto 0 0}
       <option value="hi">Sort: price high to low</option>
       <option value="lo">Sort: price low to high</option>
     </select>
-    <input type="search" id="fQ" placeholder="Search cards" aria-label="Search cards">
+    <input type="search" id="fQ" placeholder="Search name or number (1/105)" aria-label="Search cards by name or number">
     <span class="count" id="count"></span>
   </div>
 
@@ -449,7 +464,7 @@ dialog.left{margin:0 auto 0 0}
     </div>
   </section>
 
-  <footer id="foot">Prices are the average of recent Lightly Played and Moderately Played Unlimited sales on TCGplayer and refresh automatically once a day. Tap Need on a card to mark it owned, or tap the card to log what you paid, set its condition, or add a photo of your copy. Open the menu at the top left to switch sets or add a new one. Everything saves on BEN.</footer>
+  <footer id="foot">Prices are averages of recent Unlimited sales (pick which ones per binder in Settings) and refresh automatically once a day. Tap Need on a card to mark it owned, or tap the card to log what you paid, set its condition, or add a photo of your copy. Open the menu at the top left to switch sets or add a new one. Everything saves on BEN.</footer>
 </div>
 
 <dialog id="dlg" aria-labelledby="dName">
@@ -461,6 +476,15 @@ dialog.left{margin:0 auto 0 0}
       <h2 id="dName"></h2>
       <div class="note" id="dRar"></div>
     </div>
+    <div class="seg dtabs" id="dTabs" role="group" aria-label="Card sections">
+      <button type="button" data-tab="info" aria-pressed="true">Details</button>
+      <button type="button" data-tab="sales" aria-pressed="false">Recent sales</button>
+    </div>
+    <div class="tabpane" id="tabSales" hidden>
+      <div class="note">The newest Unlimited English sales for each condition from the last price refresh, so you can see whether a different condition is worth it. Your price options are outlined.</div>
+      <div class="rs" id="dSales"></div>
+    </div>
+    <div class="tabpane" id="tabInfo">
     <div class="box">
       <div class="lpmp" id="dBoxes">
         <div class="half"><span class="k" id="dS0k">LP average</span><span class="v" id="dS0">–</span><span class="s" id="dS0s"></span></div>
@@ -525,6 +549,7 @@ dialog.left{margin:0 auto 0 0}
         </div>
       </div>
     </div>
+    </div>
     <div class="saved" id="dSaved" aria-live="polite"></div>
   </div>
 </dialog>
@@ -571,8 +596,8 @@ dialog.left{margin:0 auto 0 0}
     <div class="eyebrow">Cards</div>
     <label class="toggle" for="stEd"><input type="checkbox" id="stEd" checked> Show "Unlimited" under each card</label>
     <div class="note">Card images come from the public card database, which uses 1st Edition scans for older sets. The label is a reminder that you collect Unlimited.</div>
-    <div class="eyebrow">Price average</div>
-    <div class="note">Pick the two prices shown on each card. Raw conditions come from TCGplayer sales. Graded prices come from eBay sold listings collected by PriceCharting, sorted by the grading company and grade in each listing's title.</div>
+    <div class="eyebrow">Price average <span id="slotSet"></span></div>
+    <div class="note">Pick the two prices shown on each card. Each binder keeps its own choice, so switch sets from the menu to change another one. Raw conditions come from TCGplayer sales. Graded prices come from eBay sold listings collected by PriceCharting, sorted by the grading company and grade in each listing's title.</div>
     <div id="slotRows"></div>
     <div class="slotmsg" id="slotMsg" aria-live="polite"></div>
     <div class="eyebrow">Daily price refresh</div>
@@ -619,6 +644,13 @@ const enc = encodeURIComponent;
 const q = s => enc(s).replace(/%20/g,"+");
 const when = s => { if(!s) return "setup"; const d=new Date(s.length===10 ? s+"T12:00:00" : s); return isNaN(d) ? s : d.toLocaleString("en-US", s.length===10 ? {month:"short",day:"numeric",year:"numeric"} : {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}); };
 const year = s => (s||"").slice(0,4);
+// Search by name, or by the number printed on the card: "1", "001", "#1" or "1/105".
+const normNum = t => t.toLowerCase().replace(/^([a-z]*)0+(?=\d)/,"$1");
+function matchQ(c, q){
+  if(c.name.toLowerCase().includes(q)) return true;
+  const m=/^(?:no\.?\s*)?#?\s*([a-z]*\d+[a-z]?)\s*(?:\/\s*(\d+))?$/.exec(q);
+  return !!m && normNum(m[1])===normNum(c.n);
+}
 const numVal = n => { const m=/^([A-Za-z]*)(\d+)/.exec(n); return m ? [m[1], +m[2]] : [n,0]; };
 const byNum = (a,b) => { const x=numVal(a.n), y=numVal(b.n); return x[0]<y[0]?-1:x[0]>y[0]?1:x[1]-y[1]; };
 const printed = () => state.set.printedTotal || 0;
@@ -733,7 +765,7 @@ function render(){
     if(state.filter==="own" && qty(c.n)===0) return false;
     if(state.filter==="need" && qty(c.n)>0) return false;
     if(state.rar && cat(c)!==state.rar) return false;
-    if(state.q && !c.name.toLowerCase().includes(state.q) && c.n.toLowerCase()!==state.q) return false;
+    if(state.q && !matchQ(c, state.q)) return false;
     return true;
   });
   if(state.sort==="hi") list.sort((a,b)=>priceOf(b.n)-priceOf(a.n));
@@ -827,6 +859,46 @@ function lpmpBox(n){
   $("dBoxes").classList.toggle("one", state.slots[1].t==="none");
   $("dPk").textContent = mainLabel();
 }
+// ---------- recent sales tab ----------
+let cardTab="info";
+function setCardTab(t){
+  cardTab=t;
+  for(const b of $("dTabs").querySelectorAll("button")) b.setAttribute("aria-pressed", b.dataset.tab===t ? "true" : "false");
+  $("tabInfo").hidden = t!=="info"; $("tabSales").hidden = t!=="sales";
+}
+$("dTabs").addEventListener("click",e=>{ const b=e.target.closest("button[data-tab]"); if(b) setCardTab(b.dataset.tab); });
+const shortDay = d => d ? new Date(d+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "";
+function salesBlock(title, avg, list, mine, emptyText){
+  const box=document.createElement("div"); box.className="rs-cond"+(mine?" mine":"");
+  const head=document.createElement("div"); head.className="rs-head";
+  const b=document.createElement("b"); b.textContent=title;
+  if(mine){ const t=document.createElement("span"); t.className="rs-tag"; t.textContent="Your price"; b.append(t); }
+  const a=document.createElement("span"); a.className="s"; a.textContent = avg ? "Avg "+money(avg[0])+" · "+avg[1]+" sale"+(avg[1]===1?"":"s") : "";
+  head.append(b,a); box.append(head);
+  if(list && list.length){
+    const ul=document.createElement("ul"); ul.className="rs-list";
+    for(const [d,p] of list){ const li=document.createElement("li"); const x=document.createElement("span"); x.textContent=shortDay(d); const y=document.createElement("span"); y.textContent=money(p); li.append(x,y); ul.append(li); }
+    box.append(ul);
+  } else { const e=document.createElement("div"); e.className="rs-none"; e.textContent=emptyText; box.append(e); }
+  return box;
+}
+function drawSales(n){
+  const i=state.info[n]||{}, box=$("dSales"); box.replaceChildren();
+  if(!i.recent){
+    const e=document.createElement("div"); e.className="rs-none";
+    e.textContent = "Recent sales show here after the next price refresh.";
+    box.append(e); return;
+  }
+  const mineRaw=new Set(activeSlots().filter(sl=>sl.t==="raw").map(sl=>sl.c));
+  for(const c of ["NM","LP","MP","HP","DMG"])
+    box.append(salesBlock(c+" · "+COND_NAME[c], (i.cond||{})[c], (i.recent||{})[c], mineRaw.has(c), "No recent "+c+" sales found."));
+  for(const sl of activeSlots().filter(sl=>sl.t==="graded")){
+    const key=slotKey(sl);
+    let list=(i.gradedRecent||{})[key];
+    if(sl.co==="Any") list=Object.entries(i.gradedRecent||{}).filter(([k])=>k.endsWith(" "+sl.g)).flatMap(([,v])=>v).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,5);
+    box.append(salesBlock(slotName(sl)+" · eBay via PriceCharting", (i.graded||{})[key], list, true, i.graded ? "No recent "+slotName(sl)+" sales found." : "Graded sales show here after the next price refresh."));
+  }
+}
 function condOptions(n){
   const sel=$("dCond"), cur=rec(n).cond||"";
   for(const o of sel.options){
@@ -850,7 +922,7 @@ function openCard(n){
   $("dName").textContent=c.name;
   $("dRar").textContent=cat(c)+(isSecret(c)?" · secret rare":"");
   $("dP").textContent=basePrice(n) ? money(basePrice(n)) : "–";
-  lpmpBox(n);
+  lpmpBox(n); drawSales(n); setCardTab(cardTab);
   $("dPsrc").textContent=priceSource(n);
   condOptions(n);
   const L=$("dLinks"); L.replaceChildren();
@@ -1119,12 +1191,27 @@ function drawSlots(){
     row.append(k,sels); box.append(row);
   });
 }
-function saveSlots(slots){
-  const msg=$("slotMsg"); msg.textContent="Saving…";
-  fetch("api/settings",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({slots})})
+const slotsText = sl => sl.filter(x=>x.t!=="none").map(slotName).join(" + ");
+async function saveSlots(slots){
+  const msg=$("slotMsg"); msg.textContent="";
+  if(!state.sid){ drawSlots(); return; }
+  const before=slotsText(state.slots), after=slotsText(slots);
+  const graded=slots.some(x=>x.t==="graded"), raw=slots.every(x=>x.t!=="graded");
+  const ul=document.createElement("ul"); ul.className="changes";
+  [ "Only "+(state.set.name||"this binder")+" changes. Your other binders keep their own price options.",
+    raw ? "Card prices and set totals switch to the "+(slots[1].t==="none"?after:"combined "+after)+" average right away, using sales already saved."
+        : "Card prices and set totals switch to the "+slotName(slots[0])+" price"+(slots[1].t!=="none"?" (or "+slotName(slots[1])+" when there are no "+slotName(slots[0])+" sales)":"")+".",
+    graded ? "Graded prices come from eBay sold listings on PriceCharting. If they haven't been downloaded for this set yet, they fill in on the next refresh, which takes a bit longer than usual." : null,
+    "The price history chart starts following the new price from today, so expect a jump on today's date. Older days stay as they were.",
+    "Owned cards with a condition set still count at that condition's price in your collection value."
+  ].filter(Boolean).forEach(t=>{ const li=document.createElement("li"); li.textContent=t; ul.append(li); });
+  const ok=await askConfirm("Change the price average?", before+"  →  "+after, "Change", {safe:true, body:ul});
+  if(!ok){ drawSlots(); return; }
+  msg.textContent="Saving…";
+  fetch("api/set/"+enc(state.sid)+"/slots",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({slots})})
     .then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error||"Couldn't save"); return j; }))
     .then(j=>{
-      state.slots=slots; drawSlots(); msg.replaceChildren();
+      state.slots=j.slots||slots; drawSlots(); msg.replaceChildren();
       if(j.needsRefresh){
         msg.append("Saved. Graded prices load on the next refresh (a little slower than raw prices).");
         const b=document.createElement("button"); b.className="btn"; b.type="button"; b.textContent="Refresh now";
@@ -1135,10 +1222,11 @@ function saveSlots(slots){
     .catch(e=>{ drawSlots(); msg.textContent=(e&&e.message&&e.message!=="Failed to fetch") ? e.message : "Couldn't save. Check that the container is running."; });
 }
 function getSlots(){
-  return fetch("api/settings").then(r=>r.json()).then(s=>{ if(s.slots) state.slots=s.slots; if(s.options) state.slotOpts=s.options; return s; }).catch(()=>null);
+  return fetch("api/settings").then(r=>r.json()).then(s=>{ if(s.options) state.slotOpts=s.options; return s; }).catch(()=>null);
 }
 function loadSettings(){
   $("stSaved").textContent=""; $("slotMsg").textContent=""; drawSlots();
+  $("slotSet").textContent=state.set.name ? "for "+state.set.name : "";
   getSlots().then(s=>{ if(!s) throw 0; drawSlots(); return s; }).then(s=>{
     $("stAuto").checked=!!s.auto; $("stTime").value=s.time||"03:00"; showNext(s.next, s.auto);
     if(s.tz!==TZ) saveSettings({tz:TZ, offset:-new Date().getTimezoneOffset()}, true);
@@ -1326,6 +1414,7 @@ function loadState(){
     state.own=s.collection||{};
     const pr=s.prices||{}; state.prices={}; for(const k in (pr.p||{})) state.prices[k]=[pr.p[k][0]];
     state.info=pr.info||{}; state.updated=pr.updated||"";
+    state.slots=s.slots||DEFAULT_SLOTS;
     state.ready=true; header(); rarityOptions(); render(); renderView();
     fetch("api/set/"+enc(sid)+"/history").then(r=>r.json()).then(h=>{ if(seq!==loadSeq) return; state.hist=h||{}; state.histDates=Object.keys(state.hist).sort(); render(); renderView(); }).catch(()=>{});
     if(!wasRunning) $("sync").textContent="Saved on BEN · prices auto-refresh daily";
