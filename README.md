@@ -12,6 +12,7 @@ A self-hosted Pokémon TCG collection tracker. One small Python server (standard
 - Price history, biggest movers, shopping list with a budget
 - Purchase log with date, price, place, and seller handle (Instagram, TikTok, Whatnot, eBay, and more)
 - Front and back photos of your own copies
+- Privacy mode (eye button): blurs what you own and spent, shows every card in color, hides purchases
 - Five dark themes; works on phones
 
 Your collection, purchases, photos, and prices are stored only on the machine running the binder. This repository holds program files only.
