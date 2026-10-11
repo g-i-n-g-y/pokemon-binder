@@ -107,6 +107,12 @@ dialog::backdrop{background:rgba(5,4,8,.6)}
 .lpmp .half{display:flex;flex-direction:column;gap:2px;min-width:0}
 .lpmp .half+.half{border-left:1px solid var(--line);padding-left:14px}
 .lpmp .v{font-size:22px}
+.lpmp.one{grid-template-columns:1fr}
+.slotrow{display:grid;grid-template-columns:64px 1fr;gap:8px;align-items:center;margin:8px 0}
+.slotrow .k{font-size:13px;color:var(--muted)}
+.slotrow .sels{display:flex;flex-wrap:wrap;gap:6px}
+.slotrow select{font:inherit;font-size:15px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+.slotmsg{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:20px;font-size:13px;color:var(--muted)}
 .box .comb{border-top:1px solid var(--line);padding-top:8px}
 .box .comb b{font-family:var(--f-mono);font-weight:500;color:var(--ink)}
 label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
@@ -456,11 +462,11 @@ dialog.left{margin:0 auto 0 0}
       <div class="note" id="dRar"></div>
     </div>
     <div class="box">
-      <div class="lpmp">
-        <div class="half"><span class="k">LP average</span><span class="v" id="dLP">–</span><span class="s" id="dLPs"></span></div>
-        <div class="half"><span class="k">MP average</span><span class="v" id="dMP">–</span><span class="s" id="dMPs"></span></div>
+      <div class="lpmp" id="dBoxes">
+        <div class="half"><span class="k" id="dS0k">LP average</span><span class="v" id="dS0">–</span><span class="s" id="dS0s"></span></div>
+        <div class="half" id="dS1box"><span class="k" id="dS1k">MP average</span><span class="v" id="dS1">–</span><span class="s" id="dS1s"></span></div>
       </div>
-      <span class="s comb">Combined LP/MP <b id="dP"></b> · <span id="dPsrc"></span></span>
+      <span class="s comb"><span id="dPk">Combined LP/MP</span> <b id="dP"></b> · <span id="dPsrc"></span></span>
       <span class="s yours" id="dYours" hidden></span>
       <div class="spark" id="dSpark"></div></div>
     <div class="links" id="dLinks"></div>
@@ -565,6 +571,10 @@ dialog.left{margin:0 auto 0 0}
     <div class="eyebrow">Cards</div>
     <label class="toggle" for="stEd"><input type="checkbox" id="stEd" checked> Show "Unlimited" under each card</label>
     <div class="note">Card images come from the public card database, which uses 1st Edition scans for older sets. The label is a reminder that you collect Unlimited.</div>
+    <div class="eyebrow">Price average</div>
+    <div class="note">Pick the two prices shown on each card. Raw conditions come from TCGplayer sales. Graded prices come from eBay sold listings collected by PriceCharting, sorted by the grading company and grade in each listing's title.</div>
+    <div id="slotRows"></div>
+    <div class="slotmsg" id="slotMsg" aria-live="polite"></div>
     <div class="eyebrow">Daily price refresh</div>
     <label class="toggle" for="stAuto"><input type="checkbox" id="stAuto"> Refresh all sets automatically every day</label>
     <label class="f">Refresh time
@@ -584,7 +594,7 @@ dialog.left{margin:0 auto 0 0}
       <div class="k">Previous versions</div>
       <ul class="prevlist" id="stPrev"></ul>
     </div>
-    <div class="note" id="setPrices">Prices are the average of the last 10 Lightly or Moderately Played Unlimited English sales on TCGplayer. A full refresh takes about 2 minutes per set. The Refresh prices button at the top updates only the set you're viewing.</div>
+    <div class="note" id="setPrices">Each price is the average of the last 10 matching Unlimited English sales (1st Edition, Shadowless, Japanese, and lots are skipped). A full refresh takes about 2 minutes per set. The Refresh prices button at the top updates only the set you're viewing.</div>
   </div>
 </dialog>
 
@@ -597,7 +607,8 @@ const SKINS = [
   ["graphite","Graphite","Neutral charcoal, lets the cards pop",["#111213","#9FAABC","#D6B25E","#7EC8D8"]]
 ];
 const RSYM = {"Common":"●","Uncommon":"◆","Rare":"★","Rare Holo":"★ Holo","Rare Shining":"★ Shining","Rare Secret":"★ Secret"};
-const state = { hist:{}, histDates:[], view:"cards", spend:null, sid:null, set:{}, cards:[], own:{}, prices:{}, info:{}, updated:"", sets:[], catalog:null,
+const DEFAULT_SLOTS=[{t:"raw",c:"LP"},{t:"raw",c:"MP"}];
+const state = { slots:DEFAULT_SLOTS, slotOpts:null, hist:{}, histDates:[], view:"cards", spend:null, sid:null, set:{}, cards:[], own:{}, prices:{}, info:{}, updated:"", sets:[], catalog:null,
                 filter:"all", rar:"", sort:"num", q:"", ready:false, open:null };
 const $ = id => document.getElementById(id);
 const money = v => v==null ? "–" : "$"+v.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -619,7 +630,7 @@ const rec = n => state.own[n] || {};
 const qty = n => Number(rec(n).qty)||0;
 const basePrice = n => (state.prices[n]||[0])[0] || 0;
 const condPrice = (n,c) => { const i=state.info[n]; const v=i && i.cond && i.cond[c]; return v ? v[0] : 0; };
-// Owned cards with a condition set use that condition's average; everything else uses the LP/MP average.
+// Owned cards with a condition set use that condition's average; everything else uses the main price from Settings.
 const isPrivate = () => document.documentElement.hasAttribute("data-private");
 // In privacy mode every card shows the same market price, so condition-based values can't hint at ownership.
 const priceOf = n => (!isPrivate() && qty(n)>0 && rec(n).cond && condPrice(n,rec(n).cond)) || basePrice(n);
@@ -782,19 +793,39 @@ function quickToggle(n){
 }
 
 // ---------- card sheet ----------
+// ---------- price slots ----------
+const COND_NAME={NM:"Near Mint",LP:"Lightly Played",MP:"Moderately Played",HP:"Heavily Played",DMG:"Damaged"};
+const activeSlots = () => state.slots.filter(sl=>sl.t!=="none");
+const allRaw = () => activeSlots().every(sl=>sl.t==="raw");
+const slotName = sl => sl.t==="raw" ? sl.c : sl.t==="graded" ? (sl.co==="Any" ? "Graded "+sl.g : sl.co+" "+sl.g) : "";
+const slotKey = sl => sl.t==="raw" ? sl.c : sl.co+" "+sl.g;
+function slotVal(n, sl){ const i=state.info[n]||{}; return sl.t==="raw" ? (i.cond||{})[sl.c] : sl.t==="graded" ? (i.graded||{})[slotKey(sl)] : null; }
+const mainLabel = () => allRaw() ? "Combined "+activeSlots().map(slotName).join("/") : slotName(state.slots[0])+" price";
 function priceSource(n){
   const i=state.info[n];
-  if(i && i.src==="tcgplayer") return "from "+i.count+" recent sale"+(i.count===1?"":"s")+(i.last?", latest "+when(i.last):"")+". Used for set totals.";
+  const sales = i ? i.count+" recent "+"sale"+(i.count===1?"":"s") : "";
+  const late = i && i.last ? ", latest "+when(i.last) : "";
+  if(i && i.src==="pricecharting"){
+    const g=activeSlots().find(sl=>sl.t==="graded"&&slotVal(n,sl)) || state.slots[0];
+    return "from "+i.count+" recent "+slotName(g)+" sale"+(i.count===1?"":"s")+" on eBay (via PriceCharting)"+late+". Used for set totals.";
+  }
+  if(i && i.src==="tcgplayer" && !allRaw()) return "no recent "+slotName(state.slots[0])+" sales, so this uses "+slotName(activeSlots().find(sl=>sl.t==="raw")||state.slots[0])+": "+sales+late+". Used for set totals.";
+  if(i && i.src==="tcgplayer") return "from "+sales+late+". Used for set totals.";
   if(i && i.note) return i.note+".";
   return priceOf(n) ? "starting price from PriceCharting. Replaced on the next refresh." : "fills in after the next refresh.";
 }
 function lpmpBox(n){
-  const cond=(state.info[n]||{}).cond||{};
-  for(const k of ["LP","MP"]){
-    const v=cond[k];
-    $("d"+k).textContent = v ? money(v[0]) : "–";
-    $("d"+k+"s").textContent = v ? v[1]+" sale"+(v[1]===1?"":"s")+(v[2]?" · latest "+new Date(v[2]+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"}):"") : (state.info[n]&&state.info[n].cond ? "No recent sales" : "After next refresh");
-  }
+  const i=state.info[n]||{};
+  state.slots.forEach((sl,k)=>{
+    if(k===1) $("dS1box").hidden = sl.t==="none";
+    if(sl.t==="none") return;
+    const v=slotVal(n,sl), have = sl.t==="raw" ? i.cond : i.graded;
+    $("dS"+k+"k").textContent = slotName(sl)+" average";
+    $("dS"+k).textContent = v ? money(v[0]) : "–";
+    $("dS"+k+"s").textContent = v ? v[1]+" sale"+(v[1]===1?"":"s")+(v[2]?" · latest "+new Date(v[2]+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"}):"") : (have ? "No recent sales" : "After next refresh");
+  });
+  $("dBoxes").classList.toggle("one", state.slots[1].t==="none");
+  $("dPk").textContent = mainLabel();
 }
 function condOptions(n){
   const sel=$("dCond"), cur=rec(n).cond||"";
@@ -806,7 +837,7 @@ function condOptions(n){
   sel.value=cur;
   const yours=$("dYours");
   if(qty(n)>0 && cur && condPrice(n,cur)){ yours.hidden=false; yours.textContent="Your "+cur+" copy counts at "+money(condPrice(n,cur))+" in your collection value."; }
-  else if(qty(n)>0 && cur){ yours.hidden=false; yours.textContent="No recent "+cur+" sales, so your copy counts at the LP/MP average."; }
+  else if(qty(n)>0 && cur){ yours.hidden=false; yours.textContent="No recent "+cur+" sales, so your copy counts at the "+mainLabel().replace(/^Combined /,"")+" average."; }
   else yours.hidden=true;
 }
 function openCard(n){
@@ -826,7 +857,7 @@ function openCard(n){
   const s=q(state.set.name+" "+c.name+" "+n);
   [["eBay sold","https://www.ebay.com/sch/i.html?_nkw="+s+"+-1st&LH_Sold=1&LH_Complete=1"],
    ["TCGplayer","https://www.tcgplayer.com/search/pokemon/product?q="+q(c.name+" "+state.set.name)],
-   ["PriceCharting","https://www.pricecharting.com/search-products?type=prices&q="+s]]
+   ["PriceCharting",(state.info[n]||{}).pc || "https://www.pricecharting.com/search-products?type=prices&q="+s]]
    .forEach(([t,u])=>{ const a=document.createElement("a"); a.href=u; a.target="_blank"; a.rel="noopener"; a.textContent=t+" ↗"; L.append(a); });
   $("dQty").textContent=qty(n);
   $("dCond").value=r.cond||"";
@@ -1061,9 +1092,54 @@ function showNext(iso, auto){
   $("stTz").textContent = auto ? "Time zone: "+TZ.replace(/_/g," ") : "";
   $("stTime").disabled = !auto;
 }
+function slotSelect(opts, val, label){
+  const sel=document.createElement("select"); sel.setAttribute("aria-label", label);
+  opts.forEach(([v,t])=>{ const o=document.createElement("option"); o.value=v; o.textContent=t; sel.append(o); });
+  sel.value=val; return sel;
+}
+function drawSlots(){
+  const box=$("slotRows"); box.replaceChildren();
+  const o=state.slotOpts || {raw:["NM","LP","MP","HP","DMG"], graders:["PSA","BGS","CGC","SGC","TAG","ACE","Any"], grades:["10","9.5","9","8.5","8","7.5","7","6","5","4","3","2","1"]};
+  state.slots.forEach((sl,i)=>{
+    const row=document.createElement("div"); row.className="slotrow";
+    const k=document.createElement("span"); k.className="k"; k.textContent="Price "+(i+1);
+    const sels=document.createElement("div"); sels.className="sels";
+    const types=[["raw","Raw condition"],["graded","Graded"]]; if(i===1) types.push(["none","None"]);
+    const t=slotSelect(types, sl.t, "Price "+(i+1)+" type"); sels.append(t);
+    const c=slotSelect(o.raw.map(x=>[x,COND_NAME[x]?x+" · "+COND_NAME[x]:x]), sl.c||"LP", "Price "+(i+1)+" condition");
+    const co=slotSelect(o.graders.map(x=>[x,x==="Any"?"Any company":x]), sl.co||"PSA", "Price "+(i+1)+" grading company");
+    const g=slotSelect(o.grades.map(x=>[x,"Grade "+x]), sl.g||"9", "Price "+(i+1)+" grade");
+    c.hidden = sl.t!=="raw"; co.hidden = g.hidden = sl.t!=="graded";
+    sels.append(c,co,g);
+    const save=()=>{
+      const next = t.value==="raw" ? {t:"raw",c:c.value} : t.value==="graded" ? {t:"graded",co:co.value,g:g.value} : {t:"none"};
+      const slots=state.slots.slice(); slots[i]=next; saveSlots(slots);
+    };
+    [t,c,co,g].forEach(x=>x.onchange=save);
+    row.append(k,sels); box.append(row);
+  });
+}
+function saveSlots(slots){
+  const msg=$("slotMsg"); msg.textContent="Saving…";
+  fetch("api/settings",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({slots})})
+    .then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error||"Couldn't save"); return j; }))
+    .then(j=>{
+      state.slots=slots; drawSlots(); msg.replaceChildren();
+      if(j.needsRefresh){
+        msg.append("Saved. Graded prices load on the next refresh (a little slower than raw prices).");
+        const b=document.createElement("button"); b.className="btn"; b.type="button"; b.textContent="Refresh now";
+        b.onclick=()=>{ $("settings").close(); $("refresh").click(); }; msg.append(b);
+      } else msg.append("Saved. Prices updated.");
+      return state.sid && loadState();
+    })
+    .catch(e=>{ drawSlots(); msg.textContent=(e&&e.message&&e.message!=="Failed to fetch") ? e.message : "Couldn't save. Check that the container is running."; });
+}
+function getSlots(){
+  return fetch("api/settings").then(r=>r.json()).then(s=>{ if(s.slots) state.slots=s.slots; if(s.options) state.slotOpts=s.options; return s; }).catch(()=>null);
+}
 function loadSettings(){
-  $("stSaved").textContent="";
-  fetch("api/settings").then(r=>r.json()).then(s=>{
+  $("stSaved").textContent=""; $("slotMsg").textContent=""; drawSlots();
+  getSlots().then(s=>{ if(!s) throw 0; drawSlots(); return s; }).then(s=>{
     $("stAuto").checked=!!s.auto; $("stTime").value=s.time||"03:00"; showNext(s.next, s.auto);
     if(s.tz!==TZ) saveSettings({tz:TZ, offset:-new Date().getTimezoneOffset()}, true);
   }).catch(()=>{ $("stNext").textContent="Can't reach BEN."; });
@@ -1489,7 +1565,7 @@ $("dlg").addEventListener("close",()=>{ if(state.view==="stats" && state.spendSt
 header(); render();
 setPrivate(isPrivate());
 { const v=recall("nd-view"); if(v==="shop"||v==="stats") setView(v); }
-loadSets().then(()=>{
+getSlots().then(loadSets).then(()=>{
   const want=location.hash.slice(1)||recall("nd-set");
   const sid=state.sets.some(s=>s.id===want) ? want : (state.sets[0] ? state.sets[0].id : null);
   return openSet(sid);

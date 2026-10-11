@@ -7,7 +7,7 @@ A self-hosted Pokémon TCG collection tracker. One small Python server (standard
 
 - Any English set: card lists from [PokemonTCG/pokemon-tcg-data](https://github.com/PokemonTCG/pokemon-tcg-data), card images downloaded locally
 - Owned cards in color, needed cards in greyscale; tap **Need** to mark a card owned
-- Prices from recent TCGplayer sales: separate LP and MP averages (Unlimited, English), plus averages for every condition
+- Prices from recent sales, Unlimited English only: pick any two in Settings, raw conditions (NM to Damaged, from TCGplayer) or graded (PSA, BGS, CGC, SGC, TAG, ACE, from eBay sales on PriceCharting). LP and MP by default.
 - Daily automatic price refresh at a time you choose, plus a manual refresh button
 - Price history, biggest movers, shopping list with a budget
 - Purchase log with date, price, place, and seller handle (Instagram, TikTok, Whatnot, eBay, and more)
@@ -25,7 +25,7 @@ A self-hosted Pokémon TCG collection tracker. One small Python server (standard
 
 ![Privacy mode turned on](screenshots/privacy-mode.png)
 
-**Card details.** Tap a card for its LP and MP prices, copies owned, condition, purchase log with sellers, and photos of your own copy.
+**Card details.** Tap a card for its two chosen prices (LP and MP by default), copies owned, condition, purchase log with sellers, and photos of your own copy.
 
 <img src="screenshots/card-details.png" alt="Card details panel" width="360">
 

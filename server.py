@@ -22,18 +22,23 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "1.1"   # bump for every app update: 1.0 -> 1.1 for features/fixes, 2.0 for big changes
+APP_VERSION = "1.2"   # bump for every app update: 1.0 -> 1.1 for features/fixes, 2.0 for big changes
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
 SETS_DIR = os.path.join(DATA, "sets")
 SETS_FILE = os.path.join(DATA, "sets.json")
 SETTINGS = os.path.join(DATA, "settings.json")
-DEFAULT_SETTINGS = {"auto": True, "time": "03:00", "tz": "America/New_York", "offset": -240, "lastAuto": ""}
+DEFAULT_SLOTS = [{"t": "raw", "c": "LP"}, {"t": "raw", "c": "MP"}]
+DEFAULT_SETTINGS = {"auto": True, "time": "03:00", "tz": "America/New_York", "offset": -240, "lastAuto": "",
+                    "slots": DEFAULT_SLOTS}
+RAW_CONDS = ("NM", "LP", "MP", "HP", "DMG")
+GRADERS = ("PSA", "BGS", "CGC", "SGC", "TAG", "ACE", "Any")
+GRADES = ("10", "9.5", "9", "8.5", "8", "7.5", "7", "6", "5", "4", "3", "2", "1")
 CATALOG = os.path.join(DATA, "catalog.json")
 GH = "https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master"
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
-WANT_COND = ("Lightly Played", "Moderately Played")
+WANT_COND = ("Lightly Played", "Moderately Played")   # updated from the price slots at each refresh
 SALES_TO_AVERAGE = 10
 DAY = 24 * 3600
 MAX_PHOTO = 15 * 1024 * 1024
@@ -230,7 +235,9 @@ def product_id(card_id, ids):
     return None
 
 
-LP_MP_IDS = [2, 3]  # TCGplayer condition ids: 1 NM, 2 LP, 3 MP, 4 HP, 5 DMG
+LP_MP_IDS = [2, 3]  # TCGplayer condition ids: 1 NM, 2 LP, 3 MP, 4 HP, 5 DMG (updated from the price slots)
+COND_IDS = {"NM": 1, "LP": 2, "MP": 3, "HP": 4, "DMG": 5}
+COND_LONG = {"NM": "Near Mint", "LP": "Lightly Played", "MP": "Moderately Played", "HP": "Heavily Played", "DMG": "Damaged"}
 MAX_PAGES = 8
 
 
@@ -321,6 +328,199 @@ def lp_mp_average(sales):
     return avg, len(keep), keep[0].get("orderDate", "")[:10]
 
 
+# ---------- price slots (what the main price averages) ----------
+
+def clean_slots(raw):
+    """Validate the two price slots from Settings. Slot 2 may be None."""
+    out = []
+    for i, sl in enumerate((raw or [])[:2]):
+        if not isinstance(sl, dict) or sl.get("t") == "none":
+            if i == 1:
+                out.append({"t": "none"})
+                continue
+            raise ValueError("Slot 1 can't be empty")
+        if sl.get("t") == "raw" and sl.get("c") in RAW_CONDS:
+            out.append({"t": "raw", "c": sl["c"]})
+        elif sl.get("t") == "graded" and sl.get("co") in GRADERS and str(sl.get("g")) in GRADES:
+            out.append({"t": "graded", "co": sl["co"], "g": str(sl["g"])})
+        else:
+            raise ValueError("Unknown price option")
+    if not out:
+        raise ValueError("Pick at least one price option")
+    while len(out) < 2:
+        out.append({"t": "none"})
+    return out
+
+
+def slot_key(sl):
+    return sl["c"] if sl["t"] == "raw" else f"{sl['co']} {sl['g']}" if sl["t"] == "graded" else ""
+
+
+def slot_value(info_n, sl):
+    """[avg, count, latest] for one slot from a card's stored sales summaries, or None."""
+    if sl["t"] == "raw":
+        return (info_n.get("cond") or {}).get(sl["c"])
+    if sl["t"] == "graded":
+        return (info_n.get("graded") or {}).get(slot_key(sl))
+    return None
+
+
+def main_price(info_n, slots):
+    """The price used in the grid and totals. Both slots raw: their combined average. Otherwise slot 1,
+    falling back to slot 2. Returns (price, count, latest, source) or None."""
+    vals = [(sl, slot_value(info_n, sl)) for sl in slots if sl["t"] != "none"]
+    if all(sl["t"] == "raw" for sl, _ in vals):
+        got = [v for _, v in vals if v]
+        if not got:
+            return None
+        cnt = sum(v[1] for v in got)
+        return (round(sum(v[0] * v[1] for v in got) / cnt, 2), cnt, max(v[2] or "" for v in got), "tcgplayer")
+    for sl, v in vals:
+        if v:
+            return (v[0], v[1], v[2], "pricecharting" if sl["t"] == "graded" else "tcgplayer")
+    return None
+
+
+def wants_graded(slots):
+    return any(sl["t"] == "graded" for sl in slots)
+
+
+def apply_slots(slots):
+    """Point the TCGplayer sale collection at the raw conditions the slots use."""
+    global WANT_COND, LP_MP_IDS
+    raw = [sl["c"] for sl in slots if sl["t"] == "raw"] or ["LP", "MP"]
+    WANT_COND = tuple(COND_LONG[c] for c in raw)
+    LP_MP_IDS = [COND_IDS[c] for c in raw]
+
+
+def recompute_prices():
+    """Recalculate every card's main price from stored sales after the slots change (no downloads).
+    Returns True if a graded slot needs data that hasn't been downloaded yet."""
+    slots = get_settings()["slots"]
+    missing = False
+    for sid in list(sets_list()["order"]):
+        with lock:
+            prices = read_json(sdir(sid, "prices.json"), {})
+            p, info = prices.setdefault("p", {}), prices.get("info") or {}
+            for n, inf in info.items():
+                if wants_graded(slots) and "graded" not in inf:
+                    missing = True
+                mp = main_price(inf, slots)
+                if mp:
+                    p[n] = [mp[0]]
+                    inf.update(count=mp[1], last=mp[2], src=mp[3])
+            if info:
+                write_json(sdir(sid, "prices.json"), prices)
+    return missing
+
+
+# ---------- graded prices from PriceCharting sold listings ----------
+
+PC = "https://www.pricecharting.com"
+GRADE_RE = re.compile(r"\b(PSA|BGS|BECKETT|CGC|SGC|TAG|ACE)\s*(?:GEM\s*MINT\s*|GEM\s*MT\s*|MINT\s*|NM-MT\s*|PRISTINE\s*|BLACK\s*LABEL\s*)?(10|[1-9](?:\.5)?)(?![\d.])", re.I)
+SKIP_RE = re.compile(r"1st\s*ed|first\s*edition|shadowless|\blot\b|proxy|custom|reprint|japanese|korean|chinese", re.I)
+
+
+def slugify(t):
+    t = t.lower().replace("é", "e").replace("&", "and").replace("'", "")
+    return re.sub(r"[^a-z0-9]+", "-", t).strip("-")
+
+
+def pc_get(url):
+    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "text/html"})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return r.geturl(), r.read().decode("utf-8", "ignore")
+
+
+def pc_is_card(html, card):
+    m = re.search(r"<title>(.*?)</title>", html, re.S | re.I)
+    title = (m.group(1) if m else "").lower()
+    return re.search(rf"#\s*{re.escape(card['n'].lower())}(?![0-9a-z])", title) is not None
+
+
+def pc_url(sid, card, cache):
+    """The PriceCharting page for this card (Unlimited), found once and remembered."""
+    key = card["n"]
+    if key in cache:
+        return cache[key]
+    set_name = sets_list()["meta"].get(sid, {}).get("name", sid)
+    tries = [f"{PC}/game/pokemon-{slugify(set_name)}/{slugify(card['name'])}-{slugify(card['n'])}",
+             f"{PC}/game/pokemon-{slugify(set_name)}-set/{slugify(card['name'])}-{slugify(card['n'])}"]
+    for url in tries:
+        try:
+            final, html = pc_get(url)
+            if "/game/" in final and pc_is_card(html, card):
+                cache[key] = final
+                return final
+        except urllib.error.HTTPError:
+            pass
+    # fall back to PriceCharting's own search
+    q = urllib.parse.quote_plus(f"pokemon {set_name} {card['name']} {card['n']}")
+    final, html = pc_get(f"{PC}/search-products?type=prices&q={q}")
+    if "/game/" in final and pc_is_card(html, card):
+        cache[key] = final
+        return final
+    for path in re.findall(r'href="(/game/pokemon-[^"/]+/[^"#?]+)"', html):
+        if "1st-edition" in path or "japanese" in path:
+            continue
+        if path.endswith("-" + slugify(card["n"])):
+            cache[key] = PC + path
+            return PC + path
+    cache[key] = ""
+    return ""
+
+
+def pc_sales(html):
+    """Sold listings on a PriceCharting card page: [{d, title, price}], newest first."""
+    out = []
+    for row in re.findall(r"<tr[^>]*>(.*?)</tr>", html, re.S | re.I):
+        text = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", row)).strip()
+        m = re.match(r"(\d{4}-\d{2}-\d{2}|[A-Z][a-z]{2,8}\.? \d{1,2},? \d{4})\s+(.*?)\s+\$([\d,]+\.\d{2})\b", text)
+        if m:
+            d = m.group(1)
+            if not d[0].isdigit():
+                try:
+                    d = datetime.strptime(d.replace(".", "").replace(",", "")[:3] + " " + " ".join(d.replace(",", "").split()[1:]), "%b %d %Y").strftime("%Y-%m-%d")
+                except ValueError:
+                    continue
+            out.append({"d": d, "title": m.group(2), "price": float(m.group(3).replace(",", ""))})
+    seen, uniq = set(), []
+    for x in out:
+        k = (x["d"], x["title"], x["price"])
+        if k not in seen:
+            seen.add(k)
+            uniq.append(x)
+    return sorted(uniq, key=lambda x: x["d"], reverse=True)
+
+
+def graded_groups(sales):
+    """{"PSA 9": [avg, count, latest], ..., "Any 9": [...]} from graded Unlimited sales, last 10 each."""
+    groups = {}
+    for x in sales:
+        if SKIP_RE.search(x["title"]):
+            continue
+        m = GRADE_RE.search(x["title"])
+        if not m:
+            continue
+        co = m.group(1).upper().replace("BECKETT", "BGS")
+        g = m.group(2)
+        for key in (f"{co} {g}", f"Any {g}"):
+            groups.setdefault(key, []).append(x)
+    out = {}
+    for key, xs in groups.items():
+        xs = sorted(xs, key=lambda x: x["d"], reverse=True)[:SALES_TO_AVERAGE]
+        out[key] = [round(sum(x["price"] for x in xs) / len(xs), 2), len(xs), xs[0]["d"]]
+    return out
+
+
+def graded_for(sid, card, cache):
+    url = pc_url(sid, card, cache)
+    if not url:
+        return None, ""
+    _, html = pc_get(url)
+    return graded_groups(pc_sales(html)), url
+
+
 def refresh_prices(sid, reason="daily"):
     with job_lock:
         if job["running"]:
@@ -332,6 +532,10 @@ def refresh_prices(sid, reason="daily"):
         job["total"] = len(cards)
         log(f"{sid}: price refresh started ({reason}).")
         ids = read_json(sdir(sid, "tcg_ids.json"), {})
+        slots = get_settings()["slots"]
+        apply_slots(slots)
+        graded_on = wants_graded(slots)
+        pc_cache = read_json(sdir(sid, "pc_urls.json"), {})
         with lock:
             prices = read_json(sdir(sid, "prices.json"), {})
         p = prices.setdefault("p", {})
@@ -340,26 +544,41 @@ def refresh_prices(sid, reason="daily"):
         for i, c in enumerate(cards):
             job["done"] = i
             n = c["n"]
+            inf = dict(info.get(n) or {})
             try:
                 pid = product_id(f"{sid}-{n}", ids)
-                if not pid:
+                if pid:
+                    inf["cond"] = by_condition(lp_mp_sales(pid))
+                else:
                     log(f"{sid}-{n}: no TCGplayer product found")
-                    continue
-                sales = lp_mp_sales(pid)
-                avg, count, last = lp_mp_average(sales)
-                cond = by_condition(sales)
-                if avg is None:
-                    info[n] = {"note": "No recent LP/MP sales; kept last price", "cond": cond}
-                    continue
-                p[n] = [avg]
-                info[n] = {"src": "tcgplayer", "count": count, "last": last, "cond": cond}
+            except Exception as e:
+                log(f"{sid}-{n}: TCGplayer: {e}")
+            if graded_on:
+                try:
+                    time.sleep(1)
+                    groups, url = graded_for(sid, c, pc_cache)
+                    if groups is not None:
+                        inf["graded"], inf["pc"] = groups, url
+                    else:
+                        inf["graded"] = {}
+                        log(f"{sid}-{n}: no PriceCharting page found")
+                except Exception as e:
+                    log(f"{sid}-{n}: PriceCharting: {e}")
+            mp = main_price(inf, slots)
+            if mp:
+                p[n] = [mp[0]]
+                inf.update(src=mp[3], count=mp[1], last=mp[2])
+                inf.pop("note", None)
                 priced += 1
                 job["priced"] = priced
-            except Exception as e:
-                log(f"{sid}-{n}: {e}")
+            else:
+                inf["note"] = "No recent sales for your price options; kept last price"
+            info[n] = inf
             time.sleep(1)
         job["done"] = len(cards)
         write_json(sdir(sid, "tcg_ids.json"), ids)
+        if graded_on:
+            write_json(sdir(sid, "pc_urls.json"), pc_cache)
         prices["lastRun"] = int(time.time())
         if priced:
             prices["updated"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
@@ -660,7 +879,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, job, cache="no-store")
         if path == "/api/settings":
             st = get_settings()
-            out = {k: st[k] for k in ("auto", "time", "tz")}
+            out = {k: st[k] for k in ("auto", "time", "tz", "slots")}
+            out["options"] = {"raw": RAW_CONDS, "graders": GRADERS, "grades": GRADES}
             out["next"] = next_run(st).isoformat() if st["auto"] else ""
             out["lastAuto"] = st.get("lastAuto", "")
             return self.send(200, out, cache="no-store")
@@ -730,6 +950,9 @@ class Handler(BaseHTTPRequestHandler):
                 st["tz"] = new["tz"]
             if "offset" in new:
                 st["offset"] = int(new["offset"])
+            slots_changed = "slots" in new
+            if slots_changed:
+                st["slots"] = clean_slots(new["slots"])
             # a new time today shouldn't be skipped just because today's run already happened earlier
             if "time" in new:
                 merged = dict(DEFAULT_SETTINGS); merged.update(st)
@@ -739,10 +962,13 @@ class Handler(BaseHTTPRequestHandler):
                     st["lastAuto"] = ""
             with lock:
                 write_json(SETTINGS, st)
-        except Exception:
-            return self.send(400, {"error": "Invalid settings"})
+        except Exception as e:
+            return self.send(400, {"error": str(e) if isinstance(e, ValueError) and str(e) else "Invalid settings"})
         merged = get_settings()
-        return self.send(200, {"ok": True, "next": next_run(merged).isoformat() if merged["auto"] else ""})
+        out = {"ok": True, "next": next_run(merged).isoformat() if merged["auto"] else ""}
+        if slots_changed:
+            out["needsRefresh"] = recompute_prices()
+        return self.send(200, out)
 
     def do_DELETE(self):
         m = re.fullmatch(rf"/api/sets/({SID_RE})", self.path)
@@ -816,18 +1042,39 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def test_card(card_id):
-    ids = {}
-    pid = product_id(card_id, ids)
-    print(f"Card {card_id}: TCGplayer product id = {pid}")
-    if not pid:
+    try:
+        pid = product_id(card_id, {})
+        print(f"Card {card_id}: TCGplayer product id = {pid}")
+        if pid:
+            test_tcgplayer(pid)
+    except Exception as e:
+        print(f"Card {card_id}: couldn't reach TCGplayer: {e}")
+    sid, _, n = card_id.rpartition("-")
+    card = next((c for c in set_cards(sid) if c["n"] == n), None)
+    if not card:
         return
+    print("Graded (PriceCharting sold listings, Unlimited only):")
+    try:
+        groups, url = graded_for(sid, card, {})
+    except Exception as e:
+        print(f"  Couldn't reach PriceCharting: {e}")
+        return
+    print(f"  Page: {url or 'not found'}")
+    if url and not groups:
+        print("  No graded sales found on the page")
+    for key in sorted((groups or {}), key=lambda k: (k.startswith("Any"), k)):
+        a2, c2, d2 = groups[key]
+        print(f"  {key:<8} ${a2}  from {c2} sale{'s' if c2 != 1 else ''}, latest {d2}")
+
+
+def test_tcgplayer(pid):
     sales = lp_mp_sales(pid, verbose=True)
     print(f"Sales collected: {len(sales)}")
     for s in [x for x in sales if is_match(x)][:10]:
         print(f"  {s.get('orderDate', '')[:10]}  {s.get('condition')}  {s.get('variant')}  ${s.get('purchasePrice')}")
     avg, count, last = lp_mp_average(sales)
     print(f"LP/MP Unlimited average: {avg} from {count} sales (latest {last})")
-    print("By condition (Unlimited):")
+    print("By condition (Unlimited, TCGplayer):")
     for short, (a, c, d) in sorted(by_condition(sales).items(), key=lambda kv: list(COND_SHORT.values()).index(kv[0])):
         print(f"  {short:<4} ${a}  from {c} sale{'s' if c != 1 else ''}, latest {d}")
 
