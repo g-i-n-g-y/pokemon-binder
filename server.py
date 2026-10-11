@@ -1,0 +1,939 @@
+"""Pokemon Binder - tiny self-hosted collection tracker for BEN.
+
+- Any number of English sets, each in data/sets/<set id>/
+- Card lists come from the PokemonTCG/pokemon-tcg-data project on GitHub
+- Card images are downloaded to BEN when a set is added
+- Prices refresh once a day from TCGplayer recent sales (Unlimited, English, LP/MP)
+Python standard library only. Listens on port 8080 inside the container.
+
+Test one card's price lookup:  docker exec neo-binder python server.py --test neo4-107
+
+Updates: the latest server.py and index.html are downloaded from the public GitHub
+repository (GITHUB_REPO, default g-i-n-g-y/pokemon-binder) on every start and from the
+"Check for updates" button. No key is needed. Set GITHUB_REPO to an empty value to turn
+this off and use a folder mounted at /updates instead. GITHUB_TOKEN is optional and only
+needed for a private copy of the repository. Replaced files are kept in previous/.
+"""
+import json, os, re, shutil, sys, threading, time, urllib.error, urllib.parse, urllib.request
+from datetime import datetime, timedelta, timezone
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:  # very old Python
+    ZoneInfo = None
+
+APP = os.path.dirname(os.path.abspath(__file__))
+DATA = os.path.join(APP, "data")
+SETS_DIR = os.path.join(DATA, "sets")
+SETS_FILE = os.path.join(DATA, "sets.json")
+SETTINGS = os.path.join(DATA, "settings.json")
+DEFAULT_SETTINGS = {"auto": True, "time": "03:00", "tz": "America/New_York", "offset": -240, "lastAuto": ""}
+CATALOG = os.path.join(DATA, "catalog.json")
+GH = "https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master"
+UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
+WANT_COND = ("Lightly Played", "Moderately Played")
+SALES_TO_AVERAGE = 10
+DAY = 24 * 3600
+MAX_PHOTO = 15 * 1024 * 1024
+SID_RE = r"[a-z0-9][a-z0-9.\-]{0,40}"
+NUM_RE = r"[A-Za-z0-9\-]{1,12}"
+
+lock = threading.Lock()
+job_lock = threading.Lock()
+job = {"running": False, "set": "", "name": "", "done": 0, "total": 0, "priced": 0, "message": ""}
+img_jobs = {}
+
+
+# ---------- small helpers ----------
+
+def log(msg):
+    print(msg, flush=True)
+
+
+def read_json(path, default):
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return default
+
+
+def write_json(path, obj):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(obj, f, indent=1)
+    os.replace(tmp, path)
+
+
+def http_get(url, timeout=30):
+    req = urllib.request.Request(url, headers={"User-Agent": UA})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.read()
+
+
+def sdir(sid, *parts):
+    return os.path.join(SETS_DIR, sid, *parts)
+
+
+def num_key(n):
+    m = re.match(r"([A-Za-z]*)(\d+)", n)
+    return (m.group(1), int(m.group(2))) if m else (n, 0)
+
+
+# ---------- set catalog and card lists ----------
+
+def catalog(force=False):
+    cat = read_json(CATALOG, None)
+    if cat and not force and time.time() - cat.get("fetched", 0) < 7 * DAY:
+        return cat["sets"]
+    try:
+        raw = json.loads(http_get(f"{GH}/sets/en.json"))
+        sets = [{"id": s["id"], "name": s["name"], "series": s.get("series", ""),
+                 "printedTotal": s.get("printedTotal", 0), "total": s.get("total", 0),
+                 "releaseDate": s.get("releaseDate", "")} for s in raw]
+        write_json(CATALOG, {"fetched": time.time(), "sets": sets})
+        return sets
+    except Exception as e:
+        log(f"catalog: {e}")
+        return cat["sets"] if cat else []
+
+
+def fetch_cards(sid):
+    raw = json.loads(http_get(f"{GH}/cards/en/{sid}.json"))
+    cards = []
+    for c in raw:
+        cards.append({"n": str(c["number"]), "name": c["name"], "rarity": c.get("rarity") or "",
+                      "type": c.get("supertype", ""),
+                      "img": (c.get("images") or {}).get("large") or (c.get("images") or {}).get("small", "")})
+    cards.sort(key=lambda c: num_key(c["n"]))
+    write_json(sdir(sid, "cards.json"), cards)
+    return cards
+
+
+def set_cards(sid):
+    cards = read_json(sdir(sid, "cards.json"), None)
+    if cards is None:
+        cards = fetch_cards(sid)
+    return cards
+
+
+def sets_list():
+    return read_json(SETS_FILE, {"order": [], "meta": {}})
+
+
+def add_set(sid):
+    meta = next((s for s in catalog() if s["id"] == sid), None)
+    if not meta:
+        raise ValueError("Unknown set")
+    cards = set_cards(sid)
+    with lock:
+        sl = sets_list()
+        if sid not in sl["order"]:
+            sl["order"].append(sid)
+        sl["meta"][sid] = meta
+        write_json(SETS_FILE, sl)
+    start_images(sid)
+    threading.Thread(target=refresh_prices, args=(sid, "new set"), daemon=True).start()
+    log(f"Added set {meta['name']} ({len(cards)} cards)")
+    return meta
+
+
+def remove_set(sid):
+    with lock:
+        sl = sets_list()
+        if sid in sl["order"]:
+            sl["order"].remove(sid)
+        write_json(SETS_FILE, sl)
+
+
+# ---------- images ----------
+
+def image_path(sid, n):
+    return sdir(sid, "images", f"{n}.png")
+
+
+def fetch_image(sid, card):
+    dest = image_path(sid, card["n"])
+    if os.path.exists(dest) and os.path.getsize(dest) > 0:
+        return True
+    if not card.get("img"):
+        return False
+    try:
+        body = http_get(card["img"])
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        with open(dest + ".tmp", "wb") as f:
+            f.write(body)
+        os.replace(dest + ".tmp", dest)
+        return True
+    except Exception as e:
+        log(f"image {sid}-{card['n']}: {e}")
+        return False
+
+
+def download_images(sid):
+    try:
+        cards = set_cards(sid)
+        missing = [c for c in cards if not os.path.exists(image_path(sid, c["n"]))]
+        if not missing:
+            return
+        log(f"{sid}: downloading {len(missing)} card images...")
+        ok = 0
+        for c in missing:
+            ok += fetch_image(sid, c)
+            time.sleep(0.2)
+        log(f"{sid}: card images {ok} of {len(missing)} downloaded.")
+    finally:
+        img_jobs.pop(sid, None)
+
+
+def start_images(sid):
+    if sid in img_jobs:
+        return
+    img_jobs[sid] = True
+    threading.Thread(target=download_images, args=(sid,), daemon=True).start()
+
+
+# ---------- prices ----------
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs):
+        return None
+
+
+def product_id(card_id, ids):
+    """TCGplayer product id, found by following pokemontcg.io's price link for the card."""
+    if card_id in ids:
+        return ids[card_id]
+    opener = urllib.request.build_opener(_NoRedirect)
+    url = f"https://prices.pokemontcg.io/tcgplayer/{card_id}"
+    for _ in range(6):
+        m = re.search(r"/product/(\d+)", urllib.parse.unquote(url))
+        if m:
+            ids[card_id] = int(m.group(1))
+            return ids[card_id]
+        try:
+            r = opener.open(urllib.request.Request(url, headers={"User-Agent": UA}), timeout=20)
+            body = r.read(200000).decode("utf-8", "ignore")
+            m = re.search(r"tcgplayer\.com(?:%2F|/)product(?:%2F|/)(\d+)", body)
+            if m:
+                ids[card_id] = int(m.group(1))
+                return ids[card_id]
+            return None
+        except urllib.error.HTTPError as e:
+            loc = e.headers.get("Location")
+            if not loc:
+                return None
+            url = urllib.parse.urljoin(url, loc)
+    return None
+
+
+LP_MP_IDS = [2, 3]  # TCGplayer condition ids: 1 NM, 2 LP, 3 MP, 4 HP, 5 DMG
+MAX_PAGES = 8
+
+
+def latest_sales(pid, offset=0, conditions=None):
+    body = json.dumps({"conditions": conditions or [], "languages": [1], "variants": [],
+                       "listingType": "All", "offset": offset, "limit": 25}).encode()
+    req = urllib.request.Request(
+        f"https://mpapi.tcgplayer.com/v2/product/{pid}/latestsales", data=body,
+        headers={"User-Agent": UA, "Content-Type": "application/json", "Accept": "application/json",
+                 "Origin": "https://www.tcgplayer.com", "Referer": "https://www.tcgplayer.com/"})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return json.load(r).get("data") or []
+
+
+def is_match(s):
+    return (s.get("condition") in WANT_COND and "1st" not in str(s.get("variant", ""))
+            and isinstance(s.get("purchasePrice"), (int, float)))
+
+
+def collect_sales(pid, conditions, verbose=False):
+    """Page through recent sales until we have enough LP/MP Unlimited ones."""
+    found, seen, offset = [], set(), 0
+    for page in range(MAX_PAGES):
+        batch = latest_sales(pid, offset, conditions)
+        new = 0
+        for x in batch:
+            key = (x.get("orderDate"), x.get("purchasePrice"), x.get("condition"), x.get("variant"), x.get("title"))
+            if key not in seen:
+                seen.add(key)
+                found.append(x)
+                new += 1
+        if verbose:
+            print(f"  page {page + 1}: {len(batch)} sales ({new} new): " +
+                  ", ".join(f"{x.get('condition')} ${x.get('purchasePrice')}" for x in batch))
+        if not batch or not new or sum(map(is_match, found)) >= SALES_TO_AVERAGE:
+            break
+        offset += len(batch)
+        time.sleep(0.3)
+    return found
+
+
+COND_SHORT = {"Near Mint": "NM", "Lightly Played": "LP", "Moderately Played": "MP",
+              "Heavily Played": "HP", "Damaged": "DMG"}
+
+
+def sale_key(x):
+    return (x.get("orderDate"), x.get("purchasePrice"), x.get("condition"), x.get("variant"), x.get("title"))
+
+
+def lp_mp_sales(pid, verbose=False):
+    """All recent sales (for per-condition prices), topped up with LP/MP-only sales if there are too few."""
+    if verbose:
+        print("All conditions:")
+    sales = collect_sales(pid, None, verbose)
+    if sum(map(is_match, sales)) < SALES_TO_AVERAGE:
+        if verbose:
+            print("Topping up with LP/MP-only sales:")
+        seen = {sale_key(x) for x in sales}
+        for x in collect_sales(pid, LP_MP_IDS, verbose):
+            if sale_key(x) not in seen:
+                seen.add(sale_key(x))
+                sales.append(x)
+    return sales
+
+
+def by_condition(sales):
+    """{"NM": [avg, count, latest date], ...} from Unlimited sales, last 10 per condition."""
+    groups = {}
+    for x in sales:
+        short = COND_SHORT.get(x.get("condition"))
+        if short and "1st" not in str(x.get("variant", "")) and isinstance(x.get("purchasePrice"), (int, float)):
+            groups.setdefault(short, []).append(x)
+    out = {}
+    for short, xs in groups.items():
+        xs.sort(key=lambda x: x.get("orderDate", ""), reverse=True)
+        xs = xs[:SALES_TO_AVERAGE]
+        out[short] = [round(sum(x["purchasePrice"] for x in xs) / len(xs), 2), len(xs), xs[0].get("orderDate", "")[:10]]
+    return out
+
+
+def lp_mp_average(sales):
+    keep = [s for s in sales if is_match(s)]
+    keep.sort(key=lambda s: s.get("orderDate", ""), reverse=True)
+    keep = keep[:SALES_TO_AVERAGE]
+    if not keep:
+        return None, 0, None
+    avg = round(sum(s["purchasePrice"] for s in keep) / len(keep), 2)
+    return avg, len(keep), keep[0].get("orderDate", "")[:10]
+
+
+def refresh_prices(sid, reason="daily"):
+    with job_lock:
+        if job["running"]:
+            return False
+        name = sets_list()["meta"].get(sid, {}).get("name", sid)
+        job.update(running=True, set=sid, name=name, done=0, total=0, priced=0, message="")
+    try:
+        cards = set_cards(sid)
+        job["total"] = len(cards)
+        log(f"{sid}: price refresh started ({reason}).")
+        ids = read_json(sdir(sid, "tcg_ids.json"), {})
+        with lock:
+            prices = read_json(sdir(sid, "prices.json"), {})
+        p = prices.setdefault("p", {})
+        info = prices.setdefault("info", {})
+        priced = 0
+        for i, c in enumerate(cards):
+            job["done"] = i
+            n = c["n"]
+            try:
+                pid = product_id(f"{sid}-{n}", ids)
+                if not pid:
+                    log(f"{sid}-{n}: no TCGplayer product found")
+                    continue
+                sales = lp_mp_sales(pid)
+                avg, count, last = lp_mp_average(sales)
+                cond = by_condition(sales)
+                if avg is None:
+                    info[n] = {"note": "No recent LP/MP sales; kept last price", "cond": cond}
+                    continue
+                p[n] = [avg]
+                info[n] = {"src": "tcgplayer", "count": count, "last": last, "cond": cond}
+                priced += 1
+                job["priced"] = priced
+            except Exception as e:
+                log(f"{sid}-{n}: {e}")
+            time.sleep(1)
+        job["done"] = len(cards)
+        write_json(sdir(sid, "tcg_ids.json"), ids)
+        prices["lastRun"] = int(time.time())
+        if priced:
+            prices["updated"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        with lock:
+            write_json(sdir(sid, "prices.json"), prices)
+            snapshot_history(sid, prices)
+        job["message"] = f"{name}: updated {priced} of {len(cards)} prices."
+        log(f"{sid}: price refresh done, {priced} of {len(cards)} priced.")
+    except Exception as e:
+        job["message"] = f"Price refresh failed: {e}"
+        log(f"{sid}: price refresh failed: {e}")
+    finally:
+        job["running"] = False
+    return True
+
+
+def get_settings():
+    st = dict(DEFAULT_SETTINGS)
+    st.update(read_json(SETTINGS, {}))
+    return st
+
+
+def local_now(st):
+    """Current time in the time zone chosen in Settings (falls back to the saved UTC offset)."""
+    if ZoneInfo:
+        try:
+            return datetime.now(ZoneInfo(st["tz"]))
+        except Exception:
+            pass
+    return datetime.now(timezone(timedelta(minutes=int(st.get("offset", 0)))))
+
+
+def next_run(st):
+    now = local_now(st)
+    h, m = map(int, st["time"].split(":"))
+    run = now.replace(hour=h, minute=m, second=0, microsecond=0)
+    if now >= run or st.get("lastAuto") == now.strftime("%Y-%m-%d"):
+        run += timedelta(days=1)
+    return run
+
+
+def refresh_all(reason):
+    for sid in list(sets_list()["order"]):
+        while job["running"]:
+            time.sleep(15)
+        refresh_prices(sid, reason)
+
+
+# ---------- price history, purchases, spending ----------
+
+def today_local():
+    return local_now(get_settings()).strftime("%Y-%m-%d")
+
+
+def snapshot_history(sid, prices=None):
+    """Save today's LP/MP price for every card (one entry per day; the latest refresh wins)."""
+    prices = prices if prices is not None else read_json(sdir(sid, "prices.json"), {})
+    p = prices.get("p") or {}
+    if not p:
+        return
+    hist = read_json(sdir(sid, "history.json"), {})
+    hist[today_local()] = {n: v[0] for n, v in p.items() if v and isinstance(v[0], (int, float))}
+    write_json(sdir(sid, "history.json"), hist)
+
+
+def migrate_purchases(sid):
+    """Older records kept one 'cost' number; turn it into an undated purchase."""
+    with lock:
+        coll = read_json(sdir(sid, "collection.json"), {})
+        changed = False
+        for rec in coll.values():
+            if not isinstance(rec, dict):
+                continue
+            if "cost" in rec:
+                cost = rec.pop("cost")
+                if isinstance(cost, (int, float)) and cost > 0 and not rec.get("purchases"):
+                    rec["purchases"] = [{"d": "", "price": cost, "where": ""}]
+                changed = True
+            # copies owned always equals the number of purchases; pad older cards with "before tracking" rows
+            buys = [b for b in (rec.get("purchases") or []) if isinstance(b, dict)]
+            q = int(rec.get("qty") or 0)
+            if q > len(buys):
+                buys = [{"d": "", "price": None, "where": ""} for _ in range(q - len(buys))] + buys
+            if rec.get("purchases") != buys or q != len(buys):
+                rec["purchases"] = buys
+                rec["qty"] = len(buys)
+                changed = True
+        if changed:
+            write_json(sdir(sid, "collection.json"), coll)
+
+
+def spending():
+    sl = sets_list()
+    log_rows, months = [], {}
+    total_spent = 0.0
+    undated = 0
+    owned = []  # (sid, n, qty, acquired date or "", ratio)
+    dates = set()
+    hist_by_set, cur_by_set = {}, {}
+    for sid in sl["order"]:
+        coll = read_json(sdir(sid, "collection.json"), {})
+        cards = {c["n"]: c["name"] for c in (read_json(sdir(sid, "cards.json"), None) or [])}
+        prices = read_json(sdir(sid, "prices.json"), {})
+        base = {n: v[0] for n, v in (prices.get("p") or {}).items() if v}
+        info = prices.get("info") or {}
+        hist = read_json(sdir(sid, "history.json"), {})
+        hist_by_set[sid] = sorted(hist.items())
+        cur_by_set[sid] = base
+        dates.update(hist.keys())
+        set_name = sl["meta"].get(sid, {}).get("name", sid)
+        for n, rec in coll.items():
+            if not isinstance(rec, dict):
+                continue
+            buys = [b for b in rec.get("purchases") or [] if isinstance(b, dict)]
+            for b in buys:
+                price = b.get("price") if isinstance(b.get("price"), (int, float)) else 0
+                d = b.get("d") or ""
+                total_spent += price
+                if d:
+                    m = months.setdefault(d[:7], {"m": d[:7], "spent": 0.0, "count": 0})
+                    m["spent"] += price
+                    m["count"] += 1
+                else:
+                    undated += 1
+                log_rows.append({"set": sid, "setName": set_name, "n": n, "name": cards.get(n, n),
+                                 "d": d, "where": b.get("where", ""), "price": price,
+                                 "seller": b.get("seller") if isinstance(b.get("seller"), dict) else None})
+            q = rec.get("qty") or 0
+            if q > 0:
+                dated = sorted(b["d"] for b in buys if b.get("d"))
+                cond = rec.get("cond")
+                cp = ((info.get(n) or {}).get("cond") or {}).get(cond) if cond else None
+                b0 = base.get(n) or 0
+                ratio = (cp[0] / b0) if (cp and b0) else 1.0
+                owned.append((sid, n, q, dated[0] if dated else "", ratio))
+
+    def price_at(sid, n, d):
+        val = None
+        for hd, snap in hist_by_set[sid]:
+            if hd > d:
+                break
+            if n in snap:
+                val = snap[n]
+        return val if val is not None else cur_by_set[sid].get(n, 0)
+
+    today = today_local()
+    dates.add(today)
+    timeline = []
+    for d in sorted(dates):
+        spent = sum(r["price"] for r in log_rows if not r["d"] or r["d"] <= d)
+        value = 0.0
+        for sid, n, q, acq, ratio in owned:
+            if not acq or acq <= d:
+                p = cur_by_set[sid].get(n, 0) if d == today else price_at(sid, n, d)
+                value += p * ratio * q
+        timeline.append({"d": d, "spent": round(spent, 2), "value": round(value, 2)})
+    log_rows.sort(key=lambda r: (r["d"] or "0000"), reverse=True)
+    return {"totals": {"spent": round(total_spent, 2), "value": timeline[-1]["value"] if timeline else 0,
+                       "undated": undated, "purchases": len(log_rows)},
+            "months": [dict(m, spent=round(m["spent"], 2)) for m in sorted(months.values(), key=lambda m: m["m"])],
+            "timeline": timeline, "log": log_rows, "today": today}
+
+
+def scheduler():
+    time.sleep(15)
+    ticks = 0
+    while True:
+        if ticks % 30 == 0:
+            for sid in list(sets_list()["order"]):
+                start_images(sid)  # retries any images that failed earlier
+        ticks += 1
+        try:
+            st = get_settings()
+            now = local_now(st)
+            today = now.strftime("%Y-%m-%d")
+            h, m = map(int, st["time"].split(":"))
+            due = now.replace(hour=h, minute=m, second=0, microsecond=0)
+            if st["auto"] and now >= due and st.get("lastAuto") != today:
+                st["lastAuto"] = today
+                with lock:
+                    cur = read_json(SETTINGS, {})
+                    cur["lastAuto"] = today
+                    write_json(SETTINGS, cur)
+                log(f"Scheduled price refresh ({st['time']} {st['tz']}).")
+                refresh_all("scheduled")
+        except Exception as e:
+            log(f"scheduler: {e}")
+        time.sleep(60)
+
+
+# ---------- first start: move the original Neo Destiny files into data/sets/neo4 ----------
+
+def setup():
+    os.makedirs(SETS_DIR, exist_ok=True)
+    old = {"collection.json": "collection.json", "prices.json": "prices.json",
+           "tcg_ids.json": "tcg_ids.json", "images": "images", "photos": "photos"}
+    if os.path.exists(os.path.join(DATA, "collection.json")) and not os.path.exists(sdir("neo4")):
+        os.makedirs(sdir("neo4"), exist_ok=True)
+        for src, dst in old.items():
+            if os.path.exists(os.path.join(DATA, src)):
+                shutil.move(os.path.join(DATA, src), sdir("neo4", dst))
+        # photos were saved as data/photos/<n>; keep that layout under the set
+        log("Moved Neo Destiny data into data/sets/neo4")
+    sl = sets_list()
+    if not sl["order"]:
+        # first run on a fresh install, or right after the move above
+        if not os.path.exists(sdir("neo4", "collection.json")):
+            for name, dest in (("seed_collection.json", "collection.json"), ("seed_prices.json", "prices.json")):
+                src = os.path.join(APP, name)
+                if os.path.exists(src):
+                    os.makedirs(sdir("neo4"), exist_ok=True)
+                    shutil.copy(src, sdir("neo4", dest))
+        sl = {"order": ["neo4"], "meta": {"neo4": {"id": "neo4", "name": "Neo Destiny", "series": "Neo",
+              "printedTotal": 105, "total": 113, "releaseDate": "2002/02/28"}}}
+        write_json(SETS_FILE, sl)
+
+
+def warm_up():
+    """Fetch card lists and images for every set in the binder (runs in the background)."""
+    for sid in list(sets_list()["order"]):
+        try:
+            migrate_purchases(sid)
+            if not os.path.exists(sdir(sid, "history.json")):
+                with lock:
+                    snapshot_history(sid)
+        except Exception as e:
+            log(f"{sid}: history setup: {e}")
+        try:
+            set_cards(sid)
+            start_images(sid)
+        except Exception as e:
+            log(f"{sid}: couldn't load card list yet: {e}")
+    catalog()
+
+
+# ---------- web ----------
+
+class Handler(BaseHTTPRequestHandler):
+    def log_message(self, fmt, *args):
+        pass
+
+    def send(self, code, body=b"", ctype="application/json", cache=None):
+        if isinstance(body, (dict, list)):
+            body = json.dumps(body).encode()
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(body)))
+        if cache:
+            self.send_header("Cache-Control", cache)
+        self.end_headers()
+        self.wfile.write(body)
+
+    def send_file(self, path, ctype, cache="max-age=604800"):
+        try:
+            with open(path, "rb") as f:
+                self.send(200, f.read(), ctype, cache)
+        except OSError:
+            self.send(404, b"not found", "text/plain")
+
+    def body(self, limit):
+        size = int(self.headers.get("Content-Length") or 0)
+        if size <= 0 or size > limit:
+            return None
+        return self.rfile.read(size)
+
+    def in_binder(self, sid):
+        return sid in sets_list()["order"]
+
+    def do_GET(self):
+        path = self.path.split("?")[0]
+        if path in ("/", "/index.html"):
+            return self.send_file(os.path.join(APP, "index.html"), "text/html; charset=utf-8", "no-cache")
+        if path == "/api/version":
+            return self.send(200, version_info(), cache="no-store")
+        if path == "/api/sets":
+            sl = sets_list()
+            out = []
+            for sid in sl["order"]:
+                m = dict(sl["meta"].get(sid, {"id": sid, "name": sid}))
+                coll = read_json(sdir(sid, "collection.json"), {})
+                m["owned"] = sum(1 for v in coll.values() if (v or {}).get("qty", 0) > 0)
+                cards = read_json(sdir(sid, "cards.json"), None)
+                m["count"] = len(cards) if cards is not None else m.get("total", 0)
+                m["images"] = sid in img_jobs
+                out.append(m)
+            return self.send(200, {"sets": out}, cache="no-store")
+        if path == "/api/catalog":
+            return self.send(200, {"sets": catalog()}, cache="no-store")
+        if path == "/api/refresh":
+            return self.send(200, job, cache="no-store")
+        if path == "/api/settings":
+            st = get_settings()
+            out = {k: st[k] for k in ("auto", "time", "tz")}
+            out["next"] = next_run(st).isoformat() if st["auto"] else ""
+            out["lastAuto"] = st.get("lastAuto", "")
+            return self.send(200, out, cache="no-store")
+        if path == "/api/spending":
+            try:
+                return self.send(200, spending(), cache="no-store")
+            except Exception as e:
+                return self.send(500, {"error": f"Couldn't work out spending: {e}"})
+        m = re.fullmatch(rf"/api/set/({SID_RE})/history", path)
+        if m:
+            return self.send(200, read_json(sdir(m.group(1), "history.json"), {}), cache="no-store")
+        m = re.fullmatch(rf"/api/set/({SID_RE})/state", path)
+        if m:
+            sid = m.group(1)
+            if not self.in_binder(sid):
+                return self.send(404, {"error": "Set not in binder"})
+            try:
+                cards = set_cards(sid)
+            except Exception as e:
+                return self.send(502, {"error": f"Couldn't load the card list: {e}"})
+            with lock:
+                body = {"set": sets_list()["meta"].get(sid, {}), "cards": cards,
+                        "collection": read_json(sdir(sid, "collection.json"), {}),
+                        "prices": read_json(sdir(sid, "prices.json"), {})}
+            return self.send(200, body, cache="no-store")
+        m = re.fullmatch(rf"/set/({SID_RE})/img/({NUM_RE})\.png", path)
+        if m:
+            return self.send_file(image_path(m.group(1), m.group(2)), "image/png")
+        m = re.fullmatch(rf"/set/({SID_RE})/photo/({NUM_RE})(?:/(back))?", path)
+        if m:
+            name = m.group(2) + ("_back" if m.group(3) else "")
+            meta = read_json(sdir(m.group(1), "photos", name + ".json"), {})
+            return self.send_file(sdir(m.group(1), "photos", name), meta.get("type", "image/jpeg"), "no-cache")
+        self.send(404, b"not found", "text/plain")
+
+    def do_PUT(self):
+        if self.path == "/api/settings":
+            return self.do_PUT_settings()
+        m = re.fullmatch(rf"/api/set/({SID_RE})/card/({NUM_RE})", self.path)
+        raw = self.body(64 * 1024) if m else None
+        if not m or raw is None or not self.in_binder(m.group(1)):
+            return self.send(400, {"error": "bad request"})
+        try:
+            rec = json.loads(raw)
+            assert isinstance(rec, dict)
+        except Exception:
+            return self.send(400, {"error": "bad json"})
+        sid, n = m.groups()
+        with lock:
+            coll = read_json(sdir(sid, "collection.json"), {})
+            coll[n] = rec
+            write_json(sdir(sid, "collection.json"), coll)
+        self.send(200, {"ok": True})
+
+    def do_PUT_settings(self):
+        raw = self.body(4096)
+        try:
+            new = json.loads(raw or b"{}")
+            st = read_json(SETTINGS, {})
+            if "auto" in new:
+                st["auto"] = bool(new["auto"])
+            if "time" in new:
+                assert re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", new["time"])
+                st["time"] = new["time"]
+            if "tz" in new:
+                assert re.fullmatch(r"[A-Za-z_]+(/[A-Za-z_+\-]+){0,2}", new["tz"])
+                st["tz"] = new["tz"]
+            if "offset" in new:
+                st["offset"] = int(new["offset"])
+            # a new time today shouldn't be skipped just because today's run already happened earlier
+            if "time" in new:
+                merged = dict(DEFAULT_SETTINGS); merged.update(st)
+                now = local_now(merged)
+                h, m = map(int, merged["time"].split(":"))
+                if now < now.replace(hour=h, minute=m, second=0, microsecond=0):
+                    st["lastAuto"] = ""
+            with lock:
+                write_json(SETTINGS, st)
+        except Exception:
+            return self.send(400, {"error": "Invalid settings"})
+        merged = get_settings()
+        return self.send(200, {"ok": True, "next": next_run(merged).isoformat() if merged["auto"] else ""})
+
+    def do_DELETE(self):
+        m = re.fullmatch(rf"/api/sets/({SID_RE})", self.path)
+        if not m:
+            return self.send(400, {"error": "bad request"})
+        remove_set(m.group(1))
+        self.send(200, {"ok": True})
+
+    def do_POST(self):
+        path = self.path.split("?")[0]
+        if path == "/api/sets":
+            raw = self.body(4096)
+            try:
+                sid = json.loads(raw or b"{}").get("id", "")
+                assert re.fullmatch(SID_RE, sid)
+                meta = add_set(sid)
+            except urllib.error.URLError as e:
+                return self.send(502, {"error": f"Couldn't download the card list: {e}"})
+            except Exception as e:
+                return self.send(400, {"error": str(e) or "Couldn't add that set"})
+            return self.send(200, meta)
+        if path == "/api/update":
+            if not GH_REPO and not os.path.isdir(UPDATES):
+                return self.send(400, {"error": "Updates aren't set up yet"})
+            installed = update_from_github() if GH_REPO else install_files(UPDATES, "the updates folder")
+            if GH_REPO and update_status["error"]:
+                return self.send(502, {"error": update_status["error"]})
+            restarting = "server.py" in installed
+            self.send(200, {"installed": installed, "restarting": restarting, "commit": update_status["commit"]})
+            if restarting:
+                threading.Thread(target=restart_self, args=(1,), daemon=True).start()
+            return
+        if path == "/api/refresh":
+            raw = self.body(4096)
+            sid = json.loads(raw or b"{}").get("set", "") if raw else ""
+            if not job["running"] and sid and self.in_binder(sid):
+                threading.Thread(target=refresh_prices, args=(sid, "manual"), daemon=True).start()
+                time.sleep(0.2)
+            return self.send(200, job)
+        m = re.fullmatch(rf"/api/set/({SID_RE})/photo/({NUM_RE})(?:/(back))?", path)
+        ctype = self.headers.get("Content-Type", "")
+        if not m or not ctype.startswith("image/") or not self.in_binder(m.group(1)):
+            return self.send(400, {"error": "bad request"})
+        raw = self.body(MAX_PHOTO)
+        if raw is None:
+            return self.send(413, {"error": "too large"})
+        sid, n, back = m.groups()
+        name = n + ("_back" if back else "")
+        os.makedirs(sdir(sid, "photos"), exist_ok=True)
+        with open(sdir(sid, "photos", name), "wb") as f:
+            f.write(raw)
+        write_json(sdir(sid, "photos", name + ".json"), {"type": ctype})
+        self.send(200, {"v": int(time.time())})
+
+
+def test_card(card_id):
+    ids = {}
+    pid = product_id(card_id, ids)
+    print(f"Card {card_id}: TCGplayer product id = {pid}")
+    if not pid:
+        return
+    sales = lp_mp_sales(pid, verbose=True)
+    print(f"Sales collected: {len(sales)}")
+    for s in [x for x in sales if is_match(x)][:10]:
+        print(f"  {s.get('orderDate', '')[:10]}  {s.get('condition')}  {s.get('variant')}  ${s.get('purchasePrice')}")
+    avg, count, last = lp_mp_average(sales)
+    print(f"LP/MP Unlimited average: {avg} from {count} sales (latest {last})")
+    print("By condition (Unlimited):")
+    for short, (a, c, d) in sorted(by_condition(sales).items(), key=lambda kv: list(COND_SHORT.values()).index(kv[0])):
+        print(f"  {short:<4} ${a}  from {c} sale{'s' if c != 1 else ''}, latest {d}")
+
+
+UPDATES = os.environ.get("BINDER_UPDATES", "/updates")
+UPDATE_FILES = ("server.py", "index.html")
+GH_REPO = os.environ.get("GITHUB_REPO", "g-i-n-g-y/pokemon-binder")
+GH_BRANCH = os.environ.get("GITHUB_BRANCH", "main")
+GH_TOKEN = os.environ.get("GITHUB_TOKEN", "").strip()
+VERSION_FILE = os.path.join(APP, ".version.json")
+update_status = {"source": "", "commit": "", "checked": "", "error": ""}
+
+
+def same_file(a, b):
+    try:
+        with open(a, "rb") as fa, open(b, "rb") as fb:
+            return fa.read() == fb.read()
+    except OSError:
+        return False
+
+
+def install_files(folder, label):
+    """Copy changed program files from `folder` into the app. Returns the list of files installed."""
+    installed = []
+    new_server = os.path.join(folder, "server.py")
+    if os.path.isfile(new_server) and not same_file(new_server, os.path.join(APP, "server.py")):
+        try:
+            with open(new_server) as f:
+                compile(f.read(), new_server, "exec")
+        except SyntaxError as e:
+            # skip the whole update so the page and server never end up mismatched
+            log(f"Update skipped: the new server.py has an error on line {e.lineno}. Still running the old version.")
+            return installed
+    for name in UPDATE_FILES:
+        src, dst = os.path.join(folder, name), os.path.join(APP, name)
+        if not os.path.isfile(src) or same_file(src, dst):
+            continue
+        prev = os.path.join(APP, "previous")
+        os.makedirs(prev, exist_ok=True)
+        if os.path.exists(dst):
+            shutil.copy2(dst, os.path.join(prev, name))
+        shutil.copyfile(src, dst + ".tmp")
+        os.replace(dst + ".tmp", dst)
+        installed.append(name)
+    if installed:
+        log(f"Installed update from {label}: " + ", ".join(installed) + " (old copies saved in previous/)")
+    return installed
+
+
+def gh_get(path, accept):
+    headers = {"Accept": accept, "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "pokemon-binder"}
+    if GH_TOKEN:  # only for a private copy of the repository
+        headers["Authorization"] = f"Bearer {GH_TOKEN}"
+    req = urllib.request.Request(f"https://api.github.com/repos/{GH_REPO}/{path}", headers=headers)
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return r.read()
+
+
+def update_from_github():
+    """Download server.py and index.html from GitHub and install any that changed."""
+    update_status.update(source="github", checked=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), error="")
+    try:
+        sha = gh_get(f"commits/{GH_BRANCH}", "application/vnd.github.sha").decode().strip()
+        stage = os.path.join(APP, ".incoming")
+        os.makedirs(stage, exist_ok=True)
+        for name in UPDATE_FILES:
+            body = gh_get(f"contents/{name}?ref={sha}", "application/vnd.github.raw")
+            with open(os.path.join(stage, name), "wb") as f:
+                f.write(body)
+        installed = install_files(stage, f"GitHub ({sha[:7]})")
+        # only record the commit if the new server.py was actually accepted
+        if same_file(os.path.join(stage, "server.py"), os.path.join(APP, "server.py")):
+            write_json(VERSION_FILE, {"commit": sha, "installed": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
+        update_status["commit"] = read_json(VERSION_FILE, {}).get("commit", "")
+        return installed
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            msg = "Repository " + GH_REPO + " wasn't found. It may still be private"
+        elif e.code in (403, 429) and not GH_TOKEN:
+            msg = "GitHub's hourly limit for update checks was reached. Try again in an hour"
+        elif e.code == 401:
+            msg = "GitHub key was rejected (it may have expired)"
+        else:
+            msg = f"GitHub error {e.code}"
+        update_status["error"] = msg
+        log(f"Update check: {msg}")
+    except Exception as e:
+        update_status["error"] = f"Couldn't reach GitHub ({e.__class__.__name__})"
+        log(f"Update check: couldn't reach GitHub: {e}")
+    return []
+
+
+def apply_updates():
+    """Check for updates. GitHub is used when a key is set; otherwise the /updates drop folder.
+    Returns True if server.py changed."""
+    update_status["commit"] = read_json(VERSION_FILE, {}).get("commit", "")
+    if GH_REPO:
+        return "server.py" in update_from_github()
+    if os.path.isdir(UPDATES):
+        update_status.update(source="folder", checked=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), error="")
+        return "server.py" in install_files(UPDATES, "the updates folder")
+    return False
+
+
+def restart_self(delay=0):
+    if delay:
+        time.sleep(delay)
+    log("Restarting with the new server.py...")
+    os.execv(sys.executable, [sys.executable, "-u", os.path.abspath(__file__)])
+
+
+def version_info():
+    out = {}
+    for name in UPDATE_FILES:
+        try:
+            out[name] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(os.path.getmtime(os.path.join(APP, name))))
+        except OSError:
+            out[name] = ""
+    out["updatesFolder"] = os.path.isdir(UPDATES)
+    out["github"] = bool(GH_REPO)
+    out["repo"] = GH_REPO
+    out.update({k: update_status[k] for k in ("source", "commit", "checked", "error")})
+    return out
+
+
+if __name__ == "__main__":
+    if len(sys.argv) == 3 and sys.argv[1] == "--test":
+        test_card(sys.argv[2] if "-" in sys.argv[2] else f"neo4-{sys.argv[2]}")
+        sys.exit(0)
+    if apply_updates():
+        restart_self()
+    setup()
+    threading.Thread(target=warm_up, daemon=True).start()
+    threading.Thread(target=scheduler, daemon=True).start()
+    log("Pokemon Binder running on port 8080")
+    ThreadingHTTPServer(("0.0.0.0", 8080), Handler).serve_forever()

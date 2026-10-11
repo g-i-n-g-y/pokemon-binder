@@ -1,0 +1,1375 @@
+<!doctype html>
+<html lang="en" data-skin="night">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Pokémon Binder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script>try{var s=localStorage.getItem("nd-skin");if(s)document.documentElement.dataset.skin=s;}catch(e){}</script>
+<style>
+/* Layout: a binder page. Summary strip, filter bar, then a grid of card sleeves; side sheets for one card and for settings. Dark themes only. */
+:root{
+  color-scheme:dark;
+  --f-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --good:#5BC489; --bad:#EE7D7D;
+  /* Night (default) */
+  --bg:#15121E; --surface:#1F1B2B; --ink:#EEEAF6; --muted:#A39CB8; --line:#342E45; --sleeve:#262134;
+  --light:#E2B04A; --light-soft:#3A3020; --dark:#A88BEA; --dark-soft:#2D2545; --shine:#5CC3CC; --shine-soft:#1C3236;
+}
+:root[data-skin="ember"]{
+  --bg:#18110F; --surface:#231915; --ink:#F4E9E1; --muted:#B79F91; --line:#3E2D26; --sleeve:#2D201B;
+  --light:#F0A23B; --light-soft:#3B2A18; --dark:#E2734D; --dark-soft:#3A221B; --shine:#E8C547; --shine-soft:#35301A;
+}
+:root[data-skin="abyss"]{
+  --bg:#0D1618; --surface:#142124; --ink:#E3F1F2; --muted:#8FB0B4; --line:#24383C; --sleeve:#1A2B2F;
+  --light:#E7C15A; --light-soft:#33301E; --dark:#64B9CB; --dark-soft:#173238; --shine:#7FE0C8; --shine-soft:#183830;
+}
+:root[data-skin="graphite"]{
+  --bg:#111213; --surface:#1A1C1E; --ink:#ECECEC; --muted:#9A9EA3; --line:#2E3134; --sleeve:#222528;
+  --light:#D6B25E; --light-soft:#302B1E; --dark:#9FAABC; --dark-soft:#262A31; --shine:#7EC8D8; --shine-soft:#1E2C30;
+}
+:root[data-skin="haunter"]{
+  --bg:#150F1C; --surface:#20172A; --ink:#F1E8F7; --muted:#B19EC1; --line:#3A2B48; --sleeve:#2A1F36;
+  --light:#F2C14E; --light-soft:#3A3020; --dark:#C882F0; --dark-soft:#35234A; --shine:#F07FB6; --shine-soft:#3D1F30;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:20px;padding-block:28px 64px;display:flex;flex-direction:column;gap:22px}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--dark);outline-offset:2px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(30px,5vw,46px);line-height:1;margin:4px 0 0;letter-spacing:-.02em;text-wrap:balance}
+h1 .l{color:var(--light)} h1 .d{color:var(--dark)}
+.actions{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.actions .row{display:flex;gap:8px;align-items:center}
+.sync{font-size:13px;color:var(--muted);text-align:right}
+.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.icon-btn svg{width:20px;height:20px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.stat .k{font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.stat .v{font-family:var(--f-display);font-weight:700;font-size:26px;font-variant-numeric:tabular-nums;line-height:1.1}
+.stat .s{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.bar{height:6px;border-radius:3px;background:var(--sleeve);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--light),var(--dark));width:0}
+.pos{color:var(--good)} .neg{color:var(--bad)}
+.tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:none;padding:8px 14px;font:inherit;font-size:14px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.tools select,.tools input{font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);min-width:0}
+.tools input[type=search]{flex:1 1 180px}
+.count{font-size:13px;color:var(--muted);margin-left:auto}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px}
+.sleeve{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;cursor:pointer;text-align:left;font:inherit;color:inherit;transition:transform .12s ease,box-shadow .12s ease}
+.sleeve:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.35)}
+.sleeve.need{background:transparent;border-style:dashed}
+.sleeve.need .face{filter:grayscale(1);opacity:.7}
+.sleeve.need:hover .face{opacity:.9}
+.face{aspect-ratio:63/88;max-width:100%;border-radius:7px;background:var(--sleeve);display:flex;flex-direction:column;justify-content:space-between;padding:10px;overflow:hidden;position:relative;border:3px solid var(--sleeve)}
+.face img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.face.t-dark{background:var(--dark-soft);border-color:var(--dark)}
+.face.t-light{background:var(--light-soft);border-color:var(--light)}
+.face.t-shine{background:var(--shine-soft);border-color:var(--shine)}
+.face .no{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.face .nm{font-family:var(--f-display);font-weight:700;font-size:17px;line-height:1.1;text-wrap:balance}
+.face .rar{font-family:var(--f-mono);font-size:12px}
+.meta{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+.price{font-family:var(--f-mono);font-weight:500;font-variant-numeric:tabular-nums}
+.tag{font-size:11px;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.tag.own{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button.tag{font-family:inherit;background:none;cursor:pointer;padding:4px 10px;line-height:1.3}
+button.tag.own{background:var(--ink)}
+button.tag:not(.own):hover{border-color:var(--ink);color:var(--ink)}
+.sleeve .ed{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:-2px}
+.empty{padding:40px 16px;text-align:center;color:var(--muted)}
+dialog{border:0;padding:0;margin:0 0 0 auto;height:100%;max-height:100%;width:min(440px,100%);background:var(--surface);color:var(--ink)}
+dialog::backdrop{background:rgba(5,4,8,.6)}
+.sheet{display:flex;flex-direction:column;gap:18px;padding:22px 20px 28px}
+.sheet h2{font-family:var(--f-display);font-size:28px;margin:0;line-height:1.05;text-wrap:balance}
+.sheet .row{display:flex;gap:12px;flex-wrap:wrap}
+.sheet .row>*{flex:1 1 120px;min-width:0}
+.big-art{width:100%;max-width:260px;aspect-ratio:63/88;border-radius:12px;object-fit:cover;align-self:center}
+
+.box{border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.box .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.box .v{font-family:var(--f-mono);font-size:22px;font-variant-numeric:tabular-nums}
+.box .s{font-size:13px;color:var(--muted)}
+.box .yours{color:var(--ink);margin-top:4px}
+.lpmp{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:8px}
+.lpmp .half{display:flex;flex-direction:column;gap:2px;min-width:0}
+.lpmp .half+.half{border-left:1px solid var(--line);padding-left:14px}
+.lpmp .v{font-size:22px}
+.box .comb{border-top:1px solid var(--line);padding-top:8px}
+.box .comb b{font-family:var(--f-mono);font-weight:500;color:var(--ink)}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+label.f select,label.f input{font:inherit;font-size:15px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+.step{display:flex;align-items:center;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--bg)}
+.step button{border:0;background:none;font:inherit;font-size:20px;width:42px;height:40px;cursor:pointer;color:var(--ink)}
+.step output{flex:1;text-align:center;font-family:var(--f-mono);font-size:18px}
+.links{display:flex;flex-wrap:wrap;gap:8px}
+.links a,.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:14px;text-decoration:none;background:var(--bg);color:var(--ink);cursor:pointer;font-family:inherit}
+.btn:disabled{opacity:.6;cursor:default}
+.close{align-self:flex-end;border:0;background:none;font-size:15px;color:var(--muted);cursor:pointer;padding:4px;font-family:inherit}
+.photo{aspect-ratio:63/88;width:150px;max-width:100%;border-radius:8px;background:var(--sleeve);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted);text-align:center;padding:8px}
+.photo img{width:100%;height:100%;object-fit:cover}
+.note{font-size:13px;color:var(--muted)}
+.saved{font-size:13px;color:var(--good);min-height:1.4em}
+.skins{display:grid;grid-template-columns:1fr;gap:10px}
+.skin{display:flex;align-items:center;gap:14px;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--bg);color:var(--ink);cursor:pointer;font:inherit;text-align:left}
+.skin[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.skin .sw{display:flex;gap:0;border-radius:6px;overflow:hidden;flex:none}
+.skin .sw i{display:block;width:18px;height:32px}
+.skin b{font-family:var(--f-display);font-size:17px;display:block}
+.skin span{font-size:13px;color:var(--muted)}
+footer{font-size:13px;color:var(--muted);max-width:70ch}
+.views{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface);align-self:flex-start}
+.views button{border:0;background:none;padding:10px 16px;font:inherit;font-size:14px;font-weight:500;color:var(--muted);cursor:pointer}
+.views button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+#vCards,#vShop,#vStats{display:flex;flex-direction:column;gap:18px}
+#vCards[hidden],#vShop[hidden],#vStats[hidden]{display:none}
+h2.sec{font-family:var(--f-display);font-size:20px;margin:0}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.shop-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px}
+.shop-head>div{flex:1 1 320px;min-width:0}
+.shop-head .note{margin:4px 0 0;max-width:65ch}
+.budget input{width:140px}
+.budget-msg{font-size:15px;min-height:1.4em}
+.budget-msg b{font-family:var(--f-mono)}
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table.shop{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+table.shop th{font-size:12px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.shop td{padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+table.shop tr:last-child td{border-bottom:0}
+table.shop .num{text-align:right;font-family:var(--f-mono)}
+table.shop tr.fits td{background:color-mix(in srgb,var(--good) 9%,transparent)}
+table.shop tr.over td{opacity:.6}
+table.shop .c-img{width:52px}
+table.shop .thumb{width:40px;aspect-ratio:63/88;border-radius:4px;object-fit:cover;background:var(--sleeve);display:block}
+table.shop .nm{font-weight:600;cursor:pointer;background:none;border:0;color:var(--ink);font:inherit;font-weight:600;padding:0;text-align:left}
+table.shop .sub{display:block;font-size:12px;color:var(--muted);font-family:var(--f-mono)}
+table.shop .btn{padding:6px 10px;font-size:13px;white-space:nowrap}
+.trend{font-family:var(--f-mono);font-size:13px;white-space:nowrap}
+.trend.up{color:var(--good)} .trend.down{color:var(--bad)} .trend.flat{color:var(--muted)}
+.price .trend{font-size:11px;margin-left:4px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.chart{position:relative;min-height:60px}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart .empty-note{font-size:14px;color:var(--muted);padding:12px 0}
+.chart .tip{position:absolute;pointer-events:none;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;line-height:1.4;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.35);transform:translate(-50%,-110%);font-variant-numeric:tabular-nums}
+.chart .tip b{font-weight:600}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:18px;height:0;border-top:2px solid var(--dark)}
+.legend i.dash{border-top:2px dashed var(--muted)}
+.mv{display:grid;grid-template-columns:1fr auto auto;gap:4px 12px;align-items:baseline;font-variant-numeric:tabular-nums}
+.mv button{background:none;border:0;padding:0;font:inherit;color:var(--ink);text-align:left;cursor:pointer;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mv .p{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+.mv h3{grid-column:1/-1;font-family:var(--f-mono);font-size:12px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:8px 0 2px}
+.spark{margin-top:8px}
+.spark svg{display:block;width:100%;height:auto}
+.spark .cap{font-size:12px;color:var(--muted);margin-top:2px}
+.buys{display:flex;flex-direction:column;gap:8px;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.buys-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.buys-head .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.buys-head .s{font-family:var(--f-mono);font-size:14px}
+.buylist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.buylist li{display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px;font-variant-numeric:tabular-nums}
+.buylist li:last-child{border-bottom:0}
+.buylist .d{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+.buylist .w{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.buylist .pr{font-family:var(--f-mono)}
+.buylist .pr input{width:80px;font:inherit;font-family:var(--f-mono);font-size:13px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+.buylist .x{border:0;background:none;color:var(--muted);cursor:pointer;font:inherit;font-size:16px;padding:2px 6px}
+.buylist .empty{color:var(--muted);font-size:14px;display:block;padding:4px 0}
+.buyform{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.buyform label.f{min-width:0}
+.buyform input{width:100%;min-width:0;box-sizing:border-box}
+.buyform label.f:nth-child(3){grid-column:1/-1}
+.buyform .formbtns{grid-column:1/-1;display:flex;gap:8px}
+.buyform .formbtns .btn{flex:1;justify-content:center}
+.buyform select{font:inherit;font-size:15px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
+.buyform input:disabled{opacity:.5}
+.buyform.editing{outline:2px solid var(--dark);outline-offset:6px;border-radius:6px}
+.seller{display:inline-flex;align-items:center;gap:4px;color:var(--ink);text-decoration:none;border-bottom:1px dotted var(--muted);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seller:hover{border-bottom-color:var(--ink)}
+.seller .plat{font-family:var(--f-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 4px;flex:none}
+span.seller{border-bottom:0}
+.buylist li{grid-template-columns:auto minmax(0,1fr) auto auto auto}
+.buylist .meta2{display:flex;flex-direction:column;gap:2px;min-width:0}
+.buylist .ed{border:0;background:none;color:var(--muted);cursor:pointer;font:inherit;font-size:13px;padding:2px 6px}
+dialog.confirm{margin:auto;height:fit-content;max-height:calc(100% - 32px);width:min(400px,calc(100% - 32px));border-radius:14px;border:1px solid var(--line)}
+.cf{display:flex;flex-direction:column;gap:12px;padding:20px}
+.cf h2{font-family:var(--f-display);font-size:22px;margin:0}
+.cf p{margin:0;color:var(--muted);line-height:1.5}
+.cf-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
+.cf-btns .btn{padding:10px 16px}
+.btn.danger{background:var(--bad);border-color:var(--bad);color:var(--bg);font-weight:600}
+.photos{display:flex;flex-direction:column;gap:10px}
+.photos-head{display:flex;align-items:center;justify-content:space-between}
+.photos-head .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.fb{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.fb button{border:0;background:var(--bg);color:var(--muted);font-family:var(--f-mono);font-weight:500;font-size:14px;width:40px;height:34px;cursor:pointer}
+.fb button+button{border-left:1px solid var(--line)}
+.fb button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.fb button .dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--good);margin-left:3px;vertical-align:middle}
+.upd{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.toggle{display:flex;align-items:center;gap:10px;font-size:15px;cursor:pointer}
+.toggle input{width:20px;height:20px;accent-color:var(--dark)}
+label.f input[type=time]{max-width:180px}
+.title{display:flex;align-items:flex-end;gap:14px;min-width:0}
+.title>div{min-width:0}
+dialog.left{margin:0 auto 0 0}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink);justify-content:center}
+.close.back{align-self:flex-start;padding:0}
+.setlist{display:flex;flex-direction:column;gap:8px;margin-block:14px}
+.setrow{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.setrow[aria-current="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.setrow .go{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;border:0;background:none;color:var(--ink);font:inherit;text-align:left;padding:12px;cursor:pointer}
+.setrow .go b{font-family:var(--f-display);font-size:17px}
+.setrow .go span{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.setrow .rm{border:0;background:none;color:var(--muted);font:inherit;font-size:13px;padding:8px 12px;cursor:pointer;white-space:nowrap}
+.setrow .rm.confirm{color:var(--bad)}
+.mini{height:4px;border-radius:2px;background:var(--sleeve);overflow:hidden}
+.mini i{display:block;height:100%;background:linear-gradient(90deg,var(--light),var(--dark))}
+.field{font:inherit;font-size:15px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;width:100%}
+.catalog{display:flex;flex-direction:column;gap:4px}
+.catalog h3{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:14px 0 4px;font-weight:500}
+.catrow{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid var(--line)}
+.catrow div{flex:1;min-width:0}
+.catrow b{display:block;font-weight:600}
+.catrow span{font-size:13px;color:var(--muted)}
+.catrow .btn{padding:6px 12px}
+.catrow em{font-style:normal;font-size:13px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.sleeve{transition:none}.sleeve:hover{transform:none}}
+/* Phones: compact sticky top bar, 2x2 stats, two-row filters, bigger tap targets */
+@media (max-width:640px){
+  .wrap{padding-inline:16px;padding-block:0 48px;gap:16px}
+  header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);margin-inline:-16px;padding:10px 16px;flex-wrap:wrap;align-items:center;gap:6px 10px;border-bottom:1px solid var(--line)}
+  .title{flex:1 1 0;align-items:center;gap:10px}
+  .title .eyebrow{display:none}
+  h1{font-size:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0}
+  .actions{display:contents}
+  .actions .row{gap:6px}
+  #refresh{padding:8px 10px;font-size:13px}
+  .icon-btn{width:38px;height:38px}
+  .sync{order:3;flex-basis:100%;text-align:left;font-size:12px}
+  .stats{grid-template-columns:1fr 1fr;gap:8px}
+  .stat{padding:10px 12px;gap:2px}
+  .stat .k{font-size:11px}
+  .stat .v{font-size:20px}
+  .stat .s{font-size:12px}
+  .tools{gap:8px}
+  .seg{flex:1 1 100%}
+  .seg button{flex:1;padding:10px}
+  .tools select{flex:1 1 calc(50% - 4px);padding:10px 8px}
+  .tools input[type=search]{flex:1 1 100%;padding:10px}
+  .count{margin-left:0}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .sleeve{padding:8px}
+  .face .nm{font-size:15px}
+  dialog{width:100%}
+  .sheet{padding:16px 16px 32px;gap:16px}
+  .step button{width:52px;height:46px}
+  .links a,.btn{padding:10px 14px}
+  .setrow .go{padding:14px 12px}
+  .catrow{padding:10px 2px}
+  .views{align-self:stretch}
+  .views button{flex:1;padding:10px 8px}
+  table.shop th,table.shop td{padding:8px}
+  table.shop .hide-sm{display:none}
+  .stats-sum .stat .v{font-size:20px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="title">
+      <button class="icon-btn" type="button" id="menuBtn" aria-label="Your sets">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <div>
+        <div class="eyebrow" id="eyebrow">Loading…</div>
+        <h1 id="setTitle"></h1>
+      </div>
+    </div>
+    <div class="actions">
+      <div class="row">
+        <button class="btn" type="button" id="refresh">Refresh prices</button>
+        <button class="icon-btn" type="button" id="cog" aria-label="Settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        </button>
+      </div>
+      <div class="sync" id="sync">Loading your collection…</div>
+    </div>
+  </header>
+
+  <section class="stats" aria-label="Collection summary">
+    <div class="stat"><span class="k">Cards owned</span><span class="v" id="sOwned">–</span><div class="bar"><i id="sBar"></i></div><span class="s" id="sPct"></span></div>
+    <div class="stat"><span class="k">Collection value</span><span class="v" id="sValue">–</span><span class="s" id="sGain"></span></div>
+    <div class="stat"><span class="k">Cost to finish</span><span class="v" id="sNeed">–</span><span class="s" id="sNeedN"></span></div>
+    <div class="stat"><span class="k">Full set value</span><span class="v" id="sFull">–</span><span class="s" id="sUpd"></span></div>
+  </section>
+
+  <nav class="views" id="views" aria-label="Views">
+    <button type="button" data-v="cards" aria-pressed="true">Cards</button>
+    <button type="button" data-v="shop" aria-pressed="false">Shopping list</button>
+    <button type="button" data-v="stats" aria-pressed="false">Stats</button>
+  </nav>
+
+  <div id="vCards">
+  <div class="tools" role="toolbar" aria-label="Filters">
+    <div class="seg" id="fOwn">
+      <button type="button" data-v="all" aria-pressed="true">All</button>
+      <button type="button" data-v="own" aria-pressed="false">Owned</button>
+      <button type="button" data-v="need" aria-pressed="false">Need</button>
+    </div>
+    <select id="fRar" aria-label="Rarity"><option value="">All rarities</option></select>
+    <select id="fSort" aria-label="Sort">
+      <option value="num">Sort: set number</option>
+      <option value="hi">Sort: price high to low</option>
+      <option value="lo">Sort: price low to high</option>
+    </select>
+    <input type="search" id="fQ" placeholder="Search cards" aria-label="Search cards">
+    <span class="count" id="count"></span>
+  </div>
+
+  <main class="grid" id="grid"></main>
+  </div>
+
+  <section id="vShop" hidden aria-label="Shopping list">
+    <div class="shop-head">
+      <div>
+        <h2 class="sec">Shopping list</h2>
+        <p class="note">Cards you still need in this set, cheapest first. The running total shows what it costs to get every card up to that row.</p>
+      </div>
+      <label class="f budget">Budget ($)
+        <input type="number" id="shopBudget" min="0" step="1" inputmode="decimal" placeholder="50">
+      </label>
+    </div>
+    <div class="budget-msg" id="shopMsg" aria-live="polite"></div>
+    <div class="table-wrap">
+      <table class="shop" id="shopTable">
+        <thead><tr><th class="c-img"><span class="sr">Card</span></th><th>Card</th><th class="num">Price</th><th class="num hide-sm">7 days</th><th class="num">Running total</th><th><span class="sr">Actions</span></th></tr></thead>
+        <tbody id="shopBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="vStats" hidden aria-label="Stats">
+    <div class="stats stats-sum">
+      <div class="stat"><span class="k">Total spent</span><span class="v" id="tSpent">–</span><span class="s" id="tSpentN"></span></div>
+      <div class="stat"><span class="k">Current value</span><span class="v" id="tValue">–</span><span class="s" id="tGain"></span></div>
+      <div class="stat"><span class="k">This month</span><span class="v" id="tMonth">–</span><span class="s" id="tMonthN"></span></div>
+      <div class="stat"><span class="k">Average per month</span><span class="v" id="tAvg">–</span><span class="s" id="tAvgN"></span></div>
+    </div>
+    <p class="note">Spending and value cover every set in your binder.</p>
+
+    <div class="panel">
+      <h2 class="sec">Value vs. spent over time</h2>
+      <div class="chart" id="chLine"></div>
+    </div>
+
+    <div class="two">
+      <div class="panel">
+        <h2 class="sec">Spending per month</h2>
+        <div class="chart" id="chBars"></div>
+      </div>
+      <div class="panel">
+        <h2 class="sec" id="moversTitle">Biggest movers this week</h2>
+        <div id="movers"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2 class="sec">Purchase log</h2>
+      <div class="table-wrap">
+        <table class="shop log" id="logTable">
+          <thead><tr><th>Date</th><th>Card</th><th>Set</th><th>Where</th><th>Seller</th><th class="num">Paid</th></tr></thead>
+          <tbody id="logBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <footer id="foot">Prices are the average of recent Lightly Played and Moderately Played Unlimited sales on TCGplayer and refresh automatically once a day. Tap Need on a card to mark it owned, or tap the card to log what you paid, set its condition, or add a photo of your copy. Open the menu at the top left to switch sets or add a new one. Everything saves on BEN.</footer>
+</div>
+
+<dialog id="dlg" aria-labelledby="dName">
+  <div class="sheet">
+    <button class="close" type="button" id="dClose">Close ✕</button>
+    <img class="big-art" id="dArt" alt="">
+    <div>
+      <div class="eyebrow" id="dNo"></div>
+      <h2 id="dName"></h2>
+      <div class="note" id="dRar"></div>
+    </div>
+    <div class="box">
+      <div class="lpmp">
+        <div class="half"><span class="k">LP average</span><span class="v" id="dLP">–</span><span class="s" id="dLPs"></span></div>
+        <div class="half"><span class="k">MP average</span><span class="v" id="dMP">–</span><span class="s" id="dMPs"></span></div>
+      </div>
+      <span class="s comb">Combined LP/MP <b id="dP"></b> · <span id="dPsrc"></span></span>
+      <span class="s yours" id="dYours" hidden></span>
+      <div class="spark" id="dSpark"></div></div>
+    <div class="links" id="dLinks"></div>
+    <div class="row">
+      <label class="f">Copies owned
+        <div class="step"><button type="button" id="dMinus" aria-label="One fewer">−</button><output id="dQty">0</output><button type="button" id="dPlus" aria-label="One more">+</button></div>
+      </label>
+      <label class="f">Condition
+        <select id="dCond"><option value="">Not set</option><option value="NM">NM</option><option value="LP">LP</option><option value="MP">MP</option><option value="HP">HP</option><option value="DMG">DMG</option></select>
+      </label>
+    </div>
+    <div class="buys">
+      <div class="buys-head"><span class="k">Purchases</span><span class="s" id="dPaid"></span></div>
+      <ul class="buylist" id="dBuys"></ul>
+      <form class="buyform" id="dBuyForm">
+        <label class="f">Date<input type="date" id="bDate" required></label>
+        <label class="f">Paid ($)<input type="number" id="bPrice" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></label>
+        <label class="f">Where<input type="text" id="bWhere" maxlength="60" list="whereList" placeholder="eBay, card show, local shop…"></label>
+        <label class="f">Seller
+          <select id="bPlat">
+            <option value="">None</option>
+            <option value="instagram">Instagram</option>
+            <option value="tiktok">TikTok</option>
+            <option value="facebook">Facebook</option>
+            <option value="x">X (Twitter)</option>
+            <option value="whatnot">Whatnot</option>
+            <option value="ebay">eBay seller</option>
+            <option value="web">Website</option>
+            <option value="shop">Card shop / other</option>
+          </select>
+        </label>
+        <label class="f">Handle or name<input type="text" id="bHandle" maxlength="100" list="handleList" placeholder="@shopname" disabled></label>
+        <div class="formbtns">
+          <button class="btn primary" type="submit" id="bSubmit">Add purchase</button>
+          <button class="btn" type="button" id="bCancel" hidden>Cancel</button>
+        </div>
+      </form>
+      <datalist id="whereList"></datalist>
+      <datalist id="handleList"></datalist>
+    </div>
+    <label class="f">Notes<input id="dNote" type="text" maxlength="200" placeholder="Anything to remember about this card"></label>
+    <div class="photos">
+      <div class="photos-head">
+        <span class="k">Your copy</span>
+        <div class="fb" id="dSide" role="group" aria-label="Photo side">
+          <button type="button" data-side="front" aria-pressed="true" title="Front">F</button>
+          <button type="button" data-side="back" aria-pressed="false" title="Back">B</button>
+        </div>
+      </div>
+      <div class="row" style="align-items:flex-end">
+        <div class="photo" id="dPhoto">No front photo yet</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <label class="btn" for="dUp" id="dUpLabel">Add front photo</label>
+          <input id="dUp" type="file" accept="image/*" hidden>
+          <span class="note" id="dUpMsg"></span>
+        </div>
+      </div>
+    </div>
+    <div class="saved" id="dSaved" aria-live="polite"></div>
+  </div>
+</dialog>
+
+<dialog id="confirm" class="confirm" aria-labelledby="cfTitle">
+  <form method="dialog" class="cf">
+    <h2 id="cfTitle">Are you sure?</h2>
+    <p id="cfMsg"></p>
+    <div class="cf-btns">
+      <button class="btn" value="cancel" type="submit" id="cfCancel">Cancel</button>
+      <button class="btn danger" value="ok" type="submit" id="cfOk">Delete</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="drawer" class="left" aria-labelledby="drTitle">
+  <div class="sheet">
+    <button class="close" type="button" id="drClose">Close ✕</button>
+    <div id="drSets">
+      <h2 id="drTitle">Your sets</h2>
+      <div class="setlist" id="setList"></div>
+      <button class="btn primary" type="button" id="addOpen">+ Add a set</button>
+    </div>
+    <div id="drAdd" hidden>
+      <button class="close back" type="button" id="addBack">‹ Back to your sets</button>
+      <h2>Add a set</h2>
+      <input type="search" id="addQ" class="field" placeholder="Search sets, like Neo Genesis" aria-label="Search sets">
+      <div class="note" id="addMsg"></div>
+      <div class="catalog" id="catalog"></div>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="settings" aria-labelledby="stTitle">
+  <div class="sheet">
+    <button class="close" type="button" id="sClose">Close ✕</button>
+    <h2 id="stTitle">Settings</h2>
+    <div class="eyebrow">Theme</div>
+    <div class="skins" id="skins"></div>
+    <div class="eyebrow">Cards</div>
+    <label class="toggle" for="stEd"><input type="checkbox" id="stEd" checked> Show "Unlimited" under each card</label>
+    <div class="note">Card images come from the public card database, which uses 1st Edition scans for older sets. The label is a reminder that you collect Unlimited.</div>
+    <div class="eyebrow">Daily price refresh</div>
+    <label class="toggle" for="stAuto"><input type="checkbox" id="stAuto"> Refresh all sets automatically every day</label>
+    <label class="f">Refresh time
+      <input type="time" id="stTime" value="03:00" step="900">
+    </label>
+    <div class="box">
+      <span class="k">Next automatic refresh</span>
+      <span class="s" id="stNext" style="font-size:15px;color:var(--ink)">–</span>
+      <span class="s" id="stTz"></span>
+    </div>
+    <div class="saved" id="stSaved" aria-live="polite"></div>
+    <div class="eyebrow">About</div>
+    <div class="note" id="stVersion">Checking installed version…</div>
+    <div class="upd"><button class="btn" type="button" id="stUpdate">Check for updates</button><span class="note" id="stUpdMsg" aria-live="polite"></span></div>
+    <div class="note" id="setPrices">Prices are the average of the last 10 Lightly or Moderately Played Unlimited English sales on TCGplayer. A full refresh takes about 2 minutes per set. The Refresh prices button at the top updates only the set you're viewing.</div>
+  </div>
+</dialog>
+
+<script>
+const SKINS = [
+  ["night","Night","Violet and gold, the default",["#15121E","#A88BEA","#E2B04A","#5CC3CC"]],
+  ["ember","Ember","Warm reds, Dark Typhlosion style",["#18110F","#E2734D","#F0A23B","#E8C547"]],
+  ["abyss","Abyss","Deep teal, Shining Kabutops style",["#0D1618","#64B9CB","#E7C15A","#7FE0C8"]],
+  ["haunter","Haunter","Purple and pink, ghost type",["#150F1C","#C882F0","#F2C14E","#F07FB6"]],
+  ["graphite","Graphite","Neutral charcoal, lets the cards pop",["#111213","#9FAABC","#D6B25E","#7EC8D8"]]
+];
+const RSYM = {"Common":"●","Uncommon":"◆","Rare":"★","Rare Holo":"★ Holo","Rare Shining":"★ Shining","Rare Secret":"★ Secret"};
+const state = { hist:{}, histDates:[], view:"cards", spend:null, sid:null, set:{}, cards:[], own:{}, prices:{}, info:{}, updated:"", sets:[], catalog:null,
+                filter:"all", rar:"", sort:"num", q:"", ready:false, open:null };
+const $ = id => document.getElementById(id);
+const money = v => v==null ? "–" : "$"+v.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const money0 = v => "$"+Math.round(v||0).toLocaleString("en-US");
+const store = (k,v) => { try{ v===undefined ? localStorage.removeItem(k) : localStorage.setItem(k,v); }catch(_){} };
+const recall = k => { try{ return localStorage.getItem(k); }catch(_){ return null; } };
+const enc = encodeURIComponent;
+const q = s => enc(s).replace(/%20/g,"+");
+const when = s => { if(!s) return "setup"; const d=new Date(s.length===10 ? s+"T12:00:00" : s); return isNaN(d) ? s : d.toLocaleString("en-US", s.length===10 ? {month:"short",day:"numeric",year:"numeric"} : {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}); };
+const year = s => (s||"").slice(0,4);
+const numVal = n => { const m=/^([A-Za-z]*)(\d+)/.exec(n); return m ? [m[1], +m[2]] : [n,0]; };
+const byNum = (a,b) => { const x=numVal(a.n), y=numVal(b.n); return x[0]<y[0]?-1:x[0]>y[0]?1:x[1]-y[1]; };
+const printed = () => state.set.printedTotal || 0;
+const label = c => { const n=numVal(c.n); return (n[0] ? c.n : String(n[1]).padStart(3,"0")) + (printed() ? "/"+printed() : ""); };
+const isSecret = c => { const n=numVal(c.n); return printed() && !n[0] && n[1] > printed(); };
+const tint = c => /Shining|Secret|Star/.test(c.rarity) || isSecret(c) ? "t-shine" : c.name.startsWith("Dark ") ? "t-dark" : c.name.startsWith("Light ") ? "t-light" : "";
+const cat = c => (c.rarity || "Unlisted") + (c.type==="Trainer" ? " · Trainer" : c.type==="Energy" ? " · Energy" : "");
+const rec = n => state.own[n] || {};
+const qty = n => Number(rec(n).qty)||0;
+const basePrice = n => (state.prices[n]||[0])[0] || 0;
+const condPrice = (n,c) => { const i=state.info[n]; const v=i && i.cond && i.cond[c]; return v ? v[0] : 0; };
+// Owned cards with a condition set use that condition's average; everything else uses the LP/MP average.
+const priceOf = n => (qty(n)>0 && rec(n).cond && condPrice(n,rec(n).cond)) || basePrice(n);
+const base = () => "set/"+enc(state.sid);
+const todayStr = () => { const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
+const daysAgo = k => { const d=new Date(); d.setDate(d.getDate()-k); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
+const buys = n => {
+  const l=(rec(n).purchases||[]).filter(b=>b && typeof b==="object");
+  const q=Number(rec(n).qty)||0;
+  return q>l.length ? Array.from({length:q-l.length},()=>({d:"",price:null,where:""})).concat(l) : l;
+};
+const whichBuy = b => b.d ? "the purchase from "+fmtDay(b.d)+(b.price?" ("+money(Number(b.price))+")":"") : "a copy logged before tracking"+(b.price?" ("+money(Number(b.price))+")":"");
+const isBlank = b => !b.price && !b.where && !(b.seller && b.seller.h);
+// In-page confirm box. Resolves true when the person confirms.
+function askConfirm(title, msg, okLabel){
+  return new Promise(res=>{
+    const dlg=$("confirm"); $("cfTitle").textContent=title; $("cfMsg").textContent=msg; $("cfOk").textContent=okLabel||"Delete";
+    dlg.returnValue=""; dlg.onclose=()=>res(dlg.returnValue==="ok");
+    dlg.showModal(); $("cfCancel").focus();
+  });
+}
+const paidFor = n => buys(n).reduce((a,b)=>a+(Number(b.price)||0),0);
+const fmtDay = d => d ? new Date(d+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "Before tracking";
+// Price history for one card: [[date, price], ...] oldest first, ending with today's live price.
+function series(n){
+  const out=[];
+  for(const d of state.histDates){ const v=state.hist[d][n]; if(typeof v==="number") out.push([d,v]); }
+  const cur=basePrice(n), t=todayStr();
+  if(cur){ if(out.length && out[out.length-1][0]===t) out[out.length-1][1]=cur; else out.push([t,cur]); }
+  return out;
+}
+// Change over the last `days` days (uses the oldest point if history is shorter).
+function trend(n, days=7){
+  const sr=series(n); if(sr.length<2) return null;
+  const cut=daysAgo(days); let from=sr[0];
+  for(const pt of sr){ if(pt[0]<=cut) from=pt; else break; }
+  const to=sr[sr.length-1]; if(!from[1] || from===to) return null;
+  const span=Math.round((new Date(to[0])-new Date(from[0]))/864e5);
+  return {pct:(to[1]-from[1])/from[1]*100, diff:to[1]-from[1], from:from[1], to:to[1], span};
+}
+function trendEl(t, small){
+  const sp=document.createElement("span");
+  if(!t){ sp.className="trend flat"; sp.textContent=small?"":"–"; return sp; }
+  const up=t.pct>=0.5, down=t.pct<=-0.5;
+  sp.className="trend "+(up?"up":down?"down":"flat");
+  sp.textContent=(up?"▲ ":down?"▼ ":"")+Math.abs(t.pct).toFixed(small?0:1)+"%";
+  sp.title=(up?"Up ":down?"Down ":"No change ")+money(Math.abs(t.diff))+" over "+t.span+" day"+(t.span===1?"":"s");
+  return sp;
+}
+let showEd = recall("nd-ed")!=="off";
+
+function cardImg(c){
+  const im=document.createElement("img"); im.alt=c.name; im.loading="lazy"; im.src=base()+"/img/"+enc(c.n)+".png";
+  im.onerror=()=>{ if(!im.dataset.r && c.img){ im.dataset.r=1; im.src=c.img; } else im.remove(); };
+  return im;
+}
+
+// ---------- header + stats ----------
+function header(){
+  const s=state.set, name=s.name||"";
+  const t=$("setTitle"); t.replaceChildren();
+  const parts=name.split(" "); const a=document.createElement("span"); a.className="l"; a.textContent=parts[0]||"";
+  const b=document.createElement("span"); b.className="d"; b.textContent=parts.length>1 ? " "+parts.slice(1).join(" ") : "";
+  t.append(a,b);
+  const secret=state.cards.filter(isSecret).length;
+  $("eyebrow").textContent=[s.series, year(s.releaseDate), "Unlimited", (printed()||state.cards.length)+" cards"+(secret?" + "+secret+" secret":"")].filter(Boolean).join(" · ");
+  document.title=(name ? name+" · " : "")+"Pokémon Binder";
+}
+function stats(){
+  let owned=0, value=0, paid=0, need=0, needN=0, full=0;
+  for(const c of state.cards){
+    const p=basePrice(c.n); full+=p;
+    paid+=paidFor(c.n);
+    if(qty(c.n)>0){ owned++; value+=priceOf(c.n)*qty(c.n); }
+    else { need+=p; needN++; }
+  }
+  const total=state.cards.length||1;
+  $("sOwned").textContent=owned+" / "+state.cards.length;
+  $("sBar").style.width=(owned/total*100).toFixed(1)+"%";
+  $("sPct").textContent=(owned/total*100).toFixed(0)+"% complete";
+  $("sValue").textContent=money0(value);
+  if(paid>0){ const g=value-paid; $("sGain").replaceChildren(); const s=document.createElement("span"); s.className=g>=0?"pos":"neg"; s.textContent=(g>=0?"+":"−")+money0(Math.abs(g)); $("sGain").append(s," vs. "+money0(paid)+" paid"); }
+  else $("sGain").textContent="Add what you paid to see gain or loss";
+  $("sNeed").textContent=money0(need);
+  $("sNeedN").textContent=needN+" cards still needed";
+  $("sFull").textContent=money0(full);
+  $("sUpd").textContent=state.updated ? "Prices as of "+when(state.updated) : "Prices load after the first refresh";
+}
+
+// ---------- grid ----------
+function rarityOptions(){
+  const sel=$("fRar"); sel.replaceChildren(); const o=document.createElement("option"); o.value=""; o.textContent="All rarities"; sel.append(o);
+  [...new Set(state.cards.map(cat))].forEach(r=>{ const x=document.createElement("option"); x.value=r; x.textContent=r; sel.append(x); });
+  sel.value=""; state.rar="";
+}
+function render(){
+  let list=state.cards.filter(c=>{
+    if(state.filter==="own" && qty(c.n)===0) return false;
+    if(state.filter==="need" && qty(c.n)>0) return false;
+    if(state.rar && cat(c)!==state.rar) return false;
+    if(state.q && !c.name.toLowerCase().includes(state.q) && c.n.toLowerCase()!==state.q) return false;
+    return true;
+  });
+  if(state.sort==="hi") list.sort((a,b)=>priceOf(b.n)-priceOf(a.n));
+  if(state.sort==="lo") list.sort((a,b)=>priceOf(a.n)-priceOf(b.n));
+  const g=$("grid"); g.replaceChildren();
+  if(!list.length){ const e=document.createElement("div"); e.className="empty"; e.textContent=state.cards.length ? "No cards match these filters." : (state.ready ? "This set has no cards yet." : "Loading cards…"); g.append(e); }
+  for(const c of list){
+    const b=document.createElement("div"); b.setAttribute("role","button"); b.tabIndex=0;
+    b.className="sleeve"+(qty(c.n)>0?"":" need"); b.dataset.n=c.n; b.setAttribute("aria-label",c.name+" details");
+    const f=document.createElement("div"); f.className="face "+tint(c);
+    const no=document.createElement("div"); no.className="no"; no.textContent=label(c);
+    const nm=document.createElement("div"); nm.className="nm"; nm.textContent=c.name;
+    const r=document.createElement("div"); r.className="rar"; r.textContent=RSYM[c.rarity]||c.rarity||"";
+    f.append(no,nm,r,cardImg(c));
+    const m=document.createElement("div"); m.className="meta";
+    const p=document.createElement("span"); p.className="price"; p.textContent=priceOf(c.n) ? money(priceOf(c.n)) : "–";
+    const tr=trend(c.n); if(tr && Math.abs(tr.pct)>=5) p.append(trendEl(tr,true));
+    const t=document.createElement("button"); t.type="button"; t.className="tag"+(qty(c.n)>0?" own":"");
+    t.textContent=qty(c.n)>0 ? (qty(c.n)>1?"Owned ×"+qty(c.n):"Owned") : "Need";
+    t.title=qty(c.n)>0 ? "Tap to mark as needed" : "Tap to mark as owned";
+    t.setAttribute("aria-label",(qty(c.n)>0?"Owned. Mark "+c.name+" as needed":"Needed. Mark "+c.name+" as owned"));
+    m.append(p,t); b.append(f);
+    if(showEd){ const ed=document.createElement("div"); ed.className="ed"; ed.textContent="Unlimited"; b.append(ed); }
+    b.append(m); g.append(b);
+  }
+  $("count").textContent=list.length+" of "+state.cards.length+" cards";
+  stats();
+}
+$("fOwn").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; state.filter=b.dataset.v; [...$("fOwn").children].forEach(x=>x.setAttribute("aria-pressed",x===b)); render(); });
+$("fRar").addEventListener("change",e=>{state.rar=e.target.value;render();});
+$("fSort").addEventListener("change",e=>{state.sort=e.target.value;render();});
+$("fQ").addEventListener("input",e=>{state.q=e.target.value.trim().toLowerCase();render();});
+$("grid").addEventListener("click",e=>{
+  const b=e.target.closest(".sleeve"); if(!b) return;
+  if(e.target.closest(".tag")){ quickToggle(b.dataset.n); return; }
+  openCard(b.dataset.n);
+});
+$("grid").addEventListener("keydown",e=>{
+  if((e.key==="Enter"||e.key===" ") && e.target.classList.contains("sleeve")){ e.preventDefault(); openCard(e.target.dataset.n); }
+});
+async function clearCard(n){
+  const c=state.cards.find(x=>x.n===n); if(!c) return;
+  const k=qty(n);
+  const ok=await askConfirm("Mark "+c.name+" as needed?", "This removes "+(k===1?"its purchase record":"all "+k+" purchase records")+" for this card, including dates, prices and sellers.", "Remove");
+  if(!ok) return;
+  saveCard(n,{purchases:[]}, done=>{ $("sync").textContent = done ? c.name+" marked as needed" : "Couldn't save. Check that the container is running."; });
+  if(state.open===n && $("dlg").open){ $("dQty").textContent=0; drawBuys(n); condOptions(n); $("dArt").classList.toggle("need",true); }
+}
+function quickToggle(n){
+  const c=state.cards.find(x=>x.n===n); if(!c) return;
+  const owned=qty(n)>0;
+  if(owned){ clearCard(n); return; }
+  const list=[{d:todayStr(), price:null, where:""}];
+  saveCard(n,{purchases:list}, ok=>{ $("sync").textContent = ok ? (owned ? c.name+" marked as needed" : c.name+" marked as owned today. Tap the card to add what you paid.") : "Couldn't save. Check that the container is running."; });
+  const t=document.querySelector('.sleeve[data-n="'+CSS.escape(n)+'"] .tag'); if(t) t.focus();
+}
+
+// ---------- card sheet ----------
+function priceSource(n){
+  const i=state.info[n];
+  if(i && i.src==="tcgplayer") return "from "+i.count+" recent sale"+(i.count===1?"":"s")+(i.last?", latest "+when(i.last):"")+". Used for set totals.";
+  if(i && i.note) return i.note+".";
+  return priceOf(n) ? "starting price from PriceCharting. Replaced on the next refresh." : "fills in after the next refresh.";
+}
+function lpmpBox(n){
+  const cond=(state.info[n]||{}).cond||{};
+  for(const k of ["LP","MP"]){
+    const v=cond[k];
+    $("d"+k).textContent = v ? money(v[0]) : "–";
+    $("d"+k+"s").textContent = v ? v[1]+" sale"+(v[1]===1?"":"s")+(v[2]?" · latest "+new Date(v[2]+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"}):"") : (state.info[n]&&state.info[n].cond ? "No recent sales" : "After next refresh");
+  }
+}
+function condOptions(n){
+  const sel=$("dCond"), cur=rec(n).cond||"";
+  for(const o of sel.options){
+    if(!o.value){ o.textContent="Not set"; continue; }
+    const i=state.info[n], v=i && i.cond && i.cond[o.value];
+    o.textContent = v ? o.value+" · "+money(v[0]) : o.value+" · no sales";
+  }
+  sel.value=cur;
+  const yours=$("dYours");
+  if(qty(n)>0 && cur && condPrice(n,cur)){ yours.hidden=false; yours.textContent="Your "+cur+" copy counts at "+money(condPrice(n,cur))+" in your collection value."; }
+  else if(qty(n)>0 && cur){ yours.hidden=false; yours.textContent="No recent "+cur+" sales, so your copy counts at the LP/MP average."; }
+  else yours.hidden=true;
+}
+function openCard(n){
+  const c=state.cards.find(x=>x.n===n); if(!c) return; state.open=n;
+  const r=rec(n);
+  const art=$("dArt"); art.hidden=false; art.dataset.r=""; art.alt=c.name; art.src=base()+"/img/"+enc(n)+".png";
+  art.onerror=()=>{ if(!art.dataset.r && c.img){ art.dataset.r=1; art.src=c.img; } else art.hidden=true; };
+  art.classList.toggle("need",qty(n)===0);
+  $("dNo").textContent="No. "+label(c);
+  $("dName").textContent=c.name;
+  $("dRar").textContent=cat(c)+(isSecret(c)?" · secret rare":"");
+  $("dP").textContent=basePrice(n) ? money(basePrice(n)) : "–";
+  lpmpBox(n);
+  $("dPsrc").textContent=priceSource(n);
+  condOptions(n);
+  const L=$("dLinks"); L.replaceChildren();
+  const s=q(state.set.name+" "+c.name+" "+n);
+  [["eBay sold","https://www.ebay.com/sch/i.html?_nkw="+s+"+-1st&LH_Sold=1&LH_Complete=1"],
+   ["TCGplayer","https://www.tcgplayer.com/search/pokemon/product?q="+q(c.name+" "+state.set.name)],
+   ["PriceCharting","https://www.pricecharting.com/search-products?type=prices&q="+s]]
+   .forEach(([t,u])=>{ const a=document.createElement("a"); a.href=u; a.target="_blank"; a.rel="noopener"; a.textContent=t+" ↗"; L.append(a); });
+  $("dQty").textContent=qty(n);
+  $("dCond").value=r.cond||"";
+  $("dNote").value=r.note||"";
+  resetBuyForm();
+  drawBuys(n); drawSpark(n);
+  photoSide="front"; drawPhoto(n);
+  $("dSaved").textContent=state.ready ? "" : "Can't reach BEN right now, so changes won't save.";
+  $("dUpMsg").textContent="";
+  $("dlg").showModal();
+}
+$("dClose").onclick=()=>$("dlg").close();
+$("dlg").addEventListener("click",e=>{ if(e.target===$("dlg")) $("dlg").close(); });
+
+let saveChain=Promise.resolve();
+function saveCard(n, patch, done){
+  const sid=state.sid;
+  const next={...rec(n),...patch}; delete next.ed; delete next.cost;
+  if(Array.isArray(next.purchases)) next.qty=next.purchases.length;
+  state.own[n]=next; render(); if(state.view==="shop") drawShop(); if(state.view==="stats") state.spendStale=true;
+  saveChain=saveChain.then(()=>fetch("api/set/"+enc(sid)+"/card/"+enc(n),{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(next)}))
+    .then(r=>{ if(!r.ok) throw 0; const s=state.sets.find(x=>x.id===sid); if(s){ s.owned=state.cards.filter(c=>qty(c.n)>0).length; } done&&done(true); })
+    .catch(()=>{ done&&done(false); });
+}
+function save(patch){
+  const n=state.open; if(n==null) return;
+  $("dSaved").textContent="Saving…";
+  saveCard(n, patch, ok=>{ $("dSaved").textContent = ok ? "Saved" : "Couldn't save. Check that the neo-binder container is running."; });
+  $("dQty").textContent=qty(n);
+}
+$("dPlus").onclick=()=>{
+  const n=state.open; const l=buys(n).slice(); l.push({d:todayStr(), price:null, where:""});
+  save({purchases:l}); drawBuys(n); condOptions(n);
+};
+$("dMinus").onclick=async()=>{
+  const n=state.open; const l=buys(n).slice(); if(!l.length) return;
+  if(l.length===1){ clearCard(n); return; }
+  // remove the newest purchase; ask first unless it's a blank one just added
+  let idx=l.length-1; for(let i=l.length-1;i>=0;i--){ if((l[i].d||"")>(l[idx].d||"")) idx=i; }
+  const b=l[idx];
+  if(!(isBlank(b) && b.d===todayStr())){
+    const ok=await askConfirm("Remove a copy?", "This deletes "+whichBuy(b)+".", "Remove");
+    if(!ok) return;
+  }
+  l.splice(idx,1); save({purchases:l}); drawBuys(n); condOptions(n);
+};
+$("dCond").onchange=e=>{ save({cond:e.target.value}); condOptions(state.open); };
+// ---------- sellers ----------
+const PLAT = {
+  instagram:{label:"Instagram", tag:"IG", url:h=>"https://www.instagram.com/"+enc(h)+"/"},
+  tiktok:{label:"TikTok", tag:"TT", url:h=>"https://www.tiktok.com/@"+enc(h)},
+  facebook:{label:"Facebook", tag:"FB", url:h=>"https://www.facebook.com/"+enc(h)},
+  x:{label:"X", tag:"X", url:h=>"https://x.com/"+enc(h)},
+  whatnot:{label:"Whatnot", tag:"WN", url:h=>"https://www.whatnot.com/user/"+enc(h)},
+  ebay:{label:"eBay", tag:"EBAY", url:h=>"https://www.ebay.com/usr/"+enc(h)},
+  web:{label:"Website", tag:"WEB", url:h=>{ const u=/^https?:\/\//i.test(h)?h:"https://"+h; try{ const x=new URL(u); return /^https?:$/.test(x.protocol)?x.href:null; }catch(_){ return null; } }},
+  shop:{label:"Card shop", tag:"SHOP", url:null}
+};
+// Accept "@name", "name", or a pasted profile link; keep just the handle.
+function cleanHandle(p, raw){
+  let h=(raw||"").trim(); if(!h) return "";
+  if(p==="web"||p==="shop") return h;
+  if(/^(https?:\/\/)?(www\.|m\.)?[a-z0-9-]+\.[a-z.]+\//i.test(h)){   // pasted profile link
+    try{
+      const u=new URL(/^https?:\/\//i.test(h)?h:"https://"+h);
+      const seg=u.pathname.split("/").filter(Boolean);
+      if(seg.length) h=seg[seg.length-1];
+    }catch(_){}
+  }
+  return h.replace(/^@+/,"").replace(/[\s/?#]+/g,"");
+}
+function sellerEl(sel){
+  if(!sel || !sel.h) return null;
+  const P=PLAT[sel.p]||PLAT.shop;
+  const showAt = sel.p && !["web","shop"].includes(sel.p);
+  const text=(showAt?"@":"")+sel.h;
+  const tag=document.createElement("span"); tag.className="plat"; tag.textContent=P.tag;
+  const href=P.url ? P.url(sel.h) : null;
+  if(href){
+    const a=document.createElement("a"); a.className="seller"; a.href=href; a.target="_blank"; a.rel="noopener noreferrer";
+    a.title="Open "+text+" on "+P.label; a.append(tag, text+" ↗"); return a;
+  }
+  const sp=document.createElement("span"); sp.className="seller"; sp.append(tag, text); return sp;
+}
+function handleOptions(){
+  const seen=new Map();
+  for(const k in state.own) for(const b of (state.own[k].purchases||[])) if(b && b.seller && b.seller.h) seen.set(b.seller.p+"|"+b.seller.h, b.seller);
+  const dl=$("handleList"); dl.replaceChildren();
+  const plat=$("bPlat").value;
+  for(const v of seen.values()) if(!plat || v.p===plat){ const o=document.createElement("option"); o.value=v.h; dl.append(o); }
+}
+$("bPlat").addEventListener("change",()=>{
+  const p=$("bPlat").value; $("bHandle").disabled=!p;
+  $("bHandle").placeholder = p==="web" ? "shopname.com" : p==="shop" ? "Shop or person's name" : "@handle";
+  if(!p) $("bHandle").value="";
+  handleOptions();
+});
+let editIdx=null;
+function resetBuyForm(){
+  editIdx=null; $("dBuyForm").classList.remove("editing");
+  $("bDate").value=todayStr(); $("bPrice").value=""; $("bWhere").value=""; $("bPlat").value=""; $("bHandle").value=""; $("bHandle").disabled=true;
+  $("bSubmit").textContent="Add purchase"; $("bCancel").hidden=true;
+}
+function editBuy(n,i){
+  const b=buys(n)[i]; if(!b) return;
+  editIdx=i; $("dBuyForm").classList.add("editing");
+  $("bDate").value=b.d||""; $("bPrice").value=(b.price==null?"":b.price); $("bWhere").value=b.where||"";
+  $("bPlat").value=(b.seller&&b.seller.p)||""; $("bHandle").value=(b.seller&&b.seller.h)||""; $("bHandle").disabled=!$("bPlat").value;
+  $("bSubmit").textContent="Save changes"; $("bCancel").hidden=false;
+  handleOptions(); $("bPrice").focus();
+}
+$("bCancel").onclick=resetBuyForm;
+
+function whereOptions(){
+  const seen=new Set(["eBay","TCGplayer","Local card shop","Card show","Facebook Marketplace"]);
+  for(const k in state.own) for(const b of (state.own[k].purchases||[])) if(b && b.where) seen.add(b.where);
+  const dl=$("whereList"); dl.replaceChildren(); seen.forEach(w=>{ const o=document.createElement("option"); o.value=w; dl.append(o); });
+}
+function drawBuys(n){
+  const ul=$("dBuys"); ul.replaceChildren();
+  const list=buys(n);
+  if(!list.length){ const li=document.createElement("li"); const sp=document.createElement("span"); sp.className="empty"; sp.textContent="No purchases logged yet."; li.append(sp); li.style.display="block"; ul.append(li); }
+  list.forEach((b,i)=>{
+    const li=document.createElement("li");
+    const d=document.createElement("span"); d.className="d"; d.textContent=fmtDay(b.d);
+    const w=document.createElement("span"); w.className="meta2";
+    if(b.where){ const ww=document.createElement("span"); ww.className="w"; ww.textContent=b.where; w.append(ww); }
+    const se=sellerEl(b.seller); if(se) w.append(se);
+    const pr=document.createElement("span"); pr.className="pr";
+    if(b.price==null || b.price===""){
+      const inp=document.createElement("input"); inp.type="number"; inp.min="0"; inp.step="0.01"; inp.inputMode="decimal"; inp.placeholder="Paid $";
+      inp.setAttribute("aria-label","What you paid on "+fmtDay(b.d));
+      inp.onchange=()=>{ if(inp.value==="") return; const l=buys(n).slice(); l[i]={...l[i], price:Math.round(Number(inp.value)*100)/100}; save({purchases:l}); drawBuys(n); };
+      pr.append(inp);
+    } else pr.textContent=money(Number(b.price));
+    const ed=document.createElement("button"); ed.type="button"; ed.className="ed"; ed.textContent="Edit"; ed.setAttribute("aria-label","Edit purchase from "+fmtDay(b.d));
+    ed.onclick=()=>editBuy(n,i);
+    const x=document.createElement("button"); x.type="button"; x.className="x"; x.textContent="×"; x.setAttribute("aria-label","Remove purchase from "+fmtDay(b.d));
+    x.onclick=async()=>{
+      const l=buys(n).slice();
+      if(l.length===1){ clearCard(n); return; }
+      const ok=await askConfirm("Delete this purchase?", "This removes "+whichBuy(b)+". Copies owned will drop to "+(l.length-1)+".", "Delete");
+      if(!ok) return;
+      l.splice(i,1); save({purchases:l}); if(editIdx!=null) resetBuyForm(); drawBuys(n); condOptions(n);
+    };
+    li.append(d,w,pr,ed,x); ul.append(li);
+  });
+  const total=paidFor(n);
+  $("dPaid").textContent = list.length ? money(total)+" total" : "";
+  whereOptions(); handleOptions();
+}
+$("dBuyForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  const n=state.open; if(n==null) return;
+  const d=$("bDate").value || (editIdx!=null ? "" : todayStr());
+  const price=$("bPrice").value==="" ? null : Math.round(Number($("bPrice").value)*100)/100;
+  const plat=$("bPlat").value, h=cleanHandle(plat,$("bHandle").value);
+  if(plat==="web" && h && !PLAT.web.url(h)){ $("dSaved").textContent="That website address doesn't look right. Use something like shopname.com."; return; }
+  const entry={d, price, where:$("bWhere").value.trim()};
+  if(plat && h) entry.seller={p:plat, h};
+  const l=buys(n).slice();
+  if(editIdx!=null && l[editIdx]) l[editIdx]=entry; else l.push(entry);
+  l.sort((a,b)=>(a.d||"").localeCompare(b.d||""));
+  save({purchases:l}); resetBuyForm(); drawBuys(n); condOptions(n);
+});
+function drawSpark(n){
+  const box=$("dSpark"); box.replaceChildren();
+  const sr=series(n);
+  if(sr.length<2){ const c=document.createElement("div"); c.className="cap"; c.textContent="Price trend appears after a few days of saved prices."; box.append(c); return; }
+  const W=360,H=56,P=4, xs=sr.map(p=>new Date(p[0]).getTime()), ys=sr.map(p=>p[1]);
+  const x0=Math.min(...xs), x1=Math.max(...xs), y0=Math.min(...ys), y1=Math.max(...ys);
+  const X=v=>P+(x1===x0?0.5:(v-x0)/(x1-x0))*(W-2*P), Y=v=>H-P-(y1===y0?0.5:(v-y0)/(y1-y0))*(H-2*P);
+  const pts=sr.map((p,i)=>X(xs[i]).toFixed(1)+","+Y(ys[i]).toFixed(1)).join(" ");
+  const ns="http://www.w3.org/2000/svg", svg=document.createElementNS(ns,"svg"); svg.setAttribute("viewBox","0 0 "+W+" "+H); svg.setAttribute("role","img");
+  const t=trend(n,30);
+  svg.setAttribute("aria-label","Price trend: "+money(ys[0])+" to "+money(ys[ys.length-1]));
+  const area=document.createElementNS(ns,"polygon"); area.setAttribute("points",P+","+(H-P)+" "+pts+" "+(W-P)+","+(H-P)); area.setAttribute("fill","var(--dark)"); area.setAttribute("opacity","0.12");
+  const line=document.createElementNS(ns,"polyline"); line.setAttribute("points",pts); line.setAttribute("fill","none"); line.setAttribute("stroke","var(--dark)"); line.setAttribute("stroke-width","2"); line.setAttribute("stroke-linejoin","round"); line.setAttribute("stroke-linecap","round");
+  const dot=document.createElementNS(ns,"circle"); dot.setAttribute("cx",X(xs[xs.length-1])); dot.setAttribute("cy",Y(ys[ys.length-1])); dot.setAttribute("r","4"); dot.setAttribute("fill","var(--dark)"); dot.setAttribute("stroke","var(--surface)"); dot.setAttribute("stroke-width","2");
+  svg.append(area,line,dot); box.append(svg);
+  const cap=document.createElement("div"); cap.className="cap";
+  const w=trend(n,7);
+  cap.append("Low "+money(y0)+" · High "+money(y1)+" since "+fmtDay(sr[0][0])+(w?" · 7 days ":""));
+  if(w) cap.append(trendEl(w));
+  box.append(cap);
+}
+let tNote; $("dNote").oninput=e=>{ clearTimeout(tNote); tNote=setTimeout(()=>save({note:e.target.value}),700); };
+let photoSide="front";
+function drawPhoto(n){
+  const c=state.cards.find(x=>x.n===n), r=rec(n), back=photoSide==="back";
+  const v=back ? r.photoBack : r.photo;
+  [...$("dSide").children].forEach(b=>{
+    b.setAttribute("aria-pressed", b.dataset.side===photoSide);
+    const has=b.dataset.side==="back" ? r.photoBack : r.photo;
+    b.replaceChildren(b.dataset.side==="back"?"B":"F"); if(has){ const d=document.createElement("span"); d.className="dot"; d.setAttribute("aria-hidden","true"); b.append(d); }
+    b.title=(b.dataset.side==="back"?"Back":"Front")+(has?" (photo added)":" (no photo yet)");
+  });
+  const ph=$("dPhoto"); ph.replaceChildren();
+  if(v){ const im=document.createElement("img"); im.alt=(back?"Back":"Front")+" of your "+(c?c.name:"card"); im.src=base()+"/photo/"+enc(n)+(back?"/back":"")+"?v="+v; ph.append(im); }
+  else ph.textContent="No "+(back?"back":"front")+" photo yet";
+  $("dUpLabel").textContent=(v?"Replace ":"Add ")+(back?"back":"front")+" photo";
+}
+$("dSide").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b||state.open==null) return; photoSide=b.dataset.side; $("dUpMsg").textContent=""; drawPhoto(state.open); });
+$("dUp").onchange=async e=>{
+  const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  if(f.size>15*1024*1024){ $("dUpMsg").textContent="That photo is too big. Use one under 15 MB."; return; }
+  const n=state.open, back=photoSide==="back";
+  $("dUpMsg").textContent="Uploading…";
+  try{
+    const r=await fetch("api/set/"+enc(state.sid)+"/photo/"+enc(n)+(back?"/back":""),{method:"POST",headers:{"Content-Type":f.type||"image/jpeg"},body:f});
+    if(!r.ok) throw 0;
+    const j=await r.json(); save(back?{photoBack:j.v}:{photo:j.v}); $("dUpMsg").textContent=(back?"Back":"Front")+" photo added"; drawPhoto(n);
+  }catch(_){ $("dUpMsg").textContent="Upload failed. Try again."; }
+};
+
+// ---------- settings / themes ----------
+function applySkin(id){
+  document.documentElement.dataset.skin=id; store("nd-skin",id);
+  [...$("skins").children].forEach(b=>b.setAttribute("aria-pressed",b.dataset.id===id));
+}
+SKINS.forEach(([id,name,desc,cols])=>{
+  const b=document.createElement("button"); b.type="button"; b.className="skin"; b.dataset.id=id;
+  const sw=document.createElement("span"); sw.className="sw"; cols.forEach(c=>{ const i=document.createElement("i"); i.style.background=c; sw.append(i); });
+  const t=document.createElement("div"); const bb=document.createElement("b"); bb.textContent=name; const sp=document.createElement("span"); sp.textContent=desc; t.append(bb,sp);
+  b.append(sw,t); b.onclick=()=>applySkin(id); $("skins").append(b);
+});
+applySkin(document.documentElement.dataset.skin||"night");
+const TZ = (()=>{ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York"; }catch(_){ return "America/New_York"; } })();
+function showNext(iso, auto){
+  $("stNext").textContent = !auto ? "Off. Use Refresh prices to update by hand." :
+    iso ? new Date(iso).toLocaleString("en-US",{weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}) : "–";
+  $("stTz").textContent = auto ? "Time zone: "+TZ.replace(/_/g," ") : "";
+  $("stTime").disabled = !auto;
+}
+function loadSettings(){
+  $("stSaved").textContent="";
+  fetch("api/settings").then(r=>r.json()).then(s=>{
+    $("stAuto").checked=!!s.auto; $("stTime").value=s.time||"03:00"; showNext(s.next, s.auto);
+    if(s.tz!==TZ) saveSettings({tz:TZ, offset:-new Date().getTimezoneOffset()}, true);
+  }).catch(()=>{ $("stNext").textContent="Can't reach BEN."; });
+}
+function saveSettings(patch, quiet){
+  if(!quiet) $("stSaved").textContent="Saving…";
+  return fetch("api/settings",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(patch)})
+    .then(r=>r.json().then(j=>{ if(!r.ok) throw 0; return j; }))
+    .then(j=>{ showNext(j.next, $("stAuto").checked); if(!quiet) $("stSaved").textContent="Saved"; })
+    .catch(()=>{ $("stSaved").textContent="Couldn't save. Check that the container is running."; });
+}
+$("stAuto").onchange=e=>saveSettings({auto:e.target.checked, tz:TZ, offset:-new Date().getTimezoneOffset()});
+$("stTime").onchange=e=>{ if(/^\d\d:\d\d$/.test(e.target.value)) saveSettings({time:e.target.value, tz:TZ, offset:-new Date().getTimezoneOffset()}); };
+$("stEd").checked=showEd;
+$("stEd").onchange=e=>{ showEd=e.target.checked; store("nd-ed", showEd?"on":"off"); render(); };
+function loadVersion(){
+  fetch("api/version").then(r=>r.json()).then(v=>{
+    const f=d=>d?new Date(d).toLocaleString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit"}):"unknown";
+    let src;
+    if(v.github) src = v.error ? "Updates from GitHub aren't working: "+v.error+"." : "Updates come from GitHub"+(v.commit?" (version "+v.commit.slice(0,7)+")":"")+".";
+    else if(v.updatesFolder) src="Updates come from your updates folder on BEN.";
+    else src="Automatic updates aren't set up.";
+    $("stVersion").textContent="Installed "+f(v["server.py"])+". "+src;
+    $("stUpdate").hidden = !(v.github || v.updatesFolder);
+  }).catch(()=>{ $("stVersion").textContent="Couldn't check the installed version."; });
+}
+$("stUpdate").onclick=async()=>{
+  const b=$("stUpdate"), msg=$("stUpdMsg"); b.disabled=true; msg.textContent="Checking…";
+  try{
+    const r=await fetch("api/update",{method:"POST"}); const j=await r.json();
+    if(!r.ok) throw new Error(j.error||"Update check failed");
+    if(!j.installed.length){ msg.textContent="You're up to date."; b.disabled=false; loadVersion(); return; }
+    msg.textContent="Update found. Installing and reloading…";
+    const wait=ms=>new Promise(res=>setTimeout(res,ms));
+    if(j.restarting){ await wait(2500); for(let i=0;i<20;i++){ try{ const t=await fetch("api/version",{cache:"no-store"}); if(t.ok) break; }catch(_){} await wait(1000); } }
+    location.reload();
+  }catch(e){ msg.textContent=e.message+"."; b.disabled=false; }
+};
+$("cog").onclick=()=>{ loadSettings(); loadVersion(); $("settings").showModal(); };
+$("sClose").onclick=()=>$("settings").close();
+$("settings").addEventListener("click",e=>{ if(e.target===$("settings")) $("settings").close(); });
+
+// ---------- set menu ----------
+function drawSets(){
+  const L=$("setList"); L.replaceChildren();
+  if(!state.sets.length){ const p=document.createElement("p"); p.className="note"; p.textContent="No sets yet. Add one to start."; L.append(p); }
+  for(const s of state.sets){
+    const row=document.createElement("div"); row.className="setrow"; row.setAttribute("aria-current", s.id===state.sid);
+    const go=document.createElement("button"); go.type="button"; go.className="go";
+    const b=document.createElement("b"); b.textContent=s.name;
+    const sp=document.createElement("span"); sp.textContent=(s.owned||0)+" of "+(s.count||s.total||0)+" owned · "+[s.series,year(s.releaseDate)].filter(Boolean).join(" · ");
+    const bar=document.createElement("div"); bar.className="mini"; const i=document.createElement("i"); i.style.width=((s.owned||0)/Math.max(1,s.count||s.total||1)*100).toFixed(1)+"%"; bar.append(i);
+    go.append(b,sp,bar); go.onclick=()=>{ $("drawer").close(); openSet(s.id); };
+    const rm=document.createElement("button"); rm.type="button"; rm.className="rm"; rm.textContent="Remove";
+    rm.onclick=async()=>{
+      if(!rm.classList.contains("confirm")){ rm.classList.add("confirm"); rm.textContent="Tap to confirm"; setTimeout(()=>{ rm.classList.remove("confirm"); rm.textContent="Remove"; },4000); return; }
+      rm.disabled=true;
+      try{ const r=await fetch("api/sets/"+enc(s.id),{method:"DELETE"}); if(!r.ok) throw 0; }catch(_){ rm.disabled=false; rm.textContent="Couldn't remove"; return; }
+      await loadSets(); if(state.sid===s.id) openSet(state.sets[0] ? state.sets[0].id : null); drawSets();
+    };
+    row.append(go,rm); L.append(row);
+  }
+}
+function drawCatalog(){
+  const C=$("catalog"); C.replaceChildren();
+  if(!state.catalog){ $("addMsg").textContent="Loading the set list…"; return; }
+  const term=$("addQ").value.trim().toLowerCase();
+  const have=new Set(state.sets.map(s=>s.id));
+  const groups={};
+  state.catalog.filter(s=>!term || s.name.toLowerCase().includes(term) || (s.series||"").toLowerCase().includes(term))
+    .forEach(s=>{ (groups[s.series||"Other"] ||= []).push(s); });
+  const order=Object.keys(groups).sort((a,b)=>(groups[a][0].releaseDate||"").localeCompare(groups[b][0].releaseDate||""));
+  $("addMsg").textContent=order.length ? "" : "No sets match that search.";
+  for(const g of order){
+    const h=document.createElement("h3"); h.textContent=g; C.append(h);
+    for(const s of groups[g].sort((a,b)=>(a.releaseDate||"").localeCompare(b.releaseDate||""))){
+      const row=document.createElement("div"); row.className="catrow";
+      const d=document.createElement("div"); const b=document.createElement("b"); b.textContent=s.name;
+      const sp=document.createElement("span"); sp.textContent=year(s.releaseDate)+" · "+s.total+" cards"; d.append(b,sp);
+      row.append(d);
+      if(have.has(s.id)){ const em=document.createElement("em"); em.textContent="In your binder"; row.append(em); }
+      else {
+        const add=document.createElement("button"); add.type="button"; add.className="btn"; add.textContent="Add";
+        add.onclick=async()=>{
+          add.disabled=true; add.textContent="Adding…";
+          try{
+            const r=await fetch("api/sets",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:s.id})});
+            const j=await r.json(); if(!r.ok) throw new Error(j.error||"Couldn't add that set");
+            await loadSets(); $("drawer").close(); showAdd(false); openSet(s.id);
+            $("sync").textContent=s.name+" added. Downloading card images and checking prices in the background.";
+          }catch(err){ add.disabled=false; add.textContent="Add"; $("addMsg").textContent=err.message+". Check that BEN is online and try again."; }
+        };
+        row.append(add);
+      }
+      C.append(row);
+    }
+  }
+}
+function showAdd(on){
+  $("drSets").hidden=on; $("drAdd").hidden=!on;
+  if(on){
+    $("addQ").value=""; drawCatalog(); setTimeout(()=>$("addQ").focus(),50);
+    if(!state.catalog) fetch("api/catalog").then(r=>r.json()).then(j=>{ state.catalog=j.sets||[]; drawCatalog(); if(!state.catalog.length) $("addMsg").textContent="Couldn't load the set list. Check that BEN is online."; }).catch(()=>{ $("addMsg").textContent="Couldn't load the set list. Check that BEN is online."; });
+  }
+}
+$("menuBtn").onclick=()=>{ showAdd(false); drawSets(); $("drawer").showModal(); loadSets().then(drawSets); };
+$("drClose").onclick=()=>$("drawer").close();
+$("drawer").addEventListener("click",e=>{ if(e.target===$("drawer")) $("drawer").close(); });
+$("addOpen").onclick=()=>showAdd(true);
+$("addBack").onclick=()=>{ showAdd(false); drawSets(); };
+$("addQ").addEventListener("input",drawCatalog);
+
+// ---------- data ----------
+function loadSets(){
+  return fetch("api/sets").then(r=>r.json()).then(j=>{ state.sets=j.sets||[]; }).catch(()=>{});
+}
+let loadSeq=0;
+function openSet(sid){
+  state.sid=sid; store("nd-set",sid||undefined);
+  if(sid && location.hash!=="#"+sid) history.replaceState(null,"","#"+sid);
+  state.cards=[]; state.own={}; state.prices={}; state.info={}; state.updated=""; state.ready=false; state.hist={}; state.histDates=[];
+  if(!sid){ state.set={name:"Pokémon Binder"}; header(); rarityOptions(); render(); $("sync").textContent="Open the menu to add your first set."; return Promise.resolve(); }
+  state.set=(state.sets.find(s=>s.id===sid))||{name:sid}; header(); render();
+  return loadState();
+}
+function loadState(){
+  const sid=state.sid, seq=++loadSeq;
+  return fetch("api/set/"+enc(sid)+"/state").then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error||"Couldn't load"); return j; })).then(s=>{
+    if(seq!==loadSeq) return;
+    state.set=s.set||state.set; state.cards=(s.cards||[]).slice().sort(byNum);
+    state.own=s.collection||{};
+    const pr=s.prices||{}; state.prices={}; for(const k in (pr.p||{})) state.prices[k]=[pr.p[k][0]];
+    state.info=pr.info||{}; state.updated=pr.updated||"";
+    state.ready=true; header(); rarityOptions(); render(); renderView();
+    fetch("api/set/"+enc(sid)+"/history").then(r=>r.json()).then(h=>{ if(seq!==loadSeq) return; state.hist=h||{}; state.histDates=Object.keys(state.hist).sort(); render(); renderView(); }).catch(()=>{});
+    if(!wasRunning) $("sync").textContent="Saved on BEN · prices auto-refresh daily";
+  }).catch(err=>{ if(seq===loadSeq){ state.ready=false; render(); $("sync").textContent=(err&&err.message&&err.message!=="Failed to fetch" ? err.message : "Can't reach BEN")+". Try reloading."; } });
+}
+
+// ---------- price refresh ----------
+let wasRunning=false, pollTimer=null;
+function showJob(j){
+  if(j.running){
+    wasRunning=true;
+    $("refresh").disabled=true; $("refresh").textContent="Refreshing…";
+    $("sync").textContent="Checking "+(j.name||"prices")+": card "+Math.min(j.done+1,j.total||1)+" of "+(j.total||"…");
+    if(!pollTimer) pollTimer=setTimeout(poll,3000);
+  } else {
+    $("refresh").disabled=false; $("refresh").textContent="Refresh prices";
+    if(wasRunning){ wasRunning=false; loadState().then(()=>{ $("sync").textContent=j.message||"Prices updated"; }); }
+  }
+}
+function poll(){ pollTimer=null; fetch("api/refresh").then(r=>r.json()).then(showJob).catch(()=>{ pollTimer=setTimeout(poll,10000); }); }
+$("refresh").onclick=()=>{
+  if(!state.sid) return;
+  $("refresh").disabled=true;
+  fetch("api/refresh",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({set:state.sid})}).then(r=>r.json()).then(showJob)
+    .catch(()=>{ $("refresh").disabled=false; $("sync").textContent="Couldn't start a refresh. Check that the container is running."; });
+};
+
+// ---------- views ----------
+function setView(v){
+  state.view=v; store("nd-view",v);
+  [...$("views").children].forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===v));
+  $("vCards").hidden=v!=="cards"; $("vShop").hidden=v!=="shop"; $("vStats").hidden=v!=="stats";
+  renderView();
+}
+function renderView(){ if(state.view==="shop") drawShop(); else if(state.view==="stats") loadStats(); }
+$("views").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b) setView(b.dataset.v); });
+
+// ---------- shopping list ----------
+function drawShop(){
+  const need=state.cards.filter(c=>qty(c.n)===0).sort((a,b)=>(basePrice(a.n)||1e9)-(basePrice(b.n)||1e9));
+  const budget=Number($("shopBudget").value)||0;
+  const body=$("shopBody"); body.replaceChildren();
+  let run=0, fit=0, fitCost=0;
+  for(const c of need){
+    const pr=basePrice(c.n); run+=pr;
+    const tr=document.createElement("tr");
+    if(budget){ if(run<=budget){ tr.className="fits"; fit++; fitCost=run; } else tr.className="over"; }
+    const tdI=document.createElement("td"); tdI.className="c-img";
+    const im=document.createElement("img"); im.className="thumb"; im.alt=""; im.loading="lazy"; im.src=base()+"/img/"+enc(c.n)+".png";
+    im.onerror=()=>{ if(!im.dataset.r && c.img){ im.dataset.r=1; im.src=c.img; } else im.style.visibility="hidden"; };
+    tdI.append(im);
+    const tdN=document.createElement("td");
+    const nb=document.createElement("button"); nb.type="button"; nb.className="nm"; nb.textContent=c.name; nb.onclick=()=>openCard(c.n);
+    const sub=document.createElement("span"); sub.className="sub"; sub.textContent=label(c)+" · "+(c.rarity||"");
+    tdN.append(nb,sub);
+    const tdP=document.createElement("td"); tdP.className="num"; tdP.textContent=pr?money(pr):"–";
+    const tdT=document.createElement("td"); tdT.className="num hide-sm"; tdT.append(trendEl(trend(c.n)));
+    const tdR=document.createElement("td"); tdR.className="num"; tdR.textContent=money(run);
+    const tdA=document.createElement("td");
+    const bt=document.createElement("button"); bt.type="button"; bt.className="btn"; bt.textContent="Bought";
+    bt.title="Mark as owned and log today's date"; bt.onclick=()=>{ quickToggle(c.n); };
+    tdA.append(bt);
+    tr.append(tdI,tdN,tdP,tdT,tdR,tdA); body.append(tr);
+  }
+  if(!need.length){ const tr=document.createElement("tr"); const td=document.createElement("td"); td.colSpan=6; td.className="empty"; td.textContent="You own every card in this set."; tr.append(td); body.append(tr); }
+  const msg=$("shopMsg"); msg.replaceChildren();
+  if(budget && need.length){
+    const b1=document.createElement("b"); b1.textContent=money(budget);
+    const b2=document.createElement("b"); b2.textContent=String(fit);
+    const b3=document.createElement("b"); b3.textContent=money(fitCost);
+    msg.append("With ",b1," you can get ",b2," card"+(fit===1?"":"s")+" for ",b3,".");
+  } else if(need.length){
+    msg.textContent=need.length+" cards needed · "+money(run)+" to finish the set.";
+  }
+}
+$("shopBudget").addEventListener("input",()=>{ store("nd-budget",$("shopBudget").value||undefined); drawShop(); });
+$("shopBudget").value=recall("nd-budget")||"";
+
+// ---------- stats ----------
+function loadStats(){
+  return fetch("api/spending").then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error); return j; })).then(sp=>{ state.spend=sp; state.spendStale=false; drawStats(); })
+    .catch(()=>{ $("chLine").replaceChildren(note("Couldn't load spending. Check that BEN is running.")); });
+}
+function note(t){ const d=document.createElement("div"); d.className="empty-note"; d.textContent=t; return d; }
+function drawStats(){
+  const sp=state.spend; if(!sp) return;
+  const T=sp.totals, gain=T.value-T.spent;
+  $("tSpent").textContent=money0(T.spent);
+  $("tSpentN").textContent=T.purchases+" purchase"+(T.purchases===1?"":"s")+(T.undated?" · "+T.undated+" before tracking":"");
+  $("tValue").textContent=money0(T.value);
+  $("tGain").replaceChildren();
+  if(T.spent>0){ const s=document.createElement("span"); s.className=gain>=0?"pos":"neg"; s.textContent=(gain>=0?"+":"−")+money0(Math.abs(gain)); $("tGain").append(s, gain>=0?" more than you paid":" less than you paid"); }
+  else $("tGain").textContent="Log purchases to compare";
+  const thisM=todayStr().slice(0,7), mo=sp.months.find(m=>m.m===thisM);
+  $("tMonth").textContent=money0(mo?mo.spent:0); $("tMonthN").textContent=(mo?mo.count:0)+" purchase"+((mo&&mo.count===1)?"":"s");
+  const avg=sp.months.length ? sp.months.reduce((a,m)=>a+m.spent,0)/sp.months.length : 0;
+  $("tAvg").textContent=money0(avg); $("tAvgN").textContent=sp.months.length ? "over "+sp.months.length+" month"+(sp.months.length===1?"":"s") : "No dated purchases yet";
+  drawLine(sp.timeline); drawBars(sp.months); drawMovers(); drawLog(sp.log);
+}
+const NS="http://www.w3.org/2000/svg";
+function el(tag, attrs, text){ const e=document.createElementNS(NS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); if(text!=null) e.textContent=text; return e; }
+function niceStep(v){ if(v<=0) return 1; const p=Math.pow(10,Math.floor(Math.log10(v))); for(const m of [1,1.5,2,2.5,3,4,5,6,8,10]) if(m*p>=v) return m*p; return 10*p; }
+function niceMax(v){ return niceStep(v/4)*4; }  // 4 even gridline steps
+const shortMoney = v => v>=1000 ? "$"+(v/1000).toFixed(v>=10000?0:1)+"k" : "$"+Math.round(v);
+function drawLine(tl){
+  const box=$("chLine"); box.replaceChildren();
+  if(!tl || !tl.length){ box.append(note("No data yet.")); return; }
+  const legend=document.createElement("div"); legend.className="legend";
+  legend.innerHTML='<span><i></i>Collection value</span><span><i class="dash"></i>Total spent</span>';
+  if(tl.length<2){
+    box.append(legend, note("Today: value "+money(tl[0].value)+", spent "+money(tl[0].spent)+". The chart fills in as BEN saves prices each day."));
+    return;
+  }
+  const W=820,H=260,L=56,R=110,Tp=14,B=30;
+  const xs=tl.map(p=>new Date(p.d+"T12:00:00").getTime());
+  const x0=xs[0], x1=xs[xs.length-1];
+  const ymax=niceMax(Math.max(...tl.map(p=>Math.max(p.value,p.spent)))*1.05);
+  const X=t=>L+(t-x0)/(x1-x0||1)*(W-L-R), Y=v=>Tp+(1-v/ymax)*(H-Tp-B);
+  const svg=el("svg",{viewBox:"0 0 "+W+" "+H,role:"img","aria-label":"Collection value and total spent over time"});
+  for(let i=0;i<=4;i++){ const v=ymax*i/4, y=Y(v);
+    svg.append(el("line",{x1:L,x2:W-R,y1:y,y2:y,stroke:"var(--line)","stroke-width":1}));
+    svg.append(el("text",{x:L-8,y:y+4,"text-anchor":"end","font-size":12,fill:"var(--muted)","font-family":"var(--f-mono)"},shortMoney(v))); }
+  const ticks=Math.min(6,tl.length);
+  for(let i=0;i<ticks;i++){ const idx=Math.round(i*(tl.length-1)/Math.max(1,ticks-1)); const d=new Date(tl[idx].d+"T12:00:00");
+    svg.append(el("text",{x:X(xs[idx]),y:H-8,"text-anchor":i===0?"start":i===ticks-1?"end":"middle","font-size":12,fill:"var(--muted)"},d.toLocaleDateString("en-US",{month:"short",day:"numeric"}))); }
+  const path=k=>tl.map((p,i)=>(i?"L":"M")+X(xs[i]).toFixed(1)+","+Y(p[k]).toFixed(1)).join("");
+  svg.append(el("path",{d:path("spent"),fill:"none",stroke:"var(--muted)","stroke-width":2,"stroke-dasharray":"6 5","stroke-linejoin":"round"}));
+  svg.append(el("path",{d:path("value"),fill:"none",stroke:"var(--dark)","stroke-width":2,"stroke-linejoin":"round","stroke-linecap":"round"}));
+  const last=tl[tl.length-1]; let yv=Y(last.value), ys=Y(last.spent);
+  if(Math.abs(yv-ys)<30){ if(yv<=ys){ yv-=8; ys+=8; } else { yv+=8; ys-=8; } }
+  svg.append(el("circle",{cx:X(x1),cy:Y(last.value),r:4,fill:"var(--dark)",stroke:"var(--surface)","stroke-width":2}));
+  svg.append(el("text",{x:X(x1)+10,y:yv-2,"font-size":12,fill:"var(--muted)"},"Value"));
+  svg.append(el("text",{x:X(x1)+10,y:yv+13,"font-size":13,fill:"var(--ink)","font-family":"var(--f-mono)"},shortMoney(last.value)));
+  svg.append(el("text",{x:X(x1)+10,y:ys-2,"font-size":12,fill:"var(--muted)"},"Spent"));
+  svg.append(el("text",{x:X(x1)+10,y:ys+13,"font-size":13,fill:"var(--ink)","font-family":"var(--f-mono)"},shortMoney(last.spent)));
+  const cross=el("line",{x1:0,x2:0,y1:Tp,y2:H-B,stroke:"var(--muted)","stroke-width":1,opacity:0});
+  const hv=el("circle",{r:5,fill:"var(--dark)",stroke:"var(--surface)","stroke-width":2,opacity:0});
+  const hit=el("rect",{x:L,y:Tp,width:W-L-R,height:H-Tp-B,fill:"transparent"});
+  svg.append(cross,hv,hit);
+  const tip=document.createElement("div"); tip.className="tip"; tip.hidden=true;
+  hit.addEventListener("pointermove",e=>{
+    const r=svg.getBoundingClientRect(), sx=(e.clientX-r.left)/r.width*W;
+    let i=0, best=1e18; xs.forEach((t,k)=>{ const dd=Math.abs(X(t)-sx); if(dd<best){ best=dd; i=k; } });
+    const p=tl[i], cx=X(xs[i]);
+    cross.setAttribute("x1",cx); cross.setAttribute("x2",cx); cross.setAttribute("opacity",.5);
+    hv.setAttribute("cx",cx); hv.setAttribute("cy",Y(p.value)); hv.setAttribute("opacity",1);
+    tip.hidden=false; tip.innerHTML="";
+    const b=document.createElement("b"); b.textContent=fmtDay(p.d); tip.append(b, document.createElement("br"), "Value "+money(p.value), document.createElement("br"), "Spent "+money(p.spent));
+    tip.style.left=(cx/W*r.width)+"px"; tip.style.top=(Y(p.value)/H*r.height)+"px";
+  });
+  hit.addEventListener("pointerleave",()=>{ tip.hidden=true; cross.setAttribute("opacity",0); hv.setAttribute("opacity",0); });
+  box.append(legend,svg,tip);
+}
+function drawBars(months){
+  const box=$("chBars"); box.replaceChildren();
+  if(!months.length){ box.append(note("Log a purchase with a date to see monthly spending.")); return; }
+  const ms=months.slice(-12);
+  const W=420,H=220,L=48,R=8,Tp=20,B=28;
+  const ymax=niceMax(Math.max(...ms.map(m=>m.spent))*1.1);
+  const bw=(W-L-R)/ms.length, Y=v=>Tp+(1-v/ymax)*(H-Tp-B);
+  const svg=el("svg",{viewBox:"0 0 "+W+" "+H,role:"img","aria-label":"Spending per month"});
+  for(let i=0;i<=4;i++){ const v=ymax*i/4, y=Y(v);
+    svg.append(el("line",{x1:L,x2:W-R,y1:y,y2:y,stroke:"var(--line)","stroke-width":1}));
+    svg.append(el("text",{x:L-8,y:y+4,"text-anchor":"end","font-size":12,fill:"var(--muted)","font-family":"var(--f-mono)"},shortMoney(v))); }
+  const tip=document.createElement("div"); tip.className="tip"; tip.hidden=true;
+  let prevYear="";
+  ms.forEach((m,i)=>{
+    const w=Math.min(36,bw-6), x=L+i*bw+(bw-w)/2, y=Y(m.spent), h=Math.max(0,H-B-y), r=Math.min(4,h);
+    const d="M"+x+","+(H-B)+"V"+(y+r)+"Q"+x+","+y+" "+(x+r)+","+y+"H"+(x+w-r)+"Q"+(x+w)+","+y+" "+(x+w)+","+(y+r)+"V"+(H-B)+"Z";
+    const bar=el("path",{d,fill:"var(--dark)"}); svg.append(bar);
+    const dt=new Date(m.m+"-15T12:00:00"), yr=String(dt.getFullYear());
+    svg.append(el("text",{x:x+w/2,y:H-10,"text-anchor":"middle","font-size":12,fill:"var(--muted)"},dt.toLocaleDateString("en-US",{month:"short"})+(yr!==prevYear&&i>0?" ’"+yr.slice(2):"")));
+    prevYear=yr;
+    if(i===ms.length-1) svg.append(el("text",{x:x+w/2,y:y-6,"text-anchor":"middle","font-size":12,fill:"var(--ink)","font-family":"var(--f-mono)"},shortMoney(m.spent)));
+    const hit=el("rect",{x:L+i*bw,y:Tp,width:bw,height:H-Tp-B,fill:"transparent"});
+    hit.addEventListener("pointerenter",()=>{ const r=svg.getBoundingClientRect(); tip.hidden=false; tip.innerHTML="";
+      const b=document.createElement("b"); b.textContent=dt.toLocaleDateString("en-US",{month:"long",year:"numeric"});
+      tip.append(b,document.createElement("br"),money(m.spent)+" · "+m.count+" purchase"+(m.count===1?"":"s"));
+      tip.style.left=((x+w/2)/W*r.width)+"px"; tip.style.top=(y/H*r.height)+"px"; bar.setAttribute("opacity",.8); });
+    hit.addEventListener("pointerleave",()=>{ tip.hidden=true; bar.setAttribute("opacity",1); });
+    svg.append(hit);
+  });
+  box.append(svg,tip);
+}
+function drawMovers(){
+  const box=$("movers"); box.replaceChildren();
+  $("moversTitle").textContent="Biggest movers this week · "+(state.set.name||"");
+  const rows=state.cards.map(c=>({c,t:trend(c.n,7)})).filter(r=>r.t && r.t.from>=1 && Math.abs(r.t.pct)>=0.5);
+  if(!rows.length){
+    const first=state.histDates[0];
+    box.append(note(first ? "No price changes yet. Prices have been saved daily since "+fmtDay(first)+"." : "Movers appear once BEN has saved prices for a few days."));
+    return;
+  }
+  const up=rows.filter(r=>r.t.pct>0).sort((a,b)=>b.t.pct-a.t.pct).slice(0,5);
+  const down=rows.filter(r=>r.t.pct<0).sort((a,b)=>a.t.pct-b.t.pct).slice(0,5);
+  const g=document.createElement("div"); g.className="mv";
+  const section=(title,list)=>{ if(!list.length) return; const h=document.createElement("h3"); h.textContent=title; g.append(h);
+    for(const {c,t} of list){ const b=document.createElement("button"); b.type="button"; b.textContent=c.name; b.onclick=()=>openCard(c.n);
+      const p=document.createElement("span"); p.className="p"; p.textContent=money(t.to); g.append(b,p,trendEl(t)); } };
+  section("Going up",up); section("Going down",down);
+  box.append(g);
+}
+function drawLog(log){
+  const body=$("logBody"); body.replaceChildren();
+  if(!log.length){ const tr=document.createElement("tr"); const td=document.createElement("td"); td.colSpan=6; td.className="empty"; td.textContent="No purchases logged yet. Tap Need on a card, or open a card and add a purchase."; tr.append(td); body.append(tr); return; }
+  for(const r of log.slice(0,200)){
+    const tr=document.createElement("tr");
+    const c1=document.createElement("td"); c1.textContent=fmtDay(r.d); c1.style.whiteSpace="nowrap";
+    const c2=document.createElement("td"); const nb=document.createElement("button"); nb.type="button"; nb.className="nm"; nb.textContent=r.name;
+    nb.onclick=()=>{ if(r.set===state.sid) openCard(r.n); else { openSet(r.set).then(()=>openCard(r.n)); } }; c2.append(nb);
+    const c3=document.createElement("td"); c3.textContent=r.setName;
+    const c4=document.createElement("td"); c4.textContent=r.where||"–";
+    const c6=document.createElement("td"); const se=sellerEl(r.seller); if(se) c6.append(se); else c6.textContent="–";
+    const c5=document.createElement("td"); c5.className="num"; c5.textContent=r.price?money(r.price):"Not set";
+    tr.append(c1,c2,c3,c4,c6,c5); body.append(tr);
+  }
+}
+$("dlg").addEventListener("close",()=>{ if(state.view==="stats" && state.spendStale) loadStats(); if(state.view==="shop") drawShop(); });
+
+// ---------- start ----------
+header(); render();
+{ const v=recall("nd-view"); if(v==="shop"||v==="stats") setView(v); }
+loadSets().then(()=>{
+  const want=location.hash.slice(1)||recall("nd-set");
+  const sid=state.sets.some(s=>s.id===want) ? want : (state.sets[0] ? state.sets[0].id : null);
+  return openSet(sid);
+}).then(()=>fetch("api/refresh")).then(r=>r&&r.json()).then(j=>{ if(j&&j.running) showJob(j); }).catch(()=>{ $("sync").textContent="Can't reach BEN. Try reloading."; });
+window.addEventListener("hashchange",()=>{ const sid=location.hash.slice(1); if(sid && sid!==state.sid && state.sets.some(s=>s.id===sid)) openSet(sid); });
+
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+# Your collection, photos, prices and images live on BEN only
+data/
+previous/
+data-backup*/
+__pycache__/
+*.tmp
+seed_collection.json
