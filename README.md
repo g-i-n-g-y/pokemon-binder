@@ -29,6 +29,12 @@ A self-hosted Pokémon TCG collection tracker. One small Python server (standard
 
 <img src="screenshots/card-details.png" alt="Card details panel" width="360">
 
+## How was this possible?
+
+I don't know how to code. I built this by describing what I wanted to an AI assistant, testing each version, and asking for changes one at a time. If you'd like to build something similar for yourself, running on your own computer and opening on your phone, I wrote up how it works in beginner terms, including what Tailscale is and how to set it up.
+
+**[Read: How I built this without knowing how to code](docs/how-this-was-made.md)** · [PDF version](docs/how-this-was-made.pdf)
+
 Your collection, purchases, photos, and prices are stored only on the machine running the binder. This repository holds program files only.
 
 ## Program files
