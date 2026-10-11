@@ -59,11 +59,11 @@ The binder updates itself from this repository. No key or password is needed.
 - **Settings → About → Check for updates** (no restart needed), or
 - **Restart** the container (it checks for updates on every start).
 
-Settings → About shows the installed version and any update problem.
+Check for updates shows what's new and asks before installing. Settings → About shows the installed version, any update problem, and up to 3 previous versions you can roll back to. After a rollback, automatic updates pause until you install an update yourself. Version history is in [CHANGELOG.md](CHANGELOG.md).
 
 Safety nets:
 - A new `server.py` with an error is skipped entirely, and the current version keeps running.
-- The replaced version is kept in `previous/` next to `server.py`.
+- The last 3 versions are kept in `previous/` next to `server.py`.
 
 Optional environment variables:
 

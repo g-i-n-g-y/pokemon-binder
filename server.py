@@ -22,6 +22,8 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
+APP_VERSION = "1.0"   # bump for every app update: 1.0 -> 1.1 for features/fixes, 2.0 for big changes
+
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
 SETS_DIR = os.path.join(DATA, "sets")
@@ -632,6 +634,14 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_file(os.path.join(APP, "index.html"), "text/html; charset=utf-8", "no-cache")
         if path == "/api/version":
             return self.send(200, version_info(), cache="no-store")
+        if path == "/api/update/check":
+            if not GH_REPO:
+                return self.send(400, {"error": "Changelog needs GitHub updates"})
+            try:
+                return self.send(200, check_github(), cache="no-store")
+            except Exception as e:
+                update_status["error"] = gh_error(e)
+                return self.send(502, {"error": update_status["error"]})
         if path == "/api/sets":
             sl = sets_list()
             out = []
@@ -755,13 +765,30 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(400, {"error": str(e) or "Couldn't add that set"})
             return self.send(200, meta)
         if path == "/api/update":
-            if not GH_REPO and not os.path.isdir(UPDATES):
-                return self.send(400, {"error": "Updates aren't set up yet"})
-            installed = update_from_github() if GH_REPO else install_files(UPDATES, "the updates folder")
-            if GH_REPO and update_status["error"]:
-                return self.send(502, {"error": update_status["error"]})
+            # install the latest version (from GitHub, or the updates folder)
+            try:
+                if GH_REPO:
+                    installed = install_from_github()
+                elif os.path.isdir(UPDATES):
+                    installed = install_files(UPDATES, "update from the updates folder")
+                else:
+                    return self.send(400, {"error": "Updates aren't set up"})
+            except Exception as e:
+                return self.send(502, {"error": gh_error(e)})
             restarting = "server.py" in installed
-            self.send(200, {"installed": installed, "restarting": restarting, "commit": update_status["commit"]})
+            self.send(200, {"installed": installed, "restarting": restarting})
+            if restarting:
+                threading.Thread(target=restart_self, args=(1,), daemon=True).start()
+            return
+        if path == "/api/rollback":
+            raw = self.body(4096)
+            try:
+                vid = json.loads(raw or b"{}").get("id", "")
+                installed = rollback(vid)
+            except Exception as e:
+                return self.send(400, {"error": str(e) or "Couldn't roll back"})
+            restarting = "server.py" in installed
+            self.send(200, {"installed": installed, "restarting": restarting})
             if restarting:
                 threading.Thread(target=restart_self, args=(1,), daemon=True).start()
             return
@@ -810,8 +837,18 @@ UPDATE_FILES = ("server.py", "index.html")
 GH_REPO = os.environ.get("GITHUB_REPO", "g-i-n-g-y/pokemon-binder")
 GH_BRANCH = os.environ.get("GITHUB_BRANCH", "main")
 GH_TOKEN = os.environ.get("GITHUB_TOKEN", "").strip()
-VERSION_FILE = os.path.join(APP, ".version.json")
-update_status = {"source": "", "commit": "", "checked": "", "error": ""}
+VERSION_FILE = os.path.join(APP, ".version.json")   # {commit, subject, date, installed, paused}
+PREVIOUS = os.path.join(APP, "previous")            # previous/<stamp>/{server.py, index.html, meta.json}
+KEEP_VERSIONS = 3
+update_status = {"source": "", "checked": "", "error": ""}
+
+
+def now_iso():
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def current_version():
+    return read_json(VERSION_FILE, {})
 
 
 def same_file(a, b):
@@ -822,32 +859,76 @@ def same_file(a, b):
         return False
 
 
-def install_files(folder, label):
-    """Copy changed program files from `folder` into the app. Returns the list of files installed."""
-    installed = []
-    new_server = os.path.join(folder, "server.py")
-    if os.path.isfile(new_server) and not same_file(new_server, os.path.join(APP, "server.py")):
-        try:
-            with open(new_server) as f:
-                compile(f.read(), new_server, "exec")
-        except SyntaxError as e:
-            # skip the whole update so the page and server never end up mismatched
-            log(f"Update skipped: the new server.py has an error on line {e.lineno}. Still running the old version.")
-            return installed
+def file_version(path):
+    """The APP_VERSION written in a server.py file, or "" for versions from before numbering."""
+    try:
+        with open(path) as f:
+            m = re.search(r'^APP_VERSION\s*=\s*"([^"]+)"', f.read(), re.M)
+        return m.group(1) if m else ""
+    except OSError:
+        return ""
+
+
+def split_subject(subject):
+    """'v1.2: Add photos' -> ('1.2', 'Add photos'); other subjects -> ('', subject)."""
+    m = re.match(r"v(\d+(?:\.\d+)+)\s*[:\-]\s*(.*)", subject or "")
+    return (m.group(1), m.group(2)) if m else ("", subject or "")
+
+
+def server_ok(path):
+    """True if the server.py at `path` has no syntax errors."""
+    try:
+        with open(path) as f:
+            compile(f.read(), path, "exec")
+        return True
+    except SyntaxError as e:
+        log(f"Update skipped: the new server.py has an error on line {e.lineno}. Still running the current version.")
+        return False
+
+
+def save_current_version():
+    """Keep a copy of the running version so it can be rolled back to later (newest 3 are kept)."""
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S-%f")
+    dest = os.path.join(PREVIOUS, stamp)
+    os.makedirs(dest, exist_ok=False)
     for name in UPDATE_FILES:
-        src, dst = os.path.join(folder, name), os.path.join(APP, name)
-        if not os.path.isfile(src) or same_file(src, dst):
-            continue
-        prev = os.path.join(APP, "previous")
-        os.makedirs(prev, exist_ok=True)
-        if os.path.exists(dst):
-            shutil.copy2(dst, os.path.join(prev, name))
-        shutil.copyfile(src, dst + ".tmp")
+        if os.path.exists(os.path.join(APP, name)):
+            shutil.copy2(os.path.join(APP, name), os.path.join(dest, name))
+    cur = current_version()
+    write_json(os.path.join(dest, "meta.json"), {"version": file_version(os.path.join(APP, "server.py")),
+                                                  "commit": cur.get("commit", ""), "subject": cur.get("subject", ""),
+                                                  "date": cur.get("date", ""), "installed": cur.get("installed", ""),
+                                                  "saved": now_iso()})
+    for old in list_versions()[KEEP_VERSIONS:]:
+        shutil.rmtree(os.path.join(PREVIOUS, old["id"]), ignore_errors=True)
+
+
+def list_versions():
+    """Saved previous versions, newest first."""
+    out = []
+    if os.path.isdir(PREVIOUS):
+        for d in sorted(os.listdir(PREVIOUS), reverse=True):
+            meta = read_json(os.path.join(PREVIOUS, d, "meta.json"), None)
+            if meta is not None and os.path.isfile(os.path.join(PREVIOUS, d, "server.py")):
+                out.append(dict(meta, id=d))
+    return out
+
+
+def install_files(folder, label):
+    """Install changed program files from `folder`. Saves the running version first. Returns files installed."""
+    changed = [n for n in UPDATE_FILES
+               if os.path.isfile(os.path.join(folder, n)) and not same_file(os.path.join(folder, n), os.path.join(APP, n))]
+    if not changed:
+        return []
+    if "server.py" in changed and not server_ok(os.path.join(folder, "server.py")):
+        return []   # skip the whole update so the page and server never end up mismatched
+    save_current_version()
+    for name in changed:
+        dst = os.path.join(APP, name)
+        shutil.copyfile(os.path.join(folder, name), dst + ".tmp")
         os.replace(dst + ".tmp", dst)
-        installed.append(name)
-    if installed:
-        log(f"Installed update from {label}: " + ", ".join(installed) + " (old copies saved in previous/)")
-    return installed
+    log(f"Installed {label}: " + ", ".join(changed))
+    return changed
 
 
 def gh_get(path, accept):
@@ -859,49 +940,112 @@ def gh_get(path, accept):
         return r.read()
 
 
-def update_from_github():
-    """Download server.py and index.html from GitHub and install any that changed."""
-    update_status.update(source="github", checked=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), error="")
-    try:
-        sha = gh_get(f"commits/{GH_BRANCH}", "application/vnd.github.sha").decode().strip()
-        stage = os.path.join(APP, ".incoming")
-        os.makedirs(stage, exist_ok=True)
-        for name in UPDATE_FILES:
-            body = gh_get(f"contents/{name}?ref={sha}", "application/vnd.github.raw")
-            with open(os.path.join(stage, name), "wb") as f:
-                f.write(body)
-        installed = install_files(stage, f"GitHub ({sha[:7]})")
-        # only record the commit if the new server.py was actually accepted
-        if same_file(os.path.join(stage, "server.py"), os.path.join(APP, "server.py")):
-            write_json(VERSION_FILE, {"commit": sha, "installed": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
-        update_status["commit"] = read_json(VERSION_FILE, {}).get("commit", "")
-        return installed
-    except urllib.error.HTTPError as e:
+def gh_json(path):
+    return json.loads(gh_get(path, "application/vnd.github+json"))
+
+
+def gh_error(e):
+    if isinstance(e, urllib.error.HTTPError):
         if e.code == 404:
-            msg = "Repository " + GH_REPO + " wasn't found. It may still be private"
-        elif e.code in (403, 429) and not GH_TOKEN:
-            msg = "GitHub's hourly limit for update checks was reached. Try again in an hour"
-        elif e.code == 401:
-            msg = "GitHub key was rejected (it may have expired)"
-        else:
-            msg = f"GitHub error {e.code}"
-        update_status["error"] = msg
-        log(f"Update check: {msg}")
-    except Exception as e:
-        update_status["error"] = f"Couldn't reach GitHub ({e.__class__.__name__})"
-        log(f"Update check: couldn't reach GitHub: {e}")
-    return []
+            return "Repository " + GH_REPO + " wasn't found. It may be private"
+        if e.code in (403, 429) and not GH_TOKEN:
+            return "GitHub's hourly limit for update checks was reached. Try again in an hour"
+        if e.code == 401:
+            return "GitHub key was rejected (it may have expired)"
+        return f"GitHub error {e.code}"
+    return f"Couldn't reach GitHub ({e.__class__.__name__})"
+
+
+def commit_info(c):
+    msg = (c.get("commit") or {}).get("message", "")
+    ver, text = split_subject(msg.split("\n")[0][:160])
+    return {"sha": c.get("sha", ""), "version": ver, "subject": text,
+            "date": ((c.get("commit") or {}).get("committer") or {}).get("date", "")}
+
+
+def check_github():
+    """What's new on GitHub compared with what's installed: {latest, changes, upToDate}."""
+    update_status.update(source="github", checked=now_iso(), error="")
+    latest = commit_info(gh_json(f"commits/{GH_BRANCH}"))
+    ver = current_version()
+    cur = ver.get("commit", "")
+    if cur and not ver.get("subject"):   # versions installed before changelogs existed: fill in the description
+        try:
+            info = commit_info(gh_json(f"commits/{cur}"))
+            write_json(VERSION_FILE, dict(ver, subject=info["subject"], date=info["date"]))
+            ver = current_version()
+        except Exception:
+            pass
+    if cur == latest["sha"]:
+        return {"upToDate": True, "latest": latest, "changes": []}
+    running = file_version(os.path.join(APP, "server.py"))
+    try:   # the version written in the latest server.py, which is what would actually be installed
+        m = re.search(r'^APP_VERSION\s*=\s*"([^"]+)"',
+                      gh_get(f"contents/server.py?ref={latest['sha']}", "application/vnd.github.raw").decode("utf-8", "ignore"), re.M)
+        latest["fileVersion"] = m.group(1) if m else ""
+    except Exception:
+        latest["fileVersion"] = latest["version"]
+    if running and latest["fileVersion"] == running:
+        return {"upToDate": True, "latest": latest, "changes": []}   # only non-app changes (like the README)
+    changes = []
+    if cur:
+        try:
+            cmp = gh_json(f"compare/{cur}...{latest['sha']}")
+            if cmp.get("status") in ("ahead", "diverged"):
+                changes = [commit_info(c) for c in reversed(cmp.get("commits") or [])]
+                changes = [c for c in changes if c["version"]][:15] or changes[:15]
+        except Exception:
+            changes = []
+    if not changes:
+        changes = [latest]
+    return {"upToDate": False, "latest": latest, "running": running, "changes": changes}
+
+
+def install_from_github(sha=None):
+    """Download server.py and index.html at `sha` (default: latest) and install them. Returns files installed."""
+    update_status.update(source="github", checked=now_iso(), error="")
+    info = commit_info(gh_json(f"commits/{sha or GH_BRANCH}"))
+    stage = os.path.join(APP, ".incoming")
+    os.makedirs(stage, exist_ok=True)
+    for name in UPDATE_FILES:
+        with open(os.path.join(stage, name), "wb") as f:
+            f.write(gh_get(f"contents/{name}?ref={info['sha']}", "application/vnd.github.raw"))
+    installed = install_files(stage, f"update {info['sha'][:7]} ({info['subject']})")
+    # record the version only if its server.py is what's now running
+    if same_file(os.path.join(stage, "server.py"), os.path.join(APP, "server.py")):
+        write_json(VERSION_FILE, dict(info, commit=info["sha"], installed=now_iso(), paused=False))
+    return installed
+
+
+def rollback(version_id):
+    """Reinstall a saved previous version. Pauses automatic updates. Returns files installed."""
+    folder = os.path.join(PREVIOUS, version_id)
+    meta = read_json(os.path.join(folder, "meta.json"), None)
+    if meta is None or not re.fullmatch(r"[0-9-]+", version_id):
+        raise ValueError("That version isn't available")
+    installed = install_files(folder, f"rollback to {meta.get('commit', '')[:7] or 'older version'}")
+    if installed or same_file(os.path.join(folder, "server.py"), os.path.join(APP, "server.py")):
+        write_json(VERSION_FILE, {"version": meta.get("version", ""), "commit": meta.get("commit", ""), "subject": meta.get("subject", ""),
+                                  "date": meta.get("date", ""), "installed": now_iso(), "paused": True})
+        shutil.rmtree(folder, ignore_errors=True)   # it's the running version now
+    return installed
 
 
 def apply_updates():
-    """Check for updates. GitHub is used when a key is set; otherwise the /updates drop folder.
-    Returns True if server.py changed."""
-    update_status["commit"] = read_json(VERSION_FILE, {}).get("commit", "")
+    """Run on start. Returns True if server.py changed (the server then restarts itself)."""
     if GH_REPO:
-        return "server.py" in update_from_github()
+        if current_version().get("paused"):
+            log("Automatic updates are paused after a rollback. Use Check for updates to install the latest.")
+            return False
+        try:
+            return "server.py" in install_from_github()
+        except Exception as e:
+            update_status["error"] = gh_error(e)
+            log(f"Update check: {update_status['error']}")
+            return False
     if os.path.isdir(UPDATES):
-        update_status.update(source="folder", checked=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), error="")
-        return "server.py" in install_files(UPDATES, "the updates folder")
+        update_status.update(source="folder", checked=now_iso(), error="")
+        return "server.py" in install_files(UPDATES, "update from the updates folder")
     return False
 
 
@@ -919,10 +1063,12 @@ def version_info():
             out[name] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(os.path.getmtime(os.path.join(APP, name))))
         except OSError:
             out[name] = ""
-    out["updatesFolder"] = os.path.isdir(UPDATES)
-    out["github"] = bool(GH_REPO)
-    out["repo"] = GH_REPO
-    out.update({k: update_status[k] for k in ("source", "commit", "checked", "error")})
+    cur = current_version()
+    out.update(version=file_version(os.path.join(APP, "server.py")),
+               updatesFolder=os.path.isdir(UPDATES), github=bool(GH_REPO), repo=GH_REPO,
+               commit=cur.get("commit", ""), subject=cur.get("subject", ""), date=cur.get("date", ""),
+               installed=cur.get("installed", ""), paused=bool(cur.get("paused")),
+               previous=list_versions(), **{k: update_status[k] for k in ("source", "checked", "error")})
     return out
 
 
