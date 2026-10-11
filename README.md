@@ -15,7 +15,7 @@ A self-hosted Pokémon TCG collection tracker. One small Python server (standard
 - Purchase log with date, price, place, and seller handle (Instagram, TikTok, Whatnot, eBay, and more)
 - Front and back photos of your own copies
 - Privacy mode (eye button): shows every card in color with no Owned/Need tags, blurs cards owned and money totals, hides purchases
-- Five dark themes; works on phones
+- Five dark themes and your own browser tab icon; works on phones
 
 ## Screenshots
 
@@ -55,6 +55,7 @@ Stored in `data/` next to `server.py`:
 |---|---|
 | `sets.json` | Which sets are in the binder |
 | `settings.json` | Refresh time and other settings |
+| `favicon` | Your tab icon, if you picked one |
 | `catalog.json` | All English sets (refreshed weekly) |
 | `sets/<set id>/collection.json` | Copies owned, condition, purchases, sellers, notes |
 | `sets/<set id>/prices.json` | Latest prices, including per-condition averages |

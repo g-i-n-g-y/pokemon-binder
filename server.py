@@ -22,7 +22,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "1.5"   # bump for every app update: 1.0 -> 1.1 for features/fixes, 2.0 for big changes
+APP_VERSION = "1.6"   # bump for every app update: 1.0 -> 1.1 for features/fixes, 2.0 for big changes
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -42,6 +42,15 @@ WANT_COND = ("Lightly Played", "Moderately Played")   # updated from the price s
 SALES_TO_AVERAGE = 10
 DAY = 24 * 3600
 MAX_PHOTO = 15 * 1024 * 1024
+# Browser tab icon. Your own icon (uploaded in Settings) lives in data/, so it never goes into the repository.
+ICON_FILE = os.path.join(DATA, "favicon")
+ICON_TYPES = ("image/png", "image/jpeg", "image/webp", "image/gif", "image/x-icon", "image/vnd.microsoft.icon")
+MAX_ICON = 2 * 1024 * 1024
+DEFAULT_ICON = b"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<rect x="6" y="4" width="52" height="56" rx="8" fill="#2A2438"/>
+<rect x="13" y="11" width="17" height="22" rx="3" fill="#A88BEA"/><rect x="34" y="11" width="17" height="22" rx="3" fill="#E2B04A"/>
+<rect x="13" y="37" width="17" height="17" rx="3" fill="#5CC3CC"/><rect x="34" y="37" width="17" height="17" rx="3" fill="#6B6380"/>
+</svg>"""
 SID_RE = r"[a-z0-9][a-z0-9.\-]{0,40}"
 NUM_RE = r"[A-Za-z0-9\-]{1,12}"
 
@@ -941,6 +950,12 @@ class Handler(BaseHTTPRequestHandler):
         path = self.path.split("?")[0]
         if path in ("/", "/index.html"):
             return self.send_file(os.path.join(APP, "index.html"), "text/html; charset=utf-8", "no-cache")
+        if path in ("/favicon", "/favicon.ico"):
+            if os.path.exists(ICON_FILE):
+                return self.send_file(ICON_FILE, read_json(ICON_FILE + ".json", {}).get("type", "image/png"), "no-cache")
+            return self.send(200, DEFAULT_ICON, "image/svg+xml", "no-cache")
+        if path == "/api/icon":
+            return self.send(200, {"custom": os.path.exists(ICON_FILE)}, cache="no-store")
         if path == "/api/version":
             return self.send(200, version_info(), cache="no-store")
         if path == "/api/update/check":
@@ -1083,6 +1098,11 @@ class Handler(BaseHTTPRequestHandler):
         return self.send(200, out)
 
     def do_DELETE(self):
+        if self.path == "/api/icon":
+            for f in (ICON_FILE, ICON_FILE + ".json"):
+                if os.path.exists(f):
+                    os.remove(f)
+            return self.send(200, {"ok": True})
         m = re.fullmatch(rf"/api/sets/({SID_RE})", self.path)
         if not m:
             return self.send(400, {"error": "bad request"})
@@ -1091,6 +1111,18 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = self.path.split("?")[0]
+        if path == "/api/icon":
+            ctype = self.headers.get("Content-Type", "").split(";")[0].strip().lower()
+            if ctype not in ICON_TYPES:
+                return self.send(400, {"error": "Use a PNG, JPG, WebP, GIF or ICO image"})
+            raw = self.body(MAX_ICON)
+            if raw is None:
+                return self.send(413, {"error": "That image is too big (2 MB max)"})
+            with lock:
+                with open(ICON_FILE, "wb") as f:
+                    f.write(raw)
+                write_json(ICON_FILE + ".json", {"type": ctype})
+            return self.send(200, {"ok": True, "v": int(time.time())})
         if path == "/api/sets":
             raw = self.body(4096)
             try:

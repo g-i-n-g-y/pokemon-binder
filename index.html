@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Pokémon Binder</title>
+<link rel="icon" id="favicon" href="favicon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <script>try{var s=localStorage.getItem("nd-skin");if(s)document.documentElement.dataset.skin=s;if(localStorage.getItem("nd-private")==="on")document.documentElement.dataset.private="";}catch(e){}</script>
@@ -108,6 +109,8 @@ dialog::backdrop{background:rgba(5,4,8,.6)}
 .lpmp .half+.half{border-left:1px solid var(--line);padding-left:14px}
 .lpmp .v{font-size:22px}
 .lpmp.one{grid-template-columns:1fr}
+.iconrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.iconrow img{width:40px;height:40px;border-radius:8px;background:var(--bg);border:1px solid var(--line);object-fit:contain;padding:3px}
 .dtabs{align-self:flex-start}
 .dtabs button{white-space:nowrap}
 .tabpane{display:flex;flex-direction:column;gap:18px}
@@ -596,6 +599,14 @@ dialog.left{margin:0 auto 0 0}
     <div class="eyebrow">Cards</div>
     <label class="toggle" for="stEd"><input type="checkbox" id="stEd" checked> Show "Unlimited" under each card</label>
     <div class="note">Card images come from the public card database, which uses 1st Edition scans for older sets. The label is a reminder that you collect Unlimited.</div>
+    <div class="eyebrow">Tab icon</div>
+    <div class="iconrow">
+      <img id="icPrev" src="favicon" alt="Current tab icon" width="40" height="40">
+      <label class="btn" for="icUp">Choose image</label>
+      <input id="icUp" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/x-icon" hidden>
+      <button class="btn" type="button" id="icReset" hidden>Use default</button>
+    </div>
+    <div class="note" id="icMsg">The little picture on the browser tab. A square PNG works best. It's saved on BEN only.</div>
     <div class="eyebrow">Price average <span id="slotSet"></span></div>
     <div class="note">Pick the two prices shown on each card. Each binder keeps its own choice, so switch sets from the menu to change another one. Raw conditions come from TCGplayer sales. Graded prices come from eBay sold listings collected by PriceCharting, sorted by the grading company and grade in each listing's title.</div>
     <div id="slotRows"></div>
@@ -1224,8 +1235,23 @@ async function saveSlots(slots){
 function getSlots(){
   return fetch("api/settings").then(r=>r.json()).then(s=>{ if(s.options) state.slotOpts=s.options; return s; }).catch(()=>null);
 }
+// ---------- tab icon ----------
+function setIcon(v){
+  const u="favicon?v="+(v||Date.now());
+  $("favicon").href=u; $("icPrev").src=u;
+  fetch("api/icon").then(r=>r.json()).then(j=>{ $("icReset").hidden=!j.custom; }).catch(()=>{});
+}
+$("icUp").onchange=e=>{
+  const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  $("icMsg").textContent="Saving…";
+  fetch("api/icon",{method:"POST",headers:{"Content-Type":f.type||"application/octet-stream"},body:f})
+    .then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error||"Couldn't save"); return j; }))
+    .then(j=>{ setIcon(j.v); $("icMsg").textContent="Saved. Other open tabs pick it up when reloaded."; })
+    .catch(err=>{ $("icMsg").textContent=(err&&err.message&&err.message!=="Failed to fetch") ? err.message : "Couldn't save. Check that the container is running."; });
+};
+$("icReset").onclick=()=>fetch("api/icon",{method:"DELETE"}).then(()=>{ setIcon(); $("icMsg").textContent="Back to the default icon."; });
 function loadSettings(){
-  $("stSaved").textContent=""; $("slotMsg").textContent=""; drawSlots();
+  $("stSaved").textContent=""; $("slotMsg").textContent=""; drawSlots(); setIcon(Date.now());
   $("slotSet").textContent=state.set.name ? "for "+state.set.name : "";
   getSlots().then(s=>{ if(!s) throw 0; drawSlots(); return s; }).then(s=>{
     $("stAuto").checked=!!s.auto; $("stTime").value=s.time||"03:00"; showNext(s.next, s.auto);
