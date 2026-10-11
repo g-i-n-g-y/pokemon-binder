@@ -14,7 +14,7 @@ repository (GITHUB_REPO, default g-i-n-g-y/pokemon-binder) on every start and fr
 this off and use a folder mounted at /updates instead. GITHUB_TOKEN is optional and only
 needed for a private copy of the repository. Replaced files are kept in previous/.
 """
-import json, os, re, shutil, sys, threading, time, urllib.error, urllib.parse, urllib.request
+import io, json, os, re, shutil, sys, tempfile, threading, time, urllib.error, urllib.parse, urllib.request, zipfile
 from datetime import datetime, timedelta, timezone
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 try:
@@ -22,7 +22,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "1.9"   # bump for every app update: 1.0 -> 1.1 for features/fixes, 2.0 for big changes
+APP_VERSION = "2.0"   # bump for every app update: 1.0 -> 1.1 for features/fixes, 2.0 for big changes
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -895,6 +895,113 @@ def setup():
         write_json(SETS_FILE, sl)
 
 
+# ---------- totals per set (for the all-binders summary) ----------
+
+def set_totals(sid):
+    """Same math as the page header: value counts owned copies at their condition's price when set."""
+    coll = read_json(sdir(sid, "collection.json"), {})
+    cards = read_json(sdir(sid, "cards.json"), None) or []
+    prices = read_json(sdir(sid, "prices.json"), {})
+    p, info = prices.get("p") or {}, prices.get("info") or {}
+    t = {"owned": 0, "count": len(cards), "value": 0.0, "paid": 0.0, "need": 0.0, "full": 0.0}
+    for c in cards:
+        n = c["n"]
+        base = (p.get(n) or [0])[0] or 0
+        rec = coll.get(n) if isinstance(coll.get(n), dict) else {}
+        t["full"] += base
+        t["paid"] += sum(b.get("price") for b in rec.get("purchases") or []
+                         if isinstance(b, dict) and isinstance(b.get("price"), (int, float)))
+        q = rec.get("qty") or 0
+        if q > 0:
+            t["owned"] += 1
+            cp = ((info.get(n) or {}).get("cond") or {}).get(rec.get("cond")) if rec.get("cond") else None
+            t["value"] += ((cp[0] if cp else 0) or base) * q
+        else:
+            t["need"] += base
+    return {k: round(v, 2) if isinstance(v, float) else v for k, v in t.items()}
+
+
+# ---------- backup and restore ----------
+
+BACKUPS = os.path.join(APP, "backups")          # safety copies made before a restore (on your server only)
+MAX_RESTORE = 500 * 1024 * 1024
+SET_FILES = ("collection", "prices", "history", "tcg_ids", "slots", "shop", "pc_urls", "cards")
+BACKUP_RE = re.compile(rf"(settings\.json|sets\.json|favicon|favicon\.json|sets/{SID_RE}/(?:{'|'.join(SET_FILES)})\.json"
+                       rf"|sets/{SID_RE}/photos/{NUM_RE}(?:_back)?(?:\.json)?)")
+
+
+def backup_names():
+    """Every file a backup holds: your collection, prices, history, settings and photos.
+    Card images and the set catalog are left out because they download again by themselves."""
+    out = []
+    for name in ("settings.json", "sets.json", "favicon", "favicon.json"):
+        if os.path.isfile(os.path.join(DATA, name)):
+            out.append(name)
+    sets_root = os.path.join(DATA, "sets")
+    for sid in sorted(os.listdir(sets_root)) if os.path.isdir(sets_root) else []:
+        for f in SET_FILES:
+            if os.path.isfile(sdir(sid, f + ".json")):
+                out.append(f"sets/{sid}/{f}.json")
+        pdir = sdir(sid, "photos")
+        for f in sorted(os.listdir(pdir)) if os.path.isdir(pdir) else []:
+            out.append(f"sets/{sid}/photos/{f}")
+    return [n for n in out if BACKUP_RE.fullmatch(n)]
+
+
+def make_backup(target):
+    with lock:
+        with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as z:
+            z.writestr("backup.json", json.dumps({"app": "pokemon-binder", "version": APP_VERSION, "created": now_iso()}))
+            for name in backup_names():
+                z.write(os.path.join(DATA, name), name)
+
+
+def restore_backup(path):
+    """Replace the binder's data with a backup file. Saves a safety copy of the current data first."""
+    try:
+        z = zipfile.ZipFile(path)
+    except zipfile.BadZipFile:
+        raise ValueError("That isn't a binder backup file")
+    with z:
+        names = [n for n in z.namelist() if BACKUP_RE.fullmatch(n)]
+        if "sets.json" not in names or "backup.json" not in z.namelist():
+            raise ValueError("That file doesn't look like a binder backup")
+        try:
+            sl = json.loads(z.read("sets.json"))
+            assert isinstance(sl.get("order"), list) and isinstance(sl.get("meta"), dict)
+            assert all(isinstance(x, str) and re.fullmatch(SID_RE, x) for x in sl["order"])
+        except Exception:
+            raise ValueError("The backup's set list is damaged")
+        for n in names:
+            if n.endswith(".json"):
+                try:
+                    json.loads(z.read(n))
+                except Exception:
+                    raise ValueError(f"The backup is damaged ({n} can't be read)")
+        os.makedirs(BACKUPS, exist_ok=True)
+        safety = os.path.join(BACKUPS, time.strftime("before-restore-%Y%m%d-%H%M%S") + f"-{int(time.time() * 1000) % 1000:03d}.zip")
+        make_backup(safety)
+        old = sorted(f for f in os.listdir(BACKUPS) if f.startswith("before-restore-"))
+        for f in old[:-5]:
+            os.remove(os.path.join(BACKUPS, f))
+        with lock:
+            for sid in {n.split("/")[1] for n in names if n.startswith("sets/")}:
+                shutil.rmtree(sdir(sid, "photos"), ignore_errors=True)
+            if "favicon" not in names:
+                for f in ("favicon", "favicon.json"):
+                    if os.path.exists(os.path.join(DATA, f)):
+                        os.remove(os.path.join(DATA, f))
+            for n in names:
+                dest = os.path.join(DATA, *n.split("/"))
+                os.makedirs(os.path.dirname(dest), exist_ok=True)
+                with z.open(n) as src, open(dest + ".tmp", "wb") as out:
+                    shutil.copyfileobj(src, out)
+                os.replace(dest + ".tmp", dest)
+    log(f"Restored a backup ({len(names)} files). Safety copy of the old data: {safety}")
+    threading.Thread(target=warm_up, daemon=True).start()
+    return len(names), os.path.basename(safety)
+
+
 def warm_up():
     """Fetch card lists and images for every set in the binder (runs in the background)."""
     for sid in list(sets_list()["order"]):
@@ -956,6 +1063,21 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, DEFAULT_ICON, "image/svg+xml", "no-cache")
         if path == "/api/icon":
             return self.send(200, {"custom": os.path.exists(ICON_FILE)}, cache="no-store")
+        if path == "/api/backup":
+            buf = io.BytesIO()
+            try:
+                make_backup(buf)
+            except Exception as e:
+                return self.send(500, {"error": f"Couldn't make the backup: {e}"})
+            body = buf.getvalue()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/zip")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Content-Disposition", f'attachment; filename="pokemon-binder-backup-{time.strftime("%Y-%m-%d")}.zip"')
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(body)
+            return
         if path == "/api/version":
             return self.send(200, version_info(), cache="no-store")
         if path == "/api/update/check":
@@ -976,6 +1098,8 @@ class Handler(BaseHTTPRequestHandler):
                 cards = read_json(sdir(sid, "cards.json"), None)
                 m["count"] = len(cards) if cards is not None else m.get("total", 0)
                 m["images"] = sid in img_jobs
+                if cards is not None:
+                    m["totals"] = set_totals(sid)
                 out.append(m)
             return self.send(200, {"sets": out}, cache="no-store")
         if path == "/api/catalog":
@@ -1058,10 +1182,13 @@ class Handler(BaseHTTPRequestHandler):
             assert mode in ("lo", "hi", "num", "mine")
             assert isinstance(order, list) and len(order) <= 1000
             assert all(isinstance(n, str) and re.fullmatch(NUM_RE, n) for n in order)
+            upg = new.get("upg") or {"from": ["HP", "DMG"], "to": "LP"}
+            assert isinstance(upg.get("from"), list) and all(c in RAW_CONDS for c in upg["from"]) and upg.get("to") in RAW_CONDS
         except Exception:
             return self.send(400, {"error": "Invalid shopping list order"})
         with lock:
-            write_json(sdir(sid, "shop.json"), {"mode": mode, "order": list(dict.fromkeys(order))})
+            write_json(sdir(sid, "shop.json"), {"mode": mode, "order": list(dict.fromkeys(order)),
+                                                "upg": {"from": list(dict.fromkeys(upg["from"])), "to": upg["to"]}})
         return self.send(200, {"ok": True})
 
     def do_PUT_slots(self, sid):
@@ -1132,6 +1259,31 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = self.path.split("?")[0]
+        if path == "/api/restore":
+            size = int(self.headers.get("Content-Length") or 0)
+            if size <= 0 or size > MAX_RESTORE:
+                return self.send(413, {"error": "That file is empty or too big"})
+            fd, tmp = tempfile.mkstemp(suffix=".zip", dir=APP)
+            try:
+                with os.fdopen(fd, "wb") as f:
+                    left = size
+                    while left:
+                        chunk = self.rfile.read(min(left, 1 << 20))
+                        if not chunk:
+                            break
+                        f.write(chunk)
+                        left -= len(chunk)
+                count, safety = restore_backup(tmp)
+            except ValueError as e:
+                return self.send(400, {"error": str(e)})
+            except Exception as e:
+                return self.send(500, {"error": f"Restore failed: {e}"})
+            finally:
+                try:
+                    os.remove(tmp)
+                except OSError:
+                    pass
+            return self.send(200, {"ok": True, "files": count, "safety": safety})
         if path == "/api/icon":
             ctype = self.headers.get("Content-Type", "").split(";")[0].strip().lower()
             if ctype not in ICON_TYPES:

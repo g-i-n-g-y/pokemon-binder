@@ -12,6 +12,9 @@ A self-hosted Pokémon TCG collection tracker. One small Python server (standard
 - Prices from recent sales, Unlimited English only: pick any two per binder in Settings, raw conditions (NM to Damaged, from TCGplayer) or graded (PSA, BGS, CGC, SGC, TAG, ACE, from eBay sales on PriceCharting). LP and MP by default.
 - Daily automatic price refresh at a time you choose, plus a manual refresh button
 - Price history, biggest movers, shopping list with a budget and your own drag-to-reorder priority
+- Upgrades list: worn copies you own and what a better one costs
+- All-binders totals in the sets menu
+- One-file backup and restore
 - Purchase log with date, price, place, and seller handle (Instagram, TikTok, Whatnot, eBay, and more)
 - Front and back photos of your own copies
 - Privacy mode (eye button): shows every card in color with no Owned/Need tags, blurs cards owned and money totals, hides purchases

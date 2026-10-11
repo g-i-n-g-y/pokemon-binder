@@ -4,6 +4,12 @@ Versions go up by 0.1 for each app update (new features or fixes) and by a whole
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v2.0 (October 11, 2026)
+
+- **Backup and restore** in Settings → Backup. Download one file with every binder's cards, purchases, sellers, notes, photos, prices and settings. Restoring asks first and saves a safety copy of your current data on your server (in `backups/`, last 5 kept).
+- **Upgrades** view: cards you own in worn conditions (HP and DMG by default, MP optional), what a better copy costs, and the cost after selling yours. Choices are saved per binder.
+- **All binders** summary at the top of the sets menu: cards owned, collection value vs. paid, cost to finish, and full sets value across every binder. Each set row also shows its value. Blurred in privacy mode.
+
 ## v1.9 (October 11, 2026)
 
 - **Shopping list order:** Cheapest, Priciest, Set number, or My order. Drag the ⠿ handle (or focus it and use the arrow keys) to move a card, and the running total and budget update as you go.

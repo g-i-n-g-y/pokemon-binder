@@ -111,6 +111,18 @@ dialog::backdrop{background:rgba(5,4,8,.6)}
 .lpmp.one{grid-template-columns:1fr}
 .iconrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .iconrow img{width:40px;height:40px;border-radius:8px;background:var(--bg);border:1px solid var(--line);object-fit:contain;padding:3px}
+.allsum{border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:12px 14px;margin-bottom:12px}
+.allsum h3{margin:0 0 8px;font-size:12px;font-weight:500;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.allsum .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
+.allsum .k{display:block;font-size:12px;color:var(--muted)}
+.allsum .v{display:block;font-family:var(--f-display);font-size:19px;font-weight:700;font-variant-numeric:tabular-nums}
+.allsum .s{display:block;font-size:12px;color:var(--muted)}
+.allsum .pos{color:var(--good)} .allsum .neg{color:var(--bad)}
+:root[data-private] .allsum .v,:root[data-private] .allsum .s{filter:blur(9px);user-select:none}
+.upg-opts{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 16px;margin-top:10px}
+.upg-opts .grp{display:flex;flex-direction:column;gap:4px}
+.upg-opts .k{font-size:13px;color:var(--muted)}
+.bk{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .dtabs{align-self:flex-start}
 .dtabs button{white-space:nowrap}
 .tabpane{display:flex;flex-direction:column;gap:18px}
@@ -355,9 +367,10 @@ dialog.left{margin:0 auto 0 0}
   .views button{flex:1;padding:10px 8px}
   table.shop th,table.shop td{padding:8px}
   table.shop .hide-sm{display:none}
+  .hide-xs{display:none}
   table.shop th{white-space:normal;padding:8px 5px}
   table.shop td{padding:6px 5px}
-  #shopTable .c-img{display:none}
+  #shopTable .c-img,#upgTable .c-img{display:none}
   table.shop .c-grip{width:24px;padding:0 0 0 2px}
   .grip{padding:8px 3px}
   table.shop .btn{padding:6px 8px}
@@ -404,7 +417,8 @@ dialog.left{margin:0 auto 0 0}
 
   <nav class="views" id="views" aria-label="Views">
     <button type="button" data-v="cards" aria-pressed="true">Cards</button>
-    <button type="button" data-v="shop" aria-pressed="false">Shopping list</button>
+    <button type="button" data-v="shop" aria-pressed="false">Shopping<span class="hide-xs"> list</span></button>
+    <button type="button" data-v="upg" aria-pressed="false">Upgrades</button>
     <button type="button" data-v="stats" aria-pressed="false">Stats</button>
   </nav>
 
@@ -451,6 +465,35 @@ dialog.left{margin:0 auto 0 0}
         <tbody id="shopBody"></tbody>
       </table>
     </div>
+  </section>
+
+  <section id="vUpg" hidden aria-label="Upgrades">
+    <div class="shop-head">
+      <div>
+        <h2 class="sec">Upgrades</h2>
+        <p class="note">Cards you own in a worn condition, and what a better copy costs right now. "After selling yours" takes off what your current copy sells for.</p>
+        <div class="upg-opts">
+          <div class="grp"><span class="k">Upgrade cards I own in</span>
+            <div class="seg" id="upgFrom" role="group" aria-label="Conditions to upgrade">
+              <button type="button" data-c="MP" aria-pressed="false">MP</button>
+              <button type="button" data-c="HP" aria-pressed="true">HP</button>
+              <button type="button" data-c="DMG" aria-pressed="true">DMG</button>
+            </div>
+          </div>
+          <label class="f">Upgrade to
+            <select id="upgTo"><option value="NM">NM</option><option value="LP" selected>LP</option><option value="MP">MP</option></select>
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="budget-msg" id="upgMsg" aria-live="polite"></div>
+    <div class="table-wrap">
+      <table class="shop" id="upgTable">
+        <thead><tr><th class="c-img"><span class="sr">Card</span></th><th>Card</th><th class="num">Yours</th><th class="num">Upgrade</th><th class="num">After selling yours</th><th class="num hide-sm">Running total</th></tr></thead>
+        <tbody id="upgBody"></tbody>
+      </table>
+    </div>
+    <p class="note" id="upgNote"></p>
   </section>
 
   <section id="vStats" hidden aria-label="Stats">
@@ -596,6 +639,7 @@ dialog.left{margin:0 auto 0 0}
     <button class="close" type="button" id="drClose">Close ✕</button>
     <div id="drSets">
       <h2 id="drTitle">Your sets</h2>
+      <div class="allsum" id="allSum" hidden></div>
       <div class="setlist" id="setList"></div>
       <button class="btn primary" type="button" id="addOpen">+ Add a set</button>
     </div>
@@ -644,6 +688,13 @@ dialog.left{margin:0 auto 0 0}
       <span class="s" id="stTz"></span>
     </div>
     <div class="saved" id="stSaved" aria-live="polite"></div>
+    <div class="eyebrow">Backup</div>
+    <div class="bk">
+      <a class="btn" href="api/backup" download id="bkDown">Download backup</a>
+      <label class="btn" for="bkUp">Restore from backup</label>
+      <input id="bkUp" type="file" accept=".zip,application/zip" hidden>
+    </div>
+    <div class="note" id="bkMsg">One file with your cards, purchases, sellers, notes, photos, prices and settings, for every binder. Keep a copy somewhere other than BEN, like your computer or cloud storage.</div>
     <div class="eyebrow">About</div>
     <div class="ver" id="stVersion">Checking installed version…</div>
     <div class="paused" id="stPaused" hidden>You rolled back to an older version, so automatic updates are paused. Use Check for updates to install the latest.</div>
@@ -652,7 +703,7 @@ dialog.left{margin:0 auto 0 0}
       <div class="k">Previous versions</div>
       <ul class="prevlist" id="stPrev"></ul>
     </div>
-    <div class="note" id="setPrices">Each price is the average of the last 10 matching Unlimited English sales (1st Edition, Shadowless, Japanese, and lots are skipped). A full refresh takes about 2 minutes per set. The Refresh prices button at the top updates only the set you're viewing.</div>
+    <div class="note" id="setPrices">Each price is the average of the newest matching Unlimited English sales (TCGplayer shares up to 5 per condition) (1st Edition, Shadowless, Japanese, and lots are skipped). A full refresh takes about 2 minutes per set. The Refresh prices button at the top updates only the set you're viewing.</div>
   </div>
 </dialog>
 
@@ -984,7 +1035,7 @@ function saveCard(n, patch, done){
   const sid=state.sid;
   const next={...rec(n),...patch}; delete next.ed; delete next.cost;
   if(Array.isArray(next.purchases)) next.qty=next.purchases.length;
-  state.own[n]=next; render(); if(state.view==="shop") drawShop(); if(state.view==="stats") state.spendStale=true;
+  state.own[n]=next; render(); if(state.view==="shop") drawShop(); if(state.view==="upg") drawUpg(); if(state.view==="stats") state.spendStale=true;
   saveChain=saveChain.then(()=>fetch("api/set/"+enc(sid)+"/card/"+enc(n),{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(next)}))
     .then(r=>{ if(!r.ok) throw 0; const s=state.sets.find(x=>x.id===sid); if(s){ s.owned=state.cards.filter(c=>qty(c.n)>0).length; } done&&done(true); })
     .catch(()=>{ done&&done(false); });
@@ -1259,6 +1310,22 @@ async function saveSlots(slots){
 function getSlots(){
   return fetch("api/settings").then(r=>r.json()).then(s=>{ if(s.options) state.slotOpts=s.options; return s; }).catch(()=>null);
 }
+// ---------- backup and restore ----------
+$("bkUp").onchange=async e=>{
+  const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  const ul=document.createElement("ul"); ul.className="changes";
+  ["Everything in the binder is replaced with what's in the backup: cards, purchases, notes, photos, prices, price options and settings.",
+   "A safety copy of your current data is saved on BEN first, in the backups folder, in case you change your mind.",
+   "Card pictures download again by themselves after the restore."].forEach(t=>{ const li=document.createElement("li"); li.textContent=t; ul.append(li); });
+  const ok=await askConfirm("Restore this backup?", f.name+" · "+(f.size/1048576).toFixed(1)+" MB", "Restore", {body:ul});
+  if(!ok) return;
+  $("bkMsg").textContent="Restoring…";
+  fetch("api/restore",{method:"POST",headers:{"Content-Type":"application/zip"},body:f})
+    .then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error||"Restore failed"); return j; }))
+    .then(j=>{ $("bkMsg").textContent="Restored "+j.files+" files. Reloading…"; setTimeout(()=>location.reload(),1200); })
+    .catch(err=>{ $("bkMsg").textContent=(err&&err.message&&err.message!=="Failed to fetch") ? err.message+"." : "Couldn't restore. Check that the container is running."; });
+};
+
 // ---------- tab icon ----------
 function setIcon(v){
   const u="favicon?v="+(v||Date.now());
@@ -1374,14 +1441,31 @@ $("sClose").onclick=()=>$("settings").close();
 $("settings").addEventListener("click",e=>{ if(e.target===$("settings")) $("settings").close(); });
 
 // ---------- set menu ----------
+function drawAllSum(){
+  const box=$("allSum"), withT=state.sets.filter(s=>s.totals);
+  box.hidden = withT.length<2; box.replaceChildren(); if(box.hidden) return;
+  const T=withT.reduce((a,s)=>{ for(const k in s.totals) a[k]=(a[k]||0)+s.totals[k]; return a; },{});
+  const h=document.createElement("h3"); h.textContent="All binders"; box.append(h);
+  const g=document.createElement("div"); g.className="grid2";
+  const cell=(k,v,sEl)=>{ const d=document.createElement("div"); const a=document.createElement("span"); a.className="k"; a.textContent=k; const b=document.createElement("span"); b.className="v"; b.textContent=v; d.append(a,b); if(sEl) d.append(sEl); g.append(d); };
+  const sub=t=>{ const e=document.createElement("span"); e.className="s"; if(typeof t==="string") e.textContent=t; else e.append(...t); return e; };
+  cell("Cards owned", T.owned+" / "+T.count, sub(Math.round(T.owned/Math.max(1,T.count)*100)+"% complete"));
+  let gain="Add what you paid to see gain";
+  if(T.paid>0){ const d=T.value-T.paid, sp=document.createElement("span"); sp.className=d>=0?"pos":"neg"; sp.textContent=(d>=0?"+":"−")+money0(Math.abs(d)); gain=[sp," vs. "+money0(T.paid)+" paid"]; }
+  cell("Collection value", money0(T.value), sub(gain));
+  cell("Cost to finish", money0(T.need), sub((T.count-T.owned)+" cards needed"));
+  cell("Full sets value", money0(T.full), sub(withT.length+" binders"));
+  box.append(g);
+}
 function drawSets(){
+  drawAllSum();
   const L=$("setList"); L.replaceChildren();
   if(!state.sets.length){ const p=document.createElement("p"); p.className="note"; p.textContent="No sets yet. Add one to start."; L.append(p); }
   for(const s of state.sets){
     const row=document.createElement("div"); row.className="setrow"; row.setAttribute("aria-current", s.id===state.sid);
     const go=document.createElement("button"); go.type="button"; go.className="go";
     const b=document.createElement("b"); b.textContent=s.name;
-    const sp=document.createElement("span"); sp.textContent=(s.owned||0)+" of "+(s.count||s.total||0)+" owned · "+[s.series,year(s.releaseDate)].filter(Boolean).join(" · ");
+    const sp=document.createElement("span"); sp.textContent=(s.owned||0)+" of "+(s.count||s.total||0)+" owned"+(s.totals?" · "+money0(s.totals.value):"")+" · "+[s.series,year(s.releaseDate)].filter(Boolean).join(" · ");
     const bar=document.createElement("div"); bar.className="mini"; const i=document.createElement("i"); i.style.width=((s.owned||0)/Math.max(1,s.count||s.total||1)*100).toFixed(1)+"%"; bar.append(i);
     go.append(b,sp,bar); go.onclick=()=>{ $("drawer").close(); openSet(s.id); };
     const rm=document.createElement("button"); rm.type="button"; rm.className="rm"; rm.textContent="Remove";
@@ -1513,10 +1597,10 @@ function setView(v){
   if(isPrivate()) v="cards";
   state.view=v; store("nd-view",v);
   [...$("views").children].forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===v));
-  $("vCards").hidden=v!=="cards"; $("vShop").hidden=v!=="shop"; $("vStats").hidden=v!=="stats";
+  $("vCards").hidden=v!=="cards"; $("vShop").hidden=v!=="shop"; $("vUpg").hidden=v!=="upg"; $("vStats").hidden=v!=="stats";
   renderView();
 }
-function renderView(){ if(state.view==="shop") drawShop(); else if(state.view==="stats") loadStats(); }
+function renderView(){ if(state.view==="shop") drawShop(); else if(state.view==="upg") drawUpg(); else if(state.view==="stats") loadStats(); }
 $("views").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b) setView(b.dataset.v); });
 
 // ---------- shopping list ----------
@@ -1635,6 +1719,55 @@ function drawShop(){
   }
   if(!need.length){ const tr=document.createElement("tr"); const td=document.createElement("td"); td.colSpan=7; td.className="empty"; td.textContent="You own every card in this set."; tr.append(td); body.append(tr); }
   shopTotals();
+}
+// ---------- upgrades ----------
+const COND_RANK={NM:0,LP:1,MP:2,HP:3,DMG:4};
+const upgPrefs = () => Object.assign({from:["HP","DMG"], to:"LP"}, (state.shop||{}).upg||{});
+function saveUpg(p){
+  state.shop=Object.assign({mode:"lo", order:[]}, state.shop||{}, {upg:p}); saveShop(); drawUpg();
+}
+$("upgFrom").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-c]"); if(!b) return;
+  const p=upgPrefs(), set=new Set(p.from);
+  set.has(b.dataset.c) ? set.delete(b.dataset.c) : set.add(b.dataset.c);
+  saveUpg({from:[...set], to:p.to});
+});
+$("upgTo").onchange=e=>{ const p=upgPrefs(); saveUpg({from:p.from, to:e.target.value}); };
+function drawUpg(){
+  const p=upgPrefs();
+  for(const b of $("upgFrom").querySelectorAll("button")) b.setAttribute("aria-pressed", p.from.includes(b.dataset.c) ? "true" : "false");
+  $("upgTo").value=p.to;
+  const owned=state.cards.filter(c=>qty(c.n)>0);
+  const noCond=owned.filter(c=>!rec(c.n).cond).length;
+  const rows=owned.filter(c=>{ const k=rec(c.n).cond; return k && p.from.includes(k) && COND_RANK[k]>COND_RANK[p.to]; })
+    .map(c=>{ const mine=condPrice(c.n,rec(c.n).cond), up=condPrice(c.n,p.to); return {c, mine, up, net: up ? up-mine : null}; })
+    .sort((a,b)=>(a.net==null?1e9:a.net)-(b.net==null?1e9:b.net));
+  const body=$("upgBody"); body.replaceChildren();
+  let run=0, net=0, priced=0;
+  for(const r of rows){
+    const c=r.c, tr=document.createElement("tr");
+    const tdI=document.createElement("td"); tdI.className="c-img";
+    const im=document.createElement("img"); im.className="thumb"; im.alt=""; im.loading="lazy"; im.src=base()+"/img/"+enc(c.n)+".png";
+    im.onerror=()=>{ if(!im.dataset.r && c.img){ im.dataset.r=1; im.src=c.img; } else im.style.visibility="hidden"; };
+    tdI.append(im);
+    const tdN=document.createElement("td");
+    const nb=document.createElement("button"); nb.type="button"; nb.className="nm"; nb.textContent=c.name; nb.onclick=()=>openCard(c.n);
+    const sub=document.createElement("span"); sub.className="sub"; sub.textContent=label(c)+(qty(c.n)>1?" · "+qty(c.n)+" copies":"");
+    tdN.append(nb,sub);
+    const tdY=document.createElement("td"); tdY.className="num"; tdY.textContent=rec(c.n).cond+" "+(r.mine?money(r.mine):"–");
+    const tdU=document.createElement("td"); tdU.className="num"; tdU.textContent=r.up ? money(r.up) : "No "+p.to+" sales";
+    const tdD=document.createElement("td"); tdD.className="num"; tdD.textContent=r.net==null ? "–" : (r.net<0?"−":"")+money(Math.abs(r.net));
+    if(r.up){ run+=r.up; net+=r.net; priced++; }
+    const tdR=document.createElement("td"); tdR.className="num hide-sm"; tdR.textContent=r.up ? money(run) : "–";
+    tr.append(tdI,tdN,tdY,tdU,tdD,tdR); body.append(tr);
+  }
+  if(!rows.length){
+    const tr=document.createElement("tr"); const td=document.createElement("td"); td.colSpan=6; td.className="empty";
+    td.textContent = !owned.length ? "You don't own any cards in this set yet." : !p.from.length ? "Pick at least one condition to upgrade." : "No cards to upgrade with these choices.";
+    tr.append(td); body.append(tr);
+  }
+  $("upgMsg").textContent = priced ? rows.length+" card"+(rows.length===1?"":"s")+" to upgrade · "+money(run)+" for "+p.to+" copies, or about "+money(net)+" after selling yours." : "";
+  $("upgNote").textContent = noCond ? noCond+" owned card"+(noCond===1?" has":"s have")+" no condition set, so "+(noCond===1?"it isn't":"they aren't")+" listed. Set the condition in a card's details." : "";
 }
 $("shopBudget").addEventListener("input",()=>{ store("nd-budget",$("shopBudget").value||undefined); drawShop(); });
 $("shopBudget").value=recall("nd-budget")||"";
@@ -1783,7 +1916,7 @@ $("dlg").addEventListener("close",()=>{ if(state.view==="stats" && state.spendSt
 // ---------- start ----------
 header(); render();
 setPrivate(isPrivate());
-{ const v=recall("nd-view"); if(v==="shop"||v==="stats") setView(v); }
+{ const v=recall("nd-view"); if(v==="shop"||v==="upg"||v==="stats") setView(v); }
 getSlots().then(loadSets).then(()=>{
   const want=location.hash.slice(1)||recall("nd-set");
   const sid=state.sets.some(s=>s.id===want) ? want : (state.sets[0] ? state.sets[0].id : null);
