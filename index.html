@@ -340,6 +340,21 @@ dialog.left{margin:0 auto 0 0}
 .catrow .sprite,.setrow .sprite{width:40px;height:40px;margin:0}
 .setrow .go b{display:flex;align-items:center;gap:6px}
 .setrow .go b .sprite{width:32px;height:32px;margin:-6px 0}
+/* ---------- custom cards ---------- */
+.cbadge{display:inline-flex;align-items:center;gap:3px;font-family:var(--f-mono);font-size:11px;font-weight:500;letter-spacing:.04em;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 7px 1px 5px;white-space:nowrap}
+.cbadge svg{width:12px;height:12px}
+.face .ctag{position:absolute;top:7px;right:7px;z-index:1;font-family:var(--f-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:999px;background:var(--ink);color:var(--bg)}
+.face.custom{border-style:dashed;border-color:var(--line);background:var(--surface)}
+.miss{border:1px dashed var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;justify-content:center}
+.miss b{font-family:var(--f-display);font-size:17px;line-height:1.2}
+.miss .s{font-size:13px;color:var(--muted);line-height:1.4}
+.miss .btn{justify-content:center;text-align:center}
+:root[data-private] .miss{display:none}
+.cform{display:flex;flex-direction:column;gap:12px}
+.cform .two{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:10px}
+.cform .row-end{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.cform .err{color:var(--bad);font-size:14px}
+.cedit{display:flex;gap:10px;flex-wrap:wrap}
 /* phone filters: search + a Filters button; the filter controls move into a panel from the bottom */
 #fBtn,#fSum{display:none}
 #fBtn{flex:none;gap:8px;align-items:center;height:42px}
@@ -724,6 +739,7 @@ dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
       <span class="s mkt" id="dMkt" hidden></span>
       <div class="spark" id="dSpark"></div></div>
     <div class="links" id="dLinks"></div>
+    <div class="cedit" id="dCustom" hidden><button class="btn" type="button" id="dCEdit">Edit custom card</button><button class="btn" type="button" id="dCDel">Delete custom card</button></div>
     <div class="row own-only">
       <label class="f">Copies owned
         <div class="step"><button type="button" id="dMinus" aria-label="One fewer">−</button><output id="dQty">0</output><button type="button" id="dPlus" aria-label="One more">+</button></div>
@@ -781,6 +797,28 @@ dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
     </div>
     </div>
     <div class="saved" id="dSaved" aria-live="polite"></div>
+  </div>
+</dialog>
+
+<dialog id="cdlg" class="float" aria-labelledby="cTitle">
+  <div class="sheet">
+    <button class="close" type="button" id="cClose">Close ✕</button>
+    <h2 id="cTitle">Add a card</h2>
+    <form class="cform" id="cForm" novalidate>
+      <div class="note">For a card the card database is missing. It shows in this binder with a Custom tag and works like any other card.</div>
+      <label class="f">Card name<input id="cName" maxlength="80" autocomplete="off" required></label>
+      <div class="two">
+        <label class="f">Set or product<input id="cSet" maxlength="80" autocomplete="off" placeholder="HGSS Trainer Kit"></label>
+        <label class="f">Number<input id="cNum" maxlength="20" autocomplete="off" placeholder="4"></label>
+      </div>
+      <label class="f">Rarity (optional)<input id="cRar" maxlength="40" autocomplete="off" placeholder="Promo"></label>
+      <label class="f">TCGplayer link (optional, for prices)<input id="cTcg" inputmode="url" autocomplete="off" placeholder="https://www.tcgplayer.com/product/…"></label>
+      <div class="note">Paste the card's TCGplayer page and it gets recent sales and a price on the next refresh, like any other card. No link? Type a price below instead.</div>
+      <label class="f">Your price (optional, used when there are no sales)<input id="cPrice" inputmode="decimal" autocomplete="off" placeholder="0.00"></label>
+      <div class="bk"><label class="btn" for="cPic">Choose picture</label><input id="cPic" type="file" accept="image/*" hidden><span class="note" id="cPicName">Optional. A photo of the card becomes its picture.</span></div>
+      <div class="err" id="cErr" aria-live="polite"></div>
+      <div class="row-end"><button class="btn" type="button" id="cCancel">Cancel</button><button class="btn primary" type="submit" id="cSave">Add card</button></div>
+    </form>
   </div>
 </dialog>
 
@@ -973,7 +1011,7 @@ const numVal = n => { const m=/^([A-Za-z]*)(\d+)/.exec(n); return m ? [m[1], +m[
 // A Pokémon master set binder (id like dex-158) holds one Pokémon's cards from every set.
 // Each of its cards carries its own set name (set), printed number (num) and set size (pt).
 const isDex = id => /^dex-\d+$/.test(id||"");
-const byNum = (a,b) => { if(a.i!=null && b.i!=null) return a.i-b.i; const x=numVal(a.n), y=numVal(b.n); return x[0]<y[0]?-1:x[0]>y[0]?1:x[1]-y[1]; };
+const byNum = (a,b) => { if(!!a.custom!==!!b.custom) return a.custom?1:-1; if(a.custom) return numVal(a.n)[1]-numVal(b.n)[1]; if(a.i!=null && b.i!=null) return a.i-b.i; const x=numVal(a.n), y=numVal(b.n); return x[0]<y[0]?-1:x[0]>y[0]?1:x[1]-y[1]; };
 const printed = () => state.set.printedTotal || 0;
 const label = c => {
   const num=c.num||c.n, pt=c.num ? c.pt : printed(), n=numVal(num);
@@ -1057,8 +1095,10 @@ function header(){
   t.append(a,b);
   const secret=state.cards.filter(isSecret).length;
   $("eyebrow").textContent=dex
-    ? ["Master set", "#"+String(s.dex||state.sid.slice(4)).padStart(4,"0"), "all sets", "Unlimited", state.cards.length+" cards"].join(" · ")
+    ? ["Master set", "#"+String(s.dex||state.sid.slice(4)).padStart(4,"0"), "all sets", "Unlimited", state.cards.filter(c=>!c.custom).length+" cards"].join(" · ")
     : [s.series, year(s.releaseDate), "Unlimited", (printed()||state.cards.length)+" cards"+(secret?" + "+secret+" secret":"")].filter(Boolean).join(" · ");
+  const nCustom=state.cards.filter(c=>c.custom).length;
+  if(nCustom){ $("eyebrow").append(" · "); $("eyebrow").append(customBadge(nCustom)); }
   gapNote(dex);
   $("fSort").options[0].textContent=dex ? "Sort: release date" : "Sort: set number";
   $("fQ").placeholder=matchMedia("(max-width:640px)").matches ? (dex ? "Search set or number" : "Search name or number")
@@ -1072,7 +1112,7 @@ function gapNote(dex){
   const el=$("gapNote"), eb=$("eyebrow");
   let msg="";
   if(dex && state.cards.length){
-    msg="May be missing some cards: the card database doesn't have every promo, trainer kit or McDonald's card for this Pokémon.";
+    msg="May be missing some cards: the card database doesn't have every promo, trainer kit or McDonald's card for this Pokémon. Use Missing a card at the end of the list to add one.";
   } else if(!dex && printed() && state.cards.length){
     const have=new Set(state.cards.map(c=>numVal(c.n)).filter(n=>!n[0]).map(n=>n[1]));
     const miss=[]; for(let i=1;i<=printed();i++) if(!have.has(i)) miss.push(i);
@@ -1125,7 +1165,8 @@ function render(){
   for(const c of list){
     const b=document.createElement("div"); b.setAttribute("role","button"); b.tabIndex=0;
     b.className="sleeve"+(qty(c.n)>0?"":" need"); b.dataset.n=c.n; b.setAttribute("aria-label",c.name+" details");
-    const f=document.createElement("div"); f.className="face "+tint(c);
+    const f=document.createElement("div"); f.className="face "+(c.custom?"custom":tint(c));
+    if(c.custom){ const ct=document.createElement("span"); ct.className="ctag"; ct.textContent="Custom"; f.append(ct); }
     const no=document.createElement("div"); no.className="no"; no.textContent=label(c);
     const nm=document.createElement("div"); nm.className="nm"; nm.textContent=c.name;
     const r=document.createElement("div"); r.className="rar"; r.textContent=RSYM[c.rarity]||c.rarity||"";
@@ -1142,6 +1183,7 @@ function render(){
     else if(showEd){ const ed=document.createElement("div"); ed.className="ed"; ed.textContent="Unlimited"; b.append(ed); }
     b.append(m); g.append(b);
   }
+  if(state.ready && state.sid && !state.q) g.append(missTile());
   $("count").textContent=list.length+" of "+state.cards.length+" cards";
   filterSummary(list.length);
   stats();
@@ -1232,6 +1274,73 @@ function quickToggle(n){
   const t=document.querySelector('.sleeve[data-n="'+CSS.escape(n)+'"] .tag'); if(t) t.focus();
 }
 
+// ---------- custom cards ----------
+const customOf = n => state.cards.find(c=>c.n===n && c.custom);
+const PENCIL='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+function customBadge(count){
+  const b=document.createElement("span"); b.className="cbadge"; b.innerHTML=PENCIL;
+  b.append(String(count)); b.title=count+" custom card"+(count===1?"":"s")+" in this binder";
+  b.setAttribute("aria-label", b.title); return b;
+}
+function missTile(){
+  const t=document.createElement("div"); t.className="miss";
+  const dex=isDex(state.sid), who=dex ? (state.set.name||"").replace(/^#?\d+\s*/,"") : "";
+  const h=document.createElement("b"); h.textContent=dex&&who ? "Missing a "+who+" card?" : "Missing a card?";
+  const p=document.createElement("div"); p.className="s"; p.textContent=dex ? "Some promos and trainer kit cards aren't in the card database." : "Add any card the list doesn't have, like a promo or a variant.";
+  t.append(h,p);
+  if(dex && who){ const a=document.createElement("a"); a.className="btn"; a.target="_blank"; a.rel="noopener"; a.href="https://pokecottage.com/pokemon-master-sets/tag/"+enc(who); a.textContent="Check PokéCottage's "+who+" list ↗"; t.append(a); }
+  const add=document.createElement("button"); add.type="button"; add.className="btn"; add.textContent="+ Add a card"; add.onclick=()=>openCustom(null);
+  t.append(add); return t;
+}
+let editing=null;
+function openCustom(n){
+  const c=n ? customOf(n) : null; editing=c ? c.n : null;
+  $("cTitle").textContent=c ? "Edit custom card" : "Add a card";
+  $("cSave").textContent=c ? "Save changes" : "Add card";
+  $("cName").value=c?c.name:""; $("cSet").value=c?c.set||"":(isDex(state.sid)?"":(state.set.name||"")); $("cNum").value=c?c.num||"":"";
+  $("cRar").value=c?c.rarity||"":""; $("cTcg").value=c&&c.tcg ? "https://www.tcgplayer.com/product/"+c.tcg : "";
+  const man=c && (state.info[c.n]||{}).manual; $("cPrice").value=man ? man.toFixed(2) : "";
+  $("cPic").value=""; $("cPicName").textContent=c ? "Optional. Choose a picture to replace this card's photo." : "Optional. A photo of the card becomes its picture.";
+  $("cErr").textContent="";
+  $("cdlg").showModal(); setTimeout(()=>$("cName").focus(),50);
+}
+$("cPic").onchange=e=>{ const f=e.target.files[0]; $("cPicName").textContent=f ? f.name : "Optional. A photo of the card becomes its picture."; };
+$("cClose").onclick=$("cCancel").onclick=()=>$("cdlg").close();
+$("cdlg").addEventListener("click",e=>{ if(e.target===$("cdlg")) $("cdlg").close(); });
+$("cForm").onsubmit=async e=>{
+  e.preventDefault();
+  if(!$("cName").value.trim()){ $("cErr").textContent="Give the card a name."; $("cName").focus(); return; }
+  const pic=$("cPic").files[0];
+  if(pic && pic.size>15*1048576){ $("cErr").textContent="That picture is too big (15 MB max)."; return; }
+  const body={name:$("cName").value, set:$("cSet").value, num:$("cNum").value, rarity:$("cRar").value, tcg:$("cTcg").value, price:$("cPrice").value};
+  $("cSave").disabled=true; $("cErr").textContent="Saving…";
+  try{
+    const url="api/set/"+enc(state.sid)+"/custom"+(editing?"/"+enc(editing):"");
+    const r=await fetch(url,{method:editing?"PUT":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    const j=await r.json(); if(!r.ok) throw new Error(j.error||"Couldn't save");
+    if(pic){
+      const up=await fetch("api/set/"+enc(state.sid)+"/photo/"+enc(j.n),{method:"POST",headers:{"Content-Type":pic.type||"image/jpeg"},body:pic});
+      if(!up.ok) throw new Error("The card was saved, but the picture didn't upload. Try adding it again from the card.");
+    }
+    $("cErr").textContent=""; $("cdlg").close();
+    $("sync").textContent=(editing?"Saved changes to ":"Added ")+j.name+(body.tcg&&!editing?". Its price fills in on the next refresh.":".");
+    await loadState(); loadSets().then(()=>{ if($("drawer").open) drawSets(); });
+    if(editing && state.open===j.n && $("dlg").open) openCard(j.n);
+  }catch(err){ $("cErr").textContent=(err&&err.message&&err.message!=="Failed to fetch") ? err.message : "Couldn't save. Check that the container is running."; }
+  finally{ $("cSave").disabled=false; }
+};
+$("dCEdit").onclick=()=>{ if(state.open) openCustom(state.open); };
+$("dCDel").onclick=async()=>{
+  const c=customOf(state.open); if(!c) return;
+  const extra = qty(c.n)>0 ? " Your "+qty(c.n)+" cop"+(qty(c.n)===1?"y":"ies")+", purchases and photos for it are deleted too." : "";
+  const ok=await askConfirm("Delete this custom card?", c.name+(c.set?" · "+c.set:""), "Delete",
+    {body:Object.assign(document.createElement("div"),{className:"note",textContent:"It's removed from this binder."+extra+" Backups you already have still include it."})});
+  if(!ok) return;
+  const r=await fetch("api/set/"+enc(state.sid)+"/custom/"+enc(c.n),{method:"DELETE"}).catch(()=>null);
+  if(!r || !r.ok){ $("dSaved").textContent="Couldn't delete. Check that the container is running."; return; }
+  $("dlg").close(); $("sync").textContent="Deleted "+c.name+".";
+  await loadState(); loadSets();
+};
 // ---------- card sheet ----------
 // ---------- price slots ----------
 const COND_NAME={NM:"Near Mint",LP:"Lightly Played",MP:"Moderately Played",HP:"Heavily Played",DMG:"Damaged"};
@@ -1251,6 +1360,7 @@ function priceSource(n){
   }
   if(i && i.src==="tcgplayer" && !allRaw()) return "no recent "+slotName(state.slots[0])+" sales, so this uses "+slotName(activeSlots().find(sl=>sl.t==="raw")||state.slots[0])+": "+sales+late+". Used for set totals.";
   if(i && i.src==="tcgplayer") return "from "+sales+late+". Used for set totals.";
+  if(i && i.src==="manual") return "the price you typed for this custom card"+(customOf(n)&&customOf(n).tcg ? " (no recent TCGplayer sales yet)" : ". Add its TCGplayer link to use real sales instead")+". Used for set totals.";
   if(i && i.src==="tcgdex") return "no recent sales for your price options, so this uses TCGplayer's market price (via TCGdex)"+(i.last?", updated "+when(i.last):"")+". Used for set totals.";
   if(i && i.note) return i.note+".";
   return priceOf(n) ? "starting price from PriceCharting. Replaced on the next refresh." : "fills in after the next refresh.";
@@ -1337,7 +1447,8 @@ function openCard(n){
   art.classList.toggle("need",qty(n)===0);
   $("dNo").textContent="No. "+label(c);
   $("dName").textContent=c.name;
-  $("dRar").textContent=(c.set ? c.set+(c.rarity?" · "+c.rarity:"") : cat(c))+(isSecret(c)?" · secret rare":"");
+  $("dRar").textContent=(c.custom?"Custom card · ":"")+(c.set ? c.set+(c.rarity?" · "+c.rarity:"") : cat(c))+(isSecret(c)?" · secret rare":"");
+  $("dCustom").hidden=!c.custom;
   $("dP").textContent=basePrice(n) ? money(basePrice(n)) : "–";
   lpmpBox(n); mktLine(n); drawSales(n); setCardTab(cardTab);
   $("dPsrc").textContent=priceSource(n);
@@ -1347,7 +1458,7 @@ function openCard(n){
   const setName=(c.set||state.set.name).replace(/ Base Set$/,"");
   const s=q(setName+" "+c.name+" "+(c.num ? c.num+(c.pt?"/"+c.pt:"") : n));
   [["eBay sold","https://www.ebay.com/sch/i.html?_nkw="+s+"+-1st&LH_Sold=1&LH_Complete=1"],
-   ["TCGplayer","https://www.tcgplayer.com/search/pokemon/product?q="+q(c.name+" "+setName)],
+   ["TCGplayer", c.tcg ? "https://www.tcgplayer.com/product/"+c.tcg : "https://www.tcgplayer.com/search/pokemon/product?q="+q(c.name+" "+setName)],
    ["PriceCharting",(state.info[n]||{}).pc || "https://www.pricecharting.com/search-products?type=prices&q="+s]]
    .forEach(([t,u])=>{ const a=document.createElement("a"); a.href=u; a.target="_blank"; a.rel="noopener"; a.textContent=t+" ↗"; L.append(a); });
   $("dQty").textContent=qty(n);
@@ -2018,6 +2129,7 @@ function drawSets(){
     const go=document.createElement("button"); go.type="button"; go.className="go";
     const b=document.createElement("b"); b.textContent=s.name;
     if(isDex(s.id)){ const im=document.createElement("img"); im.className="sprite"; im.alt=""; im.src="set/"+enc(s.id)+"/sprite.png"; im.onerror=()=>im.remove(); b.prepend(im); }
+    if(s.custom) b.append(customBadge(s.custom));
     const sp=document.createElement("span"); sp.textContent=(s.owned||0)+" of "+(s.count||s.total||0)+" owned"+(s.totals?" · "+money0(s.totals.value):"")+" · "+[s.series,year(s.releaseDate)].filter(Boolean).join(" · ");
     const bar=document.createElement("div"); bar.className="mini"; const i=document.createElement("i"); i.style.width=((s.owned||0)/Math.max(1,s.count||s.total||1)*100).toFixed(1)+"%"; bar.append(i);
     go.append(b,sp,bar); go.onclick=()=>{ $("drawer").close(); openSet(s.id); };

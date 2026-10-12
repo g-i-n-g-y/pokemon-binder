@@ -10,6 +10,15 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v2.18 (October 12, 2026)
+
+- **Custom cards:** add a card the card database is missing, like a promo, trainer kit card or variant. Use **+ Add a card** on the **Missing a card?** tile at the end of the card list.
+  - Give it a name, set, number and rarity, and optionally a picture.
+  - **Prices:** paste the card's TCGplayer link and it gets recent sales and a price on the next refresh, like any other card. Or type a price yourself.
+  - Custom cards have a **Custom** tag and work like normal cards: owned, condition, purchases, photos, spreadsheet import and backups. Open one to **Edit** or **Delete** it.
+- A pencil icon with a count shows next to any binder with custom cards, in the sets menu and the binder's header.
+- In Pokémon master set binders, the tile also links to that Pokémon's list on PokéCottage, to check for cards that might be missing.
+
 ## v2.17 (October 12, 2026)
 
 - **Automatic backups:** the binder now saves a backup of all your data on BEN before every update, rollback and spreadsheet import. If the backup can't be saved, the update is skipped.

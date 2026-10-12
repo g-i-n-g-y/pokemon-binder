@@ -24,7 +24,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "2.17"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
+APP_VERSION = "2.18"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -135,17 +135,132 @@ def fetch_cards(sid):
 
 
 def set_cards(sid):
+    """Every card in a binder: the card database's list plus any custom cards you added."""
     cards = read_json(sdir(sid, "cards.json"), None)
     if cards is None:
         cards = dex_cards(sid) if is_dex(sid) else fetch_cards(sid)
-    return cards
+    return cards + custom_cards(sid)
+
+
+# ---------- custom cards (ones the card database is missing) ----------
+# Saved per binder in custom.json as [{n: "c1", name, set, num, rarity, tcg (TCGplayer product id), price}].
+# They get a "c" number so they never clash with real card numbers, and work like any other card.
+
+CUSTOM_N = re.compile(r"c\d{1,5}")
+
+
+def custom_list(sid):
+    out = read_json(sdir(sid, "custom.json"), [])
+    return [c for c in out if isinstance(c, dict) and CUSTOM_N.fullmatch(str(c.get("n", "")))] if isinstance(out, list) else []
+
+
+def custom_cards(sid):
+    """Custom cards shaped like database cards. A front photo of your copy doubles as the card picture."""
+    out = []
+    for c in custom_list(sid):
+        n = c["n"]
+        out.append({"n": n, "name": c.get("name", ""), "rarity": c.get("rarity", ""), "type": "",
+                    "set": c.get("set", ""), "num": c.get("num", ""), "custom": True, "tcg": c.get("tcg"),
+                    "img": f"set/{sid}/photo/{n}" if os.path.isfile(sdir(sid, "photos", n)) else ""})
+    return out
+
+
+def tcg_product(v):
+    """A TCGplayer product id from a link like tcgplayer.com/product/12345/... or a bare number."""
+    t = str(v or "").strip()
+    if not t:
+        return None
+    m = re.search(r"tcgplayer\.com/product/(\d{1,9})", t) or re.fullmatch(r"(\d{1,9})", t)
+    if not m:
+        raise ValueError("That doesn't look like a TCGplayer card link (it should contain /product/ and a number)")
+    return int(m.group(1))
+
+
+def clean_custom(raw):
+    name = str(raw.get("name") or "").strip()[:80]
+    if not name:
+        raise ValueError("Give the card a name")
+    out = {"name": name, "set": str(raw.get("set") or "").strip()[:80], "num": str(raw.get("num") or "").strip()[:20],
+           "rarity": str(raw.get("rarity") or "").strip()[:40], "tcg": tcg_product(raw.get("tcg"))}
+    price = raw.get("price")
+    if price not in (None, ""):
+        try:
+            price = round(float(str(price).replace("$", "").replace(",", "")), 2)
+        except ValueError:
+            raise ValueError("The price should be a number, like 4.50")
+        if not 0 < price < 1_000_000:
+            raise ValueError("The price should be more than $0")
+    out["price"] = price or None
+    return out
+
+
+def save_custom(sid, n, raw):
+    """Add (n=None) or edit a custom card. Returns the saved card."""
+    rec = clean_custom(raw)
+    with lock:
+        lst = custom_list(sid)
+        if n is None:
+            if len(lst) >= 500:
+                raise ValueError("That's the most custom cards one binder can hold")
+            used = {int(c["n"][1:]) for c in lst}
+            n = f"c{max(used, default=0) + 1}"
+            lst.append(dict(rec, n=n, added=today_local()))
+        else:
+            old = next((c for c in lst if c["n"] == n), None)
+            if not old:
+                raise ValueError("That custom card isn't in this binder any more")
+            old.update(rec)
+        write_json(sdir(sid, "custom.json"), lst)
+        # a typed price shows right away; a TCGplayer link fills in on the next price refresh
+        prices = read_json(sdir(sid, "prices.json"), {})
+        inf = prices.setdefault("info", {}).setdefault(n, {})
+        if rec["price"]:
+            inf["manual"] = rec["price"]
+        else:
+            inf.pop("manual", None)
+        if n is not None and rec["tcg"] != inf.get("tcgId"):
+            for k in ("cond", "recent"):
+                inf.pop(k, None)
+        inf["tcgId"] = rec["tcg"]
+        mp = main_price(inf, set_slots(sid))
+        if mp:
+            prices.setdefault("p", {})[n] = [mp[0]]
+            inf.update(src=mp[3], count=mp[1], last=mp[2])
+        else:
+            prices.setdefault("p", {}).pop(n, None)
+        write_json(sdir(sid, "prices.json"), prices)
+    return next(c for c in custom_cards(sid) if c["n"] == n)
+
+
+def delete_custom(sid, n):
+    """Remove a custom card with everything saved for it (copies, purchases, prices, photos)."""
+    with lock:
+        lst = custom_list(sid)
+        if not any(c["n"] == n for c in lst):
+            raise ValueError("That custom card isn't in this binder any more")
+        write_json(sdir(sid, "custom.json"), [c for c in lst if c["n"] != n])
+        for f, key in (("collection.json", None), ("prices.json", "p"), ("prices.json", "info"), ("shop.json", None)):
+            d = read_json(sdir(sid, f), {})
+            box = d.get(key) if key else d
+            if isinstance(box, dict) and n in box:
+                box.pop(n)
+                write_json(sdir(sid, f), d)
+        hist = read_json(sdir(sid, "history.json"), {})
+        if any(isinstance(day, dict) and n in day for day in hist.values()):
+            for day in hist.values():
+                if isinstance(day, dict):
+                    day.pop(n, None)
+            write_json(sdir(sid, "history.json"), hist)
+        for f in (n, n + ".json", n + "_back", n + "_back.json"):
+            if os.path.exists(sdir(sid, "photos", f)):
+                os.remove(sdir(sid, "photos", f))
 
 
 def card_ref(sid, c):
     """(card id for price lookups, set name, number printed on the card).
     In a Pokémon master set binder each card remembers its own set."""
-    if is_dex(sid):
-        return c["n"], c.get("set", ""), c.get("num", c["n"])
+    if is_dex(sid) or c.get("custom"):
+        return (None if c.get("custom") else c["n"]), c.get("set", ""), c.get("num", c["n"])
     return f"{sid}-{c['n']}", sets_list()["meta"].get(sid, {}).get("name", sid), c["n"]
 
 
@@ -614,6 +729,8 @@ def main_price(info_n, slots, backup=None):
     mkt = info_n.get("mkt") or {}
     if backup and mkt.get("tp"):
         return (mkt["tp"], 0, mkt.get("tpUpd") or "", "tcgdex")
+    if info_n.get("manual"):
+        return (info_n["manual"], 0, "", "manual")   # a price you typed for a custom card
     return None
 
 
@@ -929,12 +1046,16 @@ def refresh_prices(sid, reason="daily"):
             n = c["n"]
             inf = dict(info.get(n) or {})
             try:
-                pid = product_id(card_ref(sid, c)[0], ids)
+                if c.get("custom"):
+                    pid = c.get("tcg")
+                    inf["tcgId"] = pid
+                else:
+                    pid = product_id(card_ref(sid, c)[0], ids)
                 if pid:
                     sales = condition_sales(pid)
                     inf["cond"] = by_condition(sales)
                     inf["recent"] = recent_by_condition(sales)
-                else:
+                elif not c.get("custom"):
                     log(f"{sid}-{n}: no TCGplayer product found")
             except Exception as e:
                 log(f"{sid}-{n}: TCGplayer: {e}")
@@ -949,7 +1070,7 @@ def refresh_prices(sid, reason="daily"):
                         log(f"{sid}-{n}: no PriceCharting page found")
                 except Exception as e:
                     log(f"{sid}-{n}: PriceCharting: {e}")
-            if backup:
+            if backup and not c.get("custom"):
                 try:
                     tc = tcgdex_card(sid, c, dex_ids)
                     if tc:
@@ -1332,7 +1453,7 @@ def shows_due():
 def set_totals(sid):
     """Same math as the page header: value counts owned copies at their condition's price when set."""
     coll = read_json(sdir(sid, "collection.json"), {})
-    cards = read_json(sdir(sid, "cards.json"), None) or []
+    cards = (read_json(sdir(sid, "cards.json"), None) or []) + custom_list(sid)
     prices = read_json(sdir(sid, "prices.json"), {})
     p, info = prices.get("p") or {}, prices.get("info") or {}
     t = {"owned": 0, "count": len(cards), "value": 0.0, "paid": 0.0, "need": 0.0, "full": 0.0}
@@ -1484,6 +1605,8 @@ def _clean_num(v):
     if isinstance(v, float) and v.is_integer():
         v = int(v)
     t = str(v).strip().lstrip("#").split("/")[0].strip()
+    if CUSTOM_N.fullmatch(t.lower()):
+        return t.lower()
     return t.lstrip("0") or t if t.isdigit() else t
 
 
@@ -1609,7 +1732,7 @@ BACKUPS = os.path.join(APP, "backups")          # safety copies made before a re
 AUTO_KEEP = {"before-update": 10, "before-import": 5, "before-restore": 5}
 AUTO_NAME_RE = re.compile(r"(before-(?:update|import|restore))-\d{8}-\d{6}(?:-\d{3})?\.zip")
 MAX_RESTORE = 500 * 1024 * 1024
-SET_FILES = ("collection", "prices", "history", "tcg_ids", "slots", "shop", "pc_urls", "tcgdex_ids", "cards")
+SET_FILES = ("collection", "prices", "history", "tcg_ids", "slots", "shop", "pc_urls", "tcgdex_ids", "custom", "cards")
 BACKUP_RE = re.compile(rf"(settings\.json|sets\.json|shows\.json|favicon|favicon\.json|sets/{SID_RE}/(?:{'|'.join(SET_FILES)})\.json"
                        rf"|sets/{SID_RE}/photos/{NUM_RE}(?:_back)?(?:\.json)?)")
 
@@ -1884,7 +2007,8 @@ class Handler(BaseHTTPRequestHandler):
                 coll = read_json(sdir(sid, "collection.json"), {})
                 m["owned"] = sum(1 for v in coll.values() if (v or {}).get("qty", 0) > 0)
                 cards = read_json(sdir(sid, "cards.json"), None)
-                m["count"] = len(cards) if cards is not None else m.get("total", 0)
+                m["custom"] = len(custom_list(sid))
+                m["count"] = (len(cards) if cards is not None else m.get("total", 0)) + m["custom"]
                 m["images"] = sid in img_jobs
                 if cards is not None:
                     m["totals"] = set_totals(sid)
@@ -1972,6 +2096,14 @@ class Handler(BaseHTTPRequestHandler):
         m = re.fullmatch(rf"/api/set/({SID_RE})/slots", self.path)
         if m:
             return self.do_PUT_slots(m.group(1))
+        m = re.fullmatch(rf"/api/set/({SID_RE})/custom/(c\d{{1,5}})", self.path)
+        if m:
+            if not self.in_binder(m.group(1)):
+                return self.send(400, {"error": "That binder isn't here"})
+            try:
+                return self.send(200, save_custom(m.group(1), m.group(2), json.loads(self.body(8192) or b"{}")))
+            except ValueError as e:
+                return self.send(400, {"error": str(e)})
         m = re.fullmatch(rf"/api/set/({SID_RE})/shop", self.path)
         if m:
             return self.do_PUT_shop(m.group(1))
@@ -2092,6 +2224,15 @@ class Handler(BaseHTTPRequestHandler):
                 if os.path.exists(f):
                     os.remove(f)
             return self.send(200, {"ok": True})
+        m = re.fullmatch(rf"/api/set/({SID_RE})/custom/(c\d{{1,5}})", self.path)
+        if m:
+            if not self.in_binder(m.group(1)):
+                return self.send(400, {"error": "That binder isn't here"})
+            try:
+                delete_custom(m.group(1), m.group(2))
+            except ValueError as e:
+                return self.send(400, {"error": str(e)})
+            return self.send(200, {"ok": True})
         m = re.fullmatch(rf"/api/sets/({SID_RE})", self.path)
         if not m:
             return self.send(400, {"error": "bad request"})
@@ -2141,6 +2282,15 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:
                 return self.send(500, {"error": f"Restore failed: {e}"})
             return self.send(200, {"ok": True, "files": count, "safety": safety})
+        m_cu = re.fullmatch(rf"/api/set/({SID_RE})/custom", path)
+        if m_cu:
+            sid = m_cu.group(1)
+            if not self.in_binder(sid):
+                return self.send(400, {"error": "That binder isn't here"})
+            try:
+                return self.send(200, save_custom(sid, None, json.loads(self.body(8192) or b"{}")))
+            except ValueError as e:
+                return self.send(400, {"error": str(e)})
         m_imp = re.fullmatch(rf"/api/set/({SID_RE})/import", path)
         if m_imp:
             sid = m_imp.group(1)
