@@ -4,6 +4,10 @@ Versions go up by 0.1 for each app update (new features or fixes) and by a whole
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v2.3 (October 11, 2026)
+
+- Master set binders: the eBay sold, TCGplayer and PriceCharting links on a card now search that card's own set and printed number (like "Expedition Totodile 134/165"), instead of the binder name and an internal card id.
+
 ## v2.2 (October 11, 2026)
 
 - **Pokémon master set binders:** Menu → + Add a set or Pokémon → A Pokémon. Search by name or Pokédex number (like Totodile or 158) to make a binder of every English card of that Pokémon, from every set, oldest first.

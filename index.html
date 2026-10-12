@@ -1053,9 +1053,11 @@ function openCard(n){
   $("dPsrc").textContent=priceSource(n);
   condOptions(n);
   const L=$("dLinks"); L.replaceChildren();
-  const s=q(state.set.name+" "+c.name+" "+n);
+  // Master set cards search with their own set and printed number, like "Expedition Totodile 134/165".
+  const setName=(c.set||state.set.name).replace(/ Base Set$/,"");
+  const s=q(setName+" "+c.name+" "+(c.num ? c.num+(c.pt?"/"+c.pt:"") : n));
   [["eBay sold","https://www.ebay.com/sch/i.html?_nkw="+s+"+-1st&LH_Sold=1&LH_Complete=1"],
-   ["TCGplayer","https://www.tcgplayer.com/search/pokemon/product?q="+q(c.name+" "+state.set.name)],
+   ["TCGplayer","https://www.tcgplayer.com/search/pokemon/product?q="+q(c.name+" "+setName)],
    ["PriceCharting",(state.info[n]||{}).pc || "https://www.pricecharting.com/search-products?type=prices&q="+s]]
    .forEach(([t,u])=>{ const a=document.createElement("a"); a.href=u; a.target="_blank"; a.rel="noopener"; a.textContent=t+" ↗"; L.append(a); });
   $("dQty").textContent=qty(n);
