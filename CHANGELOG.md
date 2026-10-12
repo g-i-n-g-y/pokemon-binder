@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v2.19.1 (October 12, 2026)
+
+- Fix: the "Check PokéCottage's list" button on the Missing a card? tile opened a page that doesn't exist. It now opens the right master set page, like pokecottage.com/pokemon-master-sets/totodile.
+
 ## v2.19 (October 12, 2026)
 
 - **Price change period:** choose what the ▲▼ percentage on each card measures: 1 day, 7 days, 30 days, 90 days, 1 year or all time. Set it in Settings → Cards, or in the Filters panel on phones. It's saved on each device, and 7 days is the default.
