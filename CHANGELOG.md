@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v2.11.1 (October 11, 2026)
+
+- Floating windows: the scroll bar no longer shows arrow buttons that run into the rounded top and bottom corners (Chrome and Edge)
+
 ## v2.11 (October 11, 2026)
 
 - Floating windows (Settings, Card shows): the scroll bar is slimmer and sits inside the rounded corners instead of running over them
