@@ -406,7 +406,7 @@ body.nav-open{padding-left:380px}
 @media (prefers-reduced-motion:reduce){#drawer,#drawer::backdrop,body{transition:none}}
 #drAdd h2{margin-bottom:2px}
 .addkind{align-self:flex-start}
-.gap-note{font-size:13px;color:var(--muted);margin:8px 0 0;max-width:60ch}
+.gap-note{font-size:13px;line-height:1.45;color:var(--muted);margin:-8px 0 0}
 .gap-note b{color:var(--light);font-weight:600}
 .shows-list{display:flex;flex-direction:column}
 .shows-list h3{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:14px 0 4px;font-weight:500}
@@ -484,8 +484,8 @@ dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
 @media (max-width:640px){
   .wrap{padding-inline:16px;padding-block:0 48px;gap:16px}
   header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);margin-inline:-16px;padding:10px 16px;flex-wrap:wrap;align-items:center;gap:6px 10px;border-bottom:1px solid var(--line)}
-  .title{flex:1 1 0;align-items:center;gap:10px}
-  .title .sprite{width:44px;height:44px;margin:0}
+  .title{flex:1 1 0;min-width:0;align-items:center;gap:6px}
+  .title .sprite{width:34px;height:34px;margin:0 -2px}
   .title .eyebrow{display:none}
   h1{font-size:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0}
   .actions{display:contents}
@@ -560,7 +560,6 @@ dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
       <div>
         <div class="eyebrow" id="eyebrow">Loading…</div>
         <h1 id="setTitle"></h1>
-        <p class="gap-note" id="gapNote" hidden></p>
       </div>
     </div>
     <div class="actions">
@@ -614,6 +613,7 @@ dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
     <button class="btn" type="button" id="fBtn" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span>Filters</span></button>
   </div>
   <div id="fSum" aria-live="polite"></div>
+  <p class="gap-note" id="gapNote" hidden></p>
 
   <main class="grid" id="grid"></main>
   </div>
@@ -1112,7 +1112,7 @@ function gapNote(dex){
   const el=$("gapNote"), eb=$("eyebrow");
   let msg="";
   if(dex && state.cards.length){
-    msg="May be missing some cards: the card database doesn't have every promo, trainer kit or McDonald's card for this Pokémon. Use Missing a card at the end of the list to add one.";
+    msg="Some promo and trainer kit cards may be missing. Add them with Missing a card? at the end of the list.";
   } else if(!dex && printed() && state.cards.length){
     const have=new Set(state.cards.map(c=>numVal(c.n)).filter(n=>!n[0]).map(n=>n[1]));
     const miss=[]; for(let i=1;i<=printed();i++) if(!have.has(i)) miss.push(i);
@@ -1120,7 +1120,7 @@ function gapNote(dex){
       +miss.slice(0,8).map(i=>"#"+String(i).padStart(3,"0")).join(", ")+(miss.length>8?", …":"")+(miss.length===1?"":")")+" of "+printed()+".";
   }
   el.hidden=!msg; el.replaceChildren();
-  if(msg){ const b=document.createElement("b"); b.textContent="* "; el.append(b, msg); eb.textContent+=" *"; }
+  if(msg){ const b=document.createElement("b"); b.textContent="* "; el.append(b, msg); eb.insertBefore(document.createTextNode(" *"), eb.querySelector(".cbadge") ? eb.lastChild.previousSibling : null); }
 }
 function stats(){
   let owned=0, value=0, paid=0, need=0, needN=0, full=0;

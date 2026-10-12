@@ -10,6 +10,12 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v2.18.1 (October 12, 2026)
+
+- Phones: the "may be missing cards" note moved out of the top bar to just above the cards, as one short line. The top bar shows only the menu, sprite, name and buttons again.
+- Smaller Pokémon sprite on phones, so names like Totodile fit without being cut off.
+- Fix: the custom card icon now stays in the header for binders that show the missing cards note.
+
 ## v2.18 (October 12, 2026)
 
 - **Custom cards:** add a card the card database is missing, like a promo, trainer kit card or variant. Use **+ Add a card** on the **Missing a card?** tile at the end of the card list.
