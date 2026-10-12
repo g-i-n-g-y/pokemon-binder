@@ -23,7 +23,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "2.6"   # bump for every app update: 1.0 -> 1.1 for features/fixes, 2.0 for big changes
+APP_VERSION = "2.7"   # bump for every app update: 1.0 -> 1.1 for features/fixes, 2.0 for big changes
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -63,7 +63,7 @@ job_lock = threading.Lock()
 job = {"running": False, "set": "", "name": "", "done": 0, "total": 0, "priced": 0, "message": ""}
 img_jobs = {}
 dex_job = {"running": False, "done": 0, "total": 0, "error": ""}
-shows_job = {"running": False, "error": ""}
+shows_job = {"running": False, "error": "", "done": 0, "total": 0}
 
 
 # ---------- small helpers ----------
@@ -352,8 +352,10 @@ def download_images(sid):
         if not missing:
             return
         log(f"{sid}: downloading {len(missing)} card images...")
+        img_jobs[sid] = {"done": 0, "total": len(missing)}
         ok = 0
-        for c in missing:
+        for i, c in enumerate(missing):
+            img_jobs[sid]["done"] = i
             ok += fetch_image(sid, c)
             time.sleep(0.2)
         log(f"{sid}: card images {ok} of {len(missing)} downloaded.")
@@ -364,7 +366,7 @@ def download_images(sid):
 def start_images(sid):
     if sid in img_jobs:
         return
-    img_jobs[sid] = True
+    img_jobs[sid] = {"done": 0, "total": 0}
     threading.Thread(target=download_images, args=(sid,), daemon=True).start()
 
 
@@ -1099,14 +1101,16 @@ def scan_shows(reason="manual"):
     with job_lock:
         if shows_job["running"]:
             return False
-        shows_job.update(running=True, error="")
+        shows_job.update(running=True, error="", done=0, total=0)
     try:
         st = shows_state()
         areas = [a for a in st["areas"] if area_slug(a)]
         slugs = {area_slug(a): a for a in areas}
         pages = [f"{TH}/shows/virginia"] + [f"{TH}/shows/virginia/{s}" for s in slugs]
         found, ok = {}, 0
-        for url in pages:
+        shows_job["total"] = len(pages)
+        for i, url in enumerate(pages):
+            shows_job["done"] = i
             try:
                 _, html = pc_get(url)
                 ok += 1
@@ -1127,6 +1131,7 @@ def scan_shows(reason="manual"):
         now = now_iso()
         shows = st["shows"]
         new = 0
+        shows_job.update(done=len(pages), total=len(pages) + sum(1 for k in found if k not in shows))
         for key, f in found.items():
             if key in shows:
                 shows[key]["seen"] = now
@@ -1144,6 +1149,7 @@ def scan_shows(reason="manual"):
             rec["tcg"] = bool(TCG_RE.search(rec["name"] + " " + rec["desc"] + " " + key))
             shows[key] = rec
             new += 1
+            shows_job["done"] += 1
         today = today_local()
         st["shows"] = {k: v for k, v in shows.items() if v["date"] >= today}   # drop past shows
         st.setdefault("firstScan", now)   # shows found on the very first scan aren't marked new
@@ -1400,7 +1406,13 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, {"shows": sorted(st["shows"].values(), key=lambda s: (s["date"], s["name"])),
                                    "areas": st["areas"], "auto": st["auto"], "scanned": st.get("scanned", ""),
                                    "firstScan": st.get("firstScan", ""), "error": st.get("error", ""), "running": shows_job["running"],
+                                   "done": shows_job["done"], "total": shows_job["total"],
                                    "today": today_local()}, cache="no-store")
+        if path == "/api/progress":
+            # everything BEN is working on, for the loading bars
+            imgs = {sid: dict(v) for sid, v in list(img_jobs.items()) if isinstance(v, dict)}
+            return self.send(200, {"prices": job, "images": imgs, "pokedex": dex_job, "shows": shows_job},
+                             cache="no-store")
         if path == "/api/catalog":
             return self.send(200, {"sets": catalog()}, cache="no-store")
         if path == "/api/refresh":

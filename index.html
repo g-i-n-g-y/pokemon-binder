@@ -51,6 +51,13 @@ h1 .l{color:var(--light)} h1 .d{color:var(--dark)}
 .actions{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
 .actions .row{display:flex;gap:8px;align-items:center}
 .sync{font-size:13px;color:var(--muted);text-align:right}
+/* loading bars: real progress when BEN knows the total, a sliding bar while it's still counting */
+.pbar{height:6px;border-radius:3px;background:var(--sleeve);overflow:hidden;width:100%;position:relative}
+.pbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--light),var(--dark));transition:width .5s ease}
+.pbar.wait i{width:30%;position:absolute;animation:pslide 1.3s ease-in-out infinite}
+@keyframes pslide{from{left:-30%}to{left:100%}}
+@media (prefers-reduced-motion:reduce){.pbar.wait i{animation:none;left:0;width:100%;opacity:.4}.pbar i{transition:none}}
+.sync-bar{width:min(260px,100%)}
 .icon-btn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
 .icon-btn svg{width:20px;height:20px}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
@@ -447,6 +454,7 @@ dialog.left{margin:0 auto 0 0}
         </button>
       </div>
       <div class="sync" id="sync">Loading your collection…</div>
+      <div class="pbar sync-bar" id="syncBar" role="progressbar" aria-label="Progress" hidden><i></i></div>
     </div>
   </header>
 
@@ -694,6 +702,7 @@ dialog.left{margin:0 auto 0 0}
       </div>
       <input type="search" id="addQ" class="field" placeholder="Search sets, like Neo Genesis" aria-label="Search sets">
       <div class="note" id="addMsg"></div>
+      <div class="pbar" id="addBar" role="progressbar" aria-label="Making the Pokémon list" hidden><i></i></div>
       <div class="catalog" id="catalog"></div>
     </div>
   </div>
@@ -704,6 +713,7 @@ dialog.left{margin:0 auto 0 0}
     <button class="close" type="button" id="shClose">Close ✕</button>
     <h2 id="shTitle">Card shows</h2>
     <div class="note" id="shInfo">Loading…</div>
+    <div class="pbar" id="shBar" role="progressbar" aria-label="Checking for shows" hidden><i></i></div>
     <div class="row" style="align-items:center">
       <button class="btn" type="button" id="shScan" style="flex:0 0 auto">Scan now</button>
       <div class="seg" id="shKind" role="group" aria-label="Which shows" style="flex:0 0 auto">
@@ -1544,7 +1554,7 @@ function loadShows(){
   clearTimeout(showsPoll);
   return fetch("api/shows").then(r=>r.json()).then(j=>{
     showsData=j; drawShows();
-    if(j.running && $("shows").open) showsPoll=setTimeout(loadShows,3000);
+    if(j.running && $("shows").open) showsPoll=setTimeout(loadShows,1500);
   }).catch(()=>{ $("shInfo").textContent="Couldn't reach BEN."; });
 }
 function drawShows(){
@@ -1557,8 +1567,8 @@ function drawShows(){
   const isNew=x=>j.firstScan && x.first>j.firstScan && (Date.now()-new Date(x.first))<14*864e5;
   const newN=list.filter(isNew).length;
   let info=j.scanned ? "Last checked "+when(j.scanned)+". "+list.length+" upcoming"+(showsKind==="tcg"?" Pokémon/TCG":"")+" show"+(list.length===1?"":"s")+(newN?", "+newN+" new":"")+"." : "Not checked yet. Tap Scan now.";
-  if(j.running) info="Checking for shows… this takes about a minute.";
-  else if(j.error) info+=" Last scan had a problem: "+j.error+".";
+  if(j.running){ info="Checking for shows"+(j.total ? ": step "+Math.min(j.done+1,j.total)+" of "+j.total : "…"); setBar($("shBar"), j.done, j.total); }
+  else { hideBar($("shBar")); if(j.error) info+=" Last scan had a problem: "+j.error+"."; }
   $("shInfo").textContent=info;
   const L=$("shList"); L.replaceChildren(); let month="";
   if(j.scanned && !list.length && !j.running){ const p=document.createElement("p"); p.className="note"; p.textContent=showsKind==="tcg" ? "No upcoming Pokémon/TCG shows found. Try All." : "No upcoming shows found in these towns."; L.append(p); }
@@ -1588,7 +1598,7 @@ $("shows").addEventListener("click",e=>{ if(e.target===$("shows")) $("shows").cl
 $("shows").addEventListener("close",()=>clearTimeout(showsPoll));
 $("shKind").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; showsKind=b.dataset.k; store("nd-shows-kind",showsKind); drawShows(); });
 $("shScan").onclick=async()=>{
-  $("shScan").disabled=true; $("shScan").textContent="Scanning…";
+  $("shScan").disabled=true; $("shScan").textContent="Scanning…"; setBar($("shBar"),0,0);
   try{ await fetch("api/shows/scan",{method:"POST"}); }catch(_){}
   loadShows();
 };
@@ -1645,13 +1655,14 @@ function loadDex(){
   clearTimeout(dexTimer);
   return fetch("api/pokedex").then(r=>r.json()).then(j=>{
     state.dex=j;
-    if(!j.ready && addKind==="dex" && !$("drAdd").hidden) dexTimer=setTimeout(()=>loadDex().then(drawCatalog),4000);
+    if(!j.ready && addKind==="dex" && !$("drAdd").hidden) dexTimer=setTimeout(()=>loadDex().then(drawCatalog),2000);
   }).catch(()=>{ state.dex={ready:false, error:"Couldn't reach BEN"}; });
 }
 function drawDex(){
   const C=$("catalog"); C.replaceChildren();
   const d=state.dex;
   if(!d){ $("addMsg").textContent="Loading the Pokémon list…"; return; }
+  if(d.building) setBar($("addBar"), d.done, d.total); else hideBar($("addBar"));
   if(!d.ready){
     $("addMsg").textContent = d.error && !d.building ? "Couldn't make the Pokémon list ("+d.error+"). Check that BEN is online and reopen this menu."
       : "Making the Pokémon list from every set (first time only, about 2 minutes)… "+(d.total ? d.done+" of "+d.total+" sets" : "");
@@ -1682,7 +1693,7 @@ function drawDex(){
           const r=await fetch("api/sets",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id})});
           const j=await r.json(); if(!r.ok) throw new Error(j.error||"Couldn't add that Pokémon");
           await loadSets(); $("drawer").close(); showAdd(false); openSet(id);
-          $("sync").textContent=p.name+" master set added. Downloading card images and checking prices in the background.";
+          $("sync").textContent=p.name+" master set added. Downloading card images and checking prices in the background."; setTimeout(poll,1500);
         }catch(err){ add.disabled=false; add.textContent="Add"; $("addMsg").textContent=err.message+"."; }
       };
       row.append(add);
@@ -1704,6 +1715,7 @@ $("addKind").addEventListener("click",e=>{ const b=e.target.closest("button"); i
 
 function drawCatalog(){
   if(addKind==="dex") return drawDex();
+  hideBar($("addBar"));
   const C=$("catalog"); C.replaceChildren();
   if(!state.catalog){ $("addMsg").textContent="Loading the set list…"; return; }
   const term=$("addQ").value.trim().toLowerCase();
@@ -1729,7 +1741,7 @@ function drawCatalog(){
             const r=await fetch("api/sets",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:s.id})});
             const j=await r.json(); if(!r.ok) throw new Error(j.error||"Couldn't add that set");
             await loadSets(); $("drawer").close(); showAdd(false); openSet(s.id);
-            $("sync").textContent=s.name+" added. Downloading card images and checking prices in the background.";
+            $("sync").textContent=s.name+" added. Downloading card images and checking prices in the background."; setTimeout(poll,1500);
           }catch(err){ add.disabled=false; add.textContent="Add"; $("addMsg").textContent=err.message+". Check that BEN is online and try again."; }
         };
         row.append(add);
@@ -1778,8 +1790,34 @@ function loadState(){
     state.shop=s.shop||{};
     state.ready=true; header(); rarityOptions(); render(); renderView();
     fetch("api/set/"+enc(sid)+"/history").then(r=>r.json()).then(h=>{ if(seq!==loadSeq) return; state.hist=h||{}; state.histDates=Object.keys(state.hist).sort(); render(); renderView(); }).catch(()=>{});
-    if(!wasRunning) $("sync").textContent="Saved on BEN · prices auto-refresh daily";
+    if(!wasRunning){ $("sync").textContent="Saved on BEN · prices auto-refresh daily"; hideBar($("syncBar")); watchImages(); }
   }).catch(err=>{ if(seq===loadSeq){ state.ready=false; render(); $("sync").textContent=(err&&err.message&&err.message!=="Failed to fetch" ? err.message : "Can't reach BEN")+". Try reloading."; } });
+}
+
+// ---------- loading bars ----------
+function setBar(el, done, total){
+  el.hidden=false; const i=el.firstElementChild;
+  if(total>0){ const pct=Math.max(2,Math.min(100,done/total*100)); el.classList.remove("wait"); i.style.width=pct.toFixed(1)+"%"; el.setAttribute("aria-valuenow",Math.round(pct)); }
+  else { el.classList.add("wait"); i.style.width=""; el.removeAttribute("aria-valuenow"); }
+}
+const hideBar = el => { el.hidden=true; el.classList.remove("wait"); el.firstElementChild.style.width="0"; };
+
+// Card images download in the background after a set is added; show how far along it is.
+let imgTimer=null, imgWatching=null;
+function watchImages(){
+  clearTimeout(imgTimer); const sid=state.sid; if(!sid) return;
+  fetch("api/progress").then(r=>r.json()).then(p=>{
+    if(sid!==state.sid) return;
+    const im=(p.images||{})[sid];
+    if(im){
+      imgWatching=sid;
+      if(!wasRunning){ $("sync").textContent="Downloading card images: "+(im.total ? Math.min(im.done+1,im.total)+" of "+im.total : "starting…"); setBar($("syncBar"), im.done, im.total); }
+      imgTimer=setTimeout(watchImages,2500);
+    } else if(imgWatching===sid){
+      imgWatching=null; render();
+      if(!wasRunning){ hideBar($("syncBar")); $("sync").textContent="Card images downloaded"; }
+    }
+  }).catch(()=>{});
 }
 
 // ---------- price refresh ----------
@@ -1789,10 +1827,11 @@ function showJob(j){
     wasRunning=true;
     $("refresh").disabled=true; $("refreshLbl").textContent="Refreshing…"; $("refresh").classList.add("busy");
     $("sync").textContent="Checking "+(j.name||"prices")+": card "+Math.min(j.done+1,j.total||1)+" of "+(j.total||"…");
+    setBar($("syncBar"), j.done, j.total);
     if(!pollTimer) pollTimer=setTimeout(poll,3000);
   } else {
     $("refresh").disabled=false; $("refreshLbl").textContent="Refresh prices"; $("refresh").classList.remove("busy");
-    if(wasRunning){ wasRunning=false; loadState().then(()=>{ $("sync").textContent=j.message||"Prices updated"; }); }
+    if(wasRunning){ wasRunning=false; hideBar($("syncBar")); loadState().then(()=>{ $("sync").textContent=j.message||"Prices updated"; watchImages(); }); }
   }
 }
 function poll(){ pollTimer=null; fetch("api/refresh").then(r=>r.json()).then(showJob).catch(()=>{ pollTimer=setTimeout(poll,10000); }); }

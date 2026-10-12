@@ -4,6 +4,15 @@ Versions go up by 0.1 for each app update (new features or fixes) and by a whole
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v2.7 (October 11, 2026)
+
+- **Loading bars** that show real progress (how many steps are done out of the total):
+  - Price refresh, under the status line at the top
+  - Card image downloads after adding a set or Pokémon
+  - Making the Pokémon list (Add a Pokémon)
+  - Card show scans
+- When BEN doesn't know the total yet, the bar slides back and forth until it does
+
 ## v2.6 (October 11, 2026)
 
 - **Card shows:** new calendar button at the top. Lists upcoming card shows in your towns from TreasureHunter.show, by month, with the date, venue and a link to each show. Pokémon/TCG shows are tagged, with a Pokémon / TCG or All filter. Shows found since your last scan are marked New.
