@@ -4,6 +4,12 @@ Versions go up by 0.1 for each app update (new features or fixes) and by a whole
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v2.5 (October 11, 2026)
+
+- **Card list gap warning.** When a binder's card list might be incomplete, an asterisk (*) shows on the card count at the top, with a short note under the binder name:
+  - Set binders: when the card database is missing card numbers between 1 and the set's printed total, it lists which ones.
+  - Master set binders: always, since the card database doesn't have every promo, trainer kit or McDonald's card.
+
 ## v2.4 (October 11, 2026)
 
 - **No more automatic updates.** Restarting the container no longer installs anything. Updates only come from Settings → About → Check for updates, which shows the changes and asks you to confirm first.
