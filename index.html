@@ -607,6 +607,8 @@ dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
       <option value="num">Sort: set number</option>
       <option value="hi">Sort: price high to low</option>
       <option value="lo">Sort: price low to high</option>
+      <option value="gain">Sort: biggest gain</option>
+      <option value="drop">Sort: biggest drop</option>
     </select>
     <input type="search" id="fQ" placeholder="Search name or number (1/105)" aria-label="Search cards by name or number">
     <span class="count" id="count"></span>
@@ -871,6 +873,9 @@ dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
     <div class="chips" id="fsRar" role="group" aria-labelledby="fsRarLbl"></div>
     <div class="eyebrow">Sort</div>
     <div class="chips" id="fsSort" role="group" aria-label="Sort"></div>
+    <div class="eyebrow">Price change over</div>
+    <div class="chips" id="fsPeriod" role="group" aria-label="Price change period"></div>
+    <div class="note" id="fsPeriodNote"></div>
     <button class="btn primary go" type="button" id="fsGo"></button>
   </div>
 </dialog>
@@ -922,6 +927,8 @@ dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
     <div class="eyebrow">Cards</div>
     <label class="toggle" for="stEd"><input type="checkbox" id="stEd" checked> Show "Unlimited" under each card</label>
     <div class="note">Card images come from the public card database, which uses 1st Edition scans for older sets. The label is a reminder that you collect Unlimited.</div>
+    <label class="f">Price change period<select id="stPeriod"></select></label>
+    <div class="note" id="stPeriodNote">The ▲▼ percentage on each card, the biggest movers in Stats and the gain/drop sorts all use this period. Only affects this device.</div>
     <div class="eyebrow">Tab icon</div>
     <div class="iconrow">
       <img id="icPrev" src="favicon" alt="Current tab icon" width="40" height="40">
@@ -1058,10 +1065,29 @@ function series(n){
   if(cur){ if(out.length && out[out.length-1][0]===t) out[out.length-1][1]=cur; else out.push([t,cur]); }
   return out;
 }
-// Change over the last `days` days (uses the oldest point if history is shorter).
-function trend(n, days=7){
+// Price change period, chosen in Settings or the phone Filters panel (0 = all time). Saved per device.
+const PERIODS=[[1,"1 day"],[7,"7 days"],[30,"30 days"],[90,"90 days"],[365,"1 year"],[0,"All time"]];
+state.period = (()=>{ const v=recall("nd-period"); return v!=null && PERIODS.some(p=>String(p[0])===v) ? +v : 7; })();
+const periodName = (d=state.period) => (PERIODS.find(p=>p[0]===d)||[0,d+" days"])[1];
+// How many days of saved prices this binder has, for the "still filling in" note.
+const historyDays = () => state.histDates.length ? Math.round((new Date(todayStr())-new Date(state.histDates[0]))/864e5) : 0;
+function periodNote(){
+  const have=historyDays(), want=state.period;
+  if(!state.histDates.length) return "Price changes appear once BEN has saved a few days of prices.";
+  if(want===0) return "All time = since "+fmtDay(state.histDates[0])+".";
+  if(have<want) return "BEN has "+have+" day"+(have===1?"":"s")+" of saved prices so far (since "+fmtDay(state.histDates[0])+"), so this shows the change over those days until "+periodName()+" builds up.";
+  return "";
+}
+function setPeriod(d){
+  state.period=d; store("nd-period",String(d));
+  if($("stPeriod")) $("stPeriod").value=String(d);
+  if($("stPeriodNote2")){ const t=periodNote(); $("stPeriodNote2").textContent=t; $("stPeriodNote2").hidden=!t; }
+  render(); if(state.view==="stats") renderView();
+}
+// Change over the last `days` days (uses the oldest point if history is shorter; 0 = all time).
+function trend(n, days=state.period){
   const sr=series(n); if(sr.length<2) return null;
-  const cut=daysAgo(days); let from=sr[0];
+  const cut=days ? daysAgo(days) : sr[0][0]; let from=sr[0];
   for(const pt of sr){ if(pt[0]<=cut) from=pt; else break; }
   const to=sr[sr.length-1]; if(!from[1] || from===to) return null;
   const span=Math.round((new Date(to[0])-new Date(from[0]))/864e5);
@@ -1160,6 +1186,11 @@ function render(){
   });
   if(state.sort==="hi") list.sort((a,b)=>priceOf(b.n)-priceOf(a.n));
   if(state.sort==="lo") list.sort((a,b)=>priceOf(a.n)-priceOf(b.n));
+  if(state.sort==="gain"||state.sort==="drop"){   // cards without a change go last
+    const pc=new Map(list.map(c=>{ const t=trend(c.n); return [c.n, t ? t.pct : null]; }));
+    const dir=state.sort==="gain"?-1:1;
+    list.sort((a,b)=>{ const x=pc.get(a.n), y=pc.get(b.n); if(x==null&&y==null) return 0; if(x==null) return 1; if(y==null) return -1; return dir*(x-y); });
+  }
   const g=$("grid"); g.replaceChildren();
   if(!list.length){ const e=document.createElement("div"); e.className="empty"; e.textContent=state.cards.length ? "No cards match these filters." : (state.ready ? "This set has no cards yet." : "Loading cards…"); g.append(e); }
   for(const c of list){
@@ -1209,6 +1240,8 @@ function drawFilterSheet(shown){
   $("fsRarLbl").textContent=isDex(state.sid) ? "Set" : "Rarity";
   $("fsRar").replaceChildren(...[...$("fRar").options].map(o=>chip(o.value ? o.textContent : "All", state.rar===o.value, ()=>{ $("fRar").value=o.value; state.rar=o.value; render(); })));
   $("fsSort").replaceChildren(...[...$("fSort").options].map(o=>chip(o.textContent.replace(/^Sort: /,"").replace(/^./,c=>c.toUpperCase()), state.sort===o.value, ()=>{ $("fSort").value=o.value; state.sort=o.value; render(); })));
+  $("fsPeriod").replaceChildren(...PERIODS.map(([d,l])=>chip(l, state.period===d, ()=>setPeriod(d))));
+  $("fsPeriodNote").textContent=periodNote(); $("fsPeriodNote").hidden=!$("fsPeriodNote").textContent;
   const n = shown ?? $("grid").querySelectorAll(".sleeve").length;
   $("fsGo").textContent="Show "+n+" card"+(n===1?"":"s");
 }
@@ -1641,8 +1674,8 @@ function drawSpark(n){
   const dot=document.createElementNS(ns,"circle"); dot.setAttribute("cx",X(xs[xs.length-1])); dot.setAttribute("cy",Y(ys[ys.length-1])); dot.setAttribute("r","4"); dot.setAttribute("fill","var(--dark)"); dot.setAttribute("stroke","var(--surface)"); dot.setAttribute("stroke-width","2");
   svg.append(area,line,dot); box.append(svg);
   const cap=document.createElement("div"); cap.className="cap";
-  const w=trend(n,7);
-  cap.append("Low "+money(y0)+" · High "+money(y1)+" since "+fmtDay(sr[0][0])+(w?" · 7 days ":""));
+  const w=trend(n);
+  cap.append("Low "+money(y0)+" · High "+money(y1)+" since "+fmtDay(sr[0][0])+(w?" · "+periodName()+" ":""));
   if(w) cap.append(trendEl(w));
   box.append(cap);
 }
@@ -1876,6 +1909,11 @@ $("stTime").onchange=e=>{ if(/^\d\d:\d\d$/.test(e.target.value)) saveSettings({t
 $("stBackup").onchange=e=>saveSettings({backup:e.target.checked}).then(()=>state.sid && loadState());
 $("stEd").checked=showEd;
 $("stEd").onchange=e=>{ showEd=e.target.checked; store("nd-ed", showEd?"on":"off"); render(); };
+$("stPeriod").replaceChildren(...PERIODS.map(([d,l])=>{ const o=document.createElement("option"); o.value=String(d); o.textContent=l; return o; }));
+$("stPeriod").value=String(state.period);
+$("stPeriod").onchange=e=>setPeriod(+e.target.value);
+(()=>{ const n=document.createElement("div"); n.className="note"; n.id="stPeriodNote2"; $("stPeriodNote").after(n); })();
+$("cog").addEventListener("click",()=>{ $("stPeriod").value=String(state.period); const t=periodNote(); $("stPeriodNote2").textContent=t; $("stPeriodNote2").hidden=!t; });
 const shortDate = d => d ? new Date(d).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "";
 const verTitle = v => v.subject || (v.version ? "Version "+v.version : v.commit ? "Version "+v.commit.slice(0,7) : "Older version");
 // Version pill: "v1.2" when the version is numbered, otherwise the short code.
@@ -2681,8 +2719,8 @@ function drawBars(months){
 }
 function drawMovers(){
   const box=$("movers"); box.replaceChildren();
-  $("moversTitle").textContent="Biggest movers this week · "+(state.set.name||"");
-  const rows=state.cards.map(c=>({c,t:trend(c.n,7)})).filter(r=>r.t && r.t.from>=1 && Math.abs(r.t.pct)>=0.5);
+  $("moversTitle").textContent="Biggest movers · "+periodName().toLowerCase()+" · "+(state.set.name||"");
+  const rows=state.cards.map(c=>({c,t:trend(c.n)})).filter(r=>r.t && r.t.from>=1 && Math.abs(r.t.pct)>=0.5);
   if(!rows.length){
     const first=state.histDates[0];
     box.append(note(first ? "No price changes yet. Prices have been saved daily since "+fmtDay(first)+"." : "Movers appear once BEN has saved prices for a few days."));

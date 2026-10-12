@@ -10,6 +10,13 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v2.19 (October 12, 2026)
+
+- **Price change period:** choose what the ▲▼ percentage on each card measures: 1 day, 7 days, 30 days, 90 days, 1 year or all time. Set it in Settings → Cards, or in the Filters panel on phones. It's saved on each device, and 7 days is the default.
+- The same period is used by the biggest movers in Stats, the change column in the shopping list and the price chart on each card
+- **New sorts:** biggest gain and biggest drop, over the chosen period
+- Longer periods fill in over time: until BEN has saved enough days of prices, the change covers the days it has, and the panel says how many
+
 ## v2.18.1 (October 12, 2026)
 
 - Phones: the "may be missing cards" note moved out of the top bar to just above the cards, as one short line. The top bar shows only the menu, sprite, name and buttons again.
