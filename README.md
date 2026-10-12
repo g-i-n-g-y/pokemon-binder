@@ -106,3 +106,13 @@ Optional environment variables:
 ```bash
 docker exec <container name> python server.py --test neo4-1
 ```
+
+## Credits and inspiration
+
+- **[Tracearr](https://github.com/connorgallopo/Tracearr)** by Connor Gallopo inspired several design ideas: the What's new window (versions grouped with Installed and Latest tags, opened from the version number), the update notice, and the sets menu that slides out and pushes the page over. No code was copied; these were rebuilt from scratch for this app.
+- Card lists and images: [PokemonTCG/pokemon-tcg-data](https://github.com/PokemonTCG/pokemon-tcg-data)
+- Pokémon sprites: [PokeAPI/sprites](https://github.com/PokeAPI/sprites)
+- Card show listings: [TreasureHunter.show](https://www.treasurehunter.show)
+- Prices: TCGplayer recent sales and PriceCharting
+
+Pokémon and all related names and images are trademarks of Nintendo, Creatures and GAME FREAK. This is a personal, unofficial project.
