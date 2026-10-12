@@ -4,6 +4,11 @@ Versions go up by 0.1 for each app update (new features or fixes) and by a whole
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v2.11 (October 11, 2026)
+
+- Floating windows (Settings, Card shows): the scroll bar is slimmer and sits inside the rounded corners instead of running over them
+- Close stays in the top corner while you scroll
+
 ## v2.10 (October 11, 2026)
 
 - Settings opens as a floating window in the middle of the screen, like Card shows. On a computer the themes sit two per row.

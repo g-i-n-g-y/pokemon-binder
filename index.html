@@ -347,8 +347,16 @@ dialog.left{margin:0 auto 0 0}
 .shows-list{display:flex;flex-direction:column}
 .shows-list h3{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:14px 0 4px;font-weight:500}
 dialog.float{margin:auto;height:fit-content;max-height:min(86vh,900px);width:min(680px,calc(100% - 24px));border-radius:14px;border:1px solid var(--line);box-shadow:0 20px 60px rgba(0,0,0,.5)}
-dialog.float .sheet{padding:18px 22px 24px}
-dialog.float .close{position:sticky;top:0}
+dialog.float{overflow:hidden}
+dialog.float[open]{display:flex;flex-direction:column}
+/* the inside scrolls, so the scroll bar sits within the rounded corners */
+dialog.float .sheet{padding:18px 22px 24px;overflow-y:auto;min-height:0;flex:1;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+dialog.float .sheet::-webkit-scrollbar{width:12px}
+dialog.float .sheet::-webkit-scrollbar-track{background:transparent;margin:16px 0}
+dialog.float .sheet::-webkit-scrollbar-thumb{background:var(--line);border-radius:12px;border:4px solid var(--surface)}
+dialog.float .sheet::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+dialog.float .close{position:absolute;top:14px;right:20px;z-index:2;background:var(--surface);border-radius:6px;padding:4px 6px}
+dialog.float .sheet>h2{padding-right:80px;margin-top:6px}
 #shKind button{white-space:nowrap}
 dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
 @media (max-width:480px){dialog.float{max-height:calc(100% - 24px)} dialog.float .sheet{padding:14px 16px 20px}}
