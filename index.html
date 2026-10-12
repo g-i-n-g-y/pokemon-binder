@@ -1321,7 +1321,9 @@ function missTile(){
   const h=document.createElement("b"); h.textContent=dex&&who ? "Missing a "+who+" card?" : "Missing a card?";
   const p=document.createElement("div"); p.className="s"; p.textContent=dex ? "Some promos and trainer kit cards aren't in the card database." : "Add any card the list doesn't have, like a promo or a variant.";
   t.append(h,p);
-  if(dex && who){ const a=document.createElement("a"); a.className="btn"; a.target="_blank"; a.rel="noopener"; a.href="https://pokecottage.com/pokemon-master-sets/"+cottageSlug(who); a.textContent="Check PokéCottage's "+who+" list ↗"; t.append(a); }
+  // PokéCottage has every Gen 1 and 2 page (#1 to #251) so far; raise this as they add more.
+  const dexNo=+(state.set.dex||String(state.sid).replace(/^dex-/,""));
+  if(dex && who && dexNo>=1 && dexNo<=COTTAGE_MAX){ const a=document.createElement("a"); a.className="btn"; a.target="_blank"; a.rel="noopener"; a.href="https://pokecottage.com/pokemon-master-sets/"+cottageSlug(who); a.textContent="Check PokéCottage's "+who+" list ↗"; t.append(a); }
   const add=document.createElement("button"); add.type="button"; add.className="btn"; add.textContent="+ Add a card"; add.onclick=()=>openCustom(null);
   t.append(add); return t;
 }
@@ -2245,6 +2247,7 @@ function setAddKind(k){
 }
 $("addKind").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b) setAddKind(b.dataset.k); });
 
+const COTTAGE_MAX=251;
 // PokéCottage page names: lowercase with dashes, like pokemon-master-sets/totodile or /mr-mime.
 const cottageSlug = name => name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
   .replace(/♀/g,"-f").replace(/♂/g,"-m").replace(/['’.:]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
