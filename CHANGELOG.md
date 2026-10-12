@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v2.11.2 (October 11, 2026)
+
+- Dropdown menus everywhere: the arrow sits further in from the right edge and matches the theme colors
+
 ## v2.11.1 (October 11, 2026)
 
 - Floating windows: the scroll bar no longer shows arrow buttons that run into the rounded top and bottom corners (Chrome and Edge)
