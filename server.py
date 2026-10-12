@@ -24,7 +24,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "2.16.1"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
+APP_VERSION = "2.16.2"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -842,12 +842,36 @@ def tcgdex_card(sid, card, cache):
     return None
 
 
+FX_FILE = os.path.join(DATA, "fx.json")
+
+
+def eur_to_usd():
+    """Today's euro to US dollar rate from Frankfurter (European Central Bank rates, free, no key).
+    Saved in data/fx.json and reused for a day; an older saved rate is used if the site can't be reached."""
+    fx = read_json(FX_FILE, {})
+    if fx.get("usd") and time.time() - fx.get("fetched", 0) < DAY:
+        return fx["usd"]
+    for url in ("https://api.frankfurter.dev/v1/latest?base=EUR&symbols=USD",
+                "https://api.frankfurter.app/latest?from=EUR&to=USD"):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": APP_UA, "Accept": "application/json"})
+            with urllib.request.urlopen(req, timeout=15) as r:
+                usd = float((json.load(r).get("rates") or {}).get("USD") or 0)
+            if 0.5 < usd < 3:
+                write_json(FX_FILE, {"usd": usd, "fetched": time.time()})
+                return usd
+        except Exception as e:
+            log(f"exchange rate: {e}")
+    return fx.get("usd")
+
+
 def _num(v):
     return round(float(v), 2) if isinstance(v, (int, float)) and v > 0 else None
 
 
-def tcgdex_market(tc, rarity=""):
-    """{"tp": TCGplayer market USD, "tpLow", "tpVar", "tpUpd", "cm30": Cardmarket 30-day avg EUR, "cmTrend", "cmUpd"}
+def tcgdex_market(tc, rarity="", usd=None):
+    """{"tp": TCGplayer market USD, "tpLow", "tpVar", "tpUpd", "cm30": Cardmarket 30-day avg in USD, "cmTrend", "cmUpd"}
+    Cardmarket prices are in euros, so they're converted with `usd` (euro to dollar rate) or left out without one.
     from a TCGdex card. Skips 1st Edition prices; prefers Unlimited, then holo or normal to match the card."""
     pr = (tc or {}).get("pricing") or {}
     out = {}
@@ -869,8 +893,10 @@ def tcgdex_market(tc, rarity=""):
         out.update(tp=price, tpLow=low if low and low <= price else None,   # a "low" above market is bad data
                    tpVar=k, tpUpd=str(tp.get("updated") or "")[:10])
     cm = pr.get("cardmarket") or {}
-    if _num(cm.get("avg30")) or _num(cm.get("trend")):
-        out.update(cm30=_num(cm.get("avg30")), cmTrend=_num(cm.get("trend")), cmUpd=str(cm.get("updated") or "")[:10])
+    if usd and (_num(cm.get("avg30")) or _num(cm.get("trend"))):
+        conv = lambda v: round(v * usd, 2) if v else None
+        out.update(cm30=conv(_num(cm.get("avg30"))), cmTrend=conv(_num(cm.get("trend"))),
+                   cmUpd=str(cm.get("updated") or "")[:10], cmUsd=True)
     return out
 
 
@@ -892,6 +918,7 @@ def refresh_prices(sid, reason="daily"):
         pc_cache = read_json(sdir(sid, "pc_urls.json"), {})
         backup = get_settings().get("backup", True)
         dex_ids = read_json(sdir(sid, "tcgdex_ids.json"), {})
+        usd = eur_to_usd() if backup else None
         with lock:
             prices = read_json(sdir(sid, "prices.json"), {})
         p = prices.setdefault("p", {})
@@ -926,7 +953,7 @@ def refresh_prices(sid, reason="daily"):
                 try:
                     tc = tcgdex_card(sid, c, dex_ids)
                     if tc:
-                        mkt = tcgdex_market(tc, c.get("rarity", ""))
+                        mkt = tcgdex_market(tc, c.get("rarity", ""), usd)
                         if mkt:
                             inf["mkt"] = mkt
                     else:
@@ -1884,14 +1911,16 @@ def test_card(card_id):
     print("Market prices (TCGdex):")
     try:
         tc = tcgdex_card(sid, card, {})
-        mkt = tcgdex_market(tc, card.get("rarity", "")) if tc else {}
+        usd = eur_to_usd()
+        print(f"  Euro to dollar rate: {usd or 'not available, Cardmarket left out'}")
+        mkt = tcgdex_market(tc, card.get("rarity", ""), usd) if tc else {}
         print(f"  Card: {tc.get('id') if tc else 'not found'}")
         if tc and not mkt:
             print("  No prices on this card")
         if mkt.get("tp"):
             print(f"  TCGplayer market ${mkt['tp']} ({mkt.get('tpVar')}), low ${mkt.get('tpLow')}, updated {mkt.get('tpUpd')}")
         if mkt.get("cm30") or mkt.get("cmTrend"):
-            print(f"  Cardmarket 30-day avg EUR {mkt.get('cm30')}, trend EUR {mkt.get('cmTrend')}, updated {mkt.get('cmUpd')}")
+            print(f"  Cardmarket 30-day avg ${mkt.get('cm30')}, trend ${mkt.get('cmTrend')} (converted from euros), updated {mkt.get('cmUpd')}")
     except Exception as e:
         print(f"  Couldn't reach TCGdex: {e}")
     print("Graded (PriceCharting sold listings, Unlimited only):")

@@ -1246,9 +1246,10 @@ function priceSource(n){
 function mktLine(n){
   const m=(state.info[n]||{}).mkt||{}, el=$("dMkt"), bits=[];
   if(m.tp) bits.push("TCGplayer "+money(m.tp)+(m.tpLow?" (low "+money(m.tpLow)+")":""));
-  if(m.cm30||m.cmTrend) bits.push("Cardmarket 30-day avg €"+(m.cm30||m.cmTrend).toFixed(2));
+  // Cardmarket is saved in dollars since v2.16.2 (cmUsd); older euro numbers stay hidden until the next refresh
+  if(m.cmUsd && (m.cm30||m.cmTrend)) bits.push("Cardmarket 30-day avg "+money(m.cm30||m.cmTrend));
   el.hidden=!bits.length;
-  el.textContent = bits.length ? "Market prices: "+bits.join(" · ")+". From TCGdex, a rough second opinion (may mix editions)." : "";
+  el.textContent = bits.length ? "Market prices: "+bits.join(" · ")+". From TCGdex, a rough second opinion"+(bits.length>1?" (Cardmarket is converted from euros and may mix editions)":"")+"." : "";
 }
 function lpmpBox(n){
   const i=state.info[n]||{};

@@ -10,6 +10,11 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v2.16.2 (October 12, 2026)
+
+- Market prices are all in US dollars now. Cardmarket's price is converted from euros with the day's exchange rate (European Central Bank, via Frankfurter), and left out if the rate can't be fetched.
+- Cardmarket numbers from the last refresh stay hidden until the next price refresh.
+
 ## v2.16.1 (October 12, 2026)
 
 - Market prices: hide TCGplayer's "low" price when it's higher than the market price, since that's a data mistake on TCGdex's side.
