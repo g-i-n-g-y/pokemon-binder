@@ -10,6 +10,11 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v2.15.1 (October 11, 2026)
+
+- Phone filters panel: swipe down to close it (from the top of the panel, or anywhere when it isn't scrolled), without the browser's pull-to-refresh kicking in
+- The panel is only as tall as its contents, so there's room above it to tap and close
+
 ## v2.15 (October 11, 2026)
 
 - **Tidier phone layout:** on phones, the card filters fold into one row: the search box and a **Filters** button. The button shows how many filters are on, and a short line under it says what you're seeing (like "Need · 72 of 113 cards").
