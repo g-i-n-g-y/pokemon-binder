@@ -23,7 +23,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "2.7"   # bump for every app update: 1.0 -> 1.1 for features/fixes, 2.0 for big changes
+APP_VERSION = "2.8"   # bump for every app update: 1.0 -> 1.1 for features/fixes, 2.0 for big changes
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -1081,6 +1081,13 @@ def shows_state():
     return st
 
 
+def tidy_show(rec):
+    """Drop the town and date the site adds to every title and description (the panel already shows them)."""
+    name = re.sub(r"\s+[—–-]\s+[^—–]*,\s*(?:VA|Virginia)\b[^—–]*$", "", rec.get("name", "")).strip()
+    desc = re.sub(r"^.*?\bin [^.]*?,\s*Virginia on [A-Z][a-z]+\.? \d{1,2}, \d{4}\.\s*", "", rec.get("desc", "")).strip()
+    return dict(rec, name=name or rec.get("name", ""), desc=desc)
+
+
 def show_details(url):
     """Name, description and image from one show's page (only fetched the first time it's seen)."""
     _, html = pc_get(url)
@@ -1403,7 +1410,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, out, cache="no-store")
         if path == "/api/shows":
             st = shows_state()
-            return self.send(200, {"shows": sorted(st["shows"].values(), key=lambda s: (s["date"], s["name"])),
+            return self.send(200, {"shows": sorted((tidy_show(x) for x in st["shows"].values()), key=lambda s: (s["date"], s["name"])),
                                    "areas": st["areas"], "auto": st["auto"], "scanned": st.get("scanned", ""),
                                    "firstScan": st.get("firstScan", ""), "error": st.get("error", ""), "running": shows_job["running"],
                                    "done": shows_job["done"], "total": shows_job["total"],

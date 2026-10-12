@@ -4,6 +4,12 @@ Versions go up by 0.1 for each app update (new features or fixes) and by a whole
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v2.8 (October 11, 2026)
+
+- Card shows opens as a floating window in the middle of the screen instead of a side panel
+- Show titles and descriptions no longer repeat the town and date (already shown on the left and under each name)
+- Pokémon / TCG filter stays on one line on phones
+
 ## v2.7 (October 11, 2026)
 
 - **Loading bars** that show real progress (how many steps are done out of the total):
