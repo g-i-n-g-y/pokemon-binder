@@ -380,6 +380,8 @@ dialog#fsheet::backdrop{background:rgba(5,4,8,.6)}
    on a phone it slides in over the page. */
 #drawer{clip-path:inset(0 100% 0 0);opacity:.6;transition:clip-path .28s cubic-bezier(.2,.8,.2,1),opacity .2s ease}
 #drawer.in{clip-path:inset(0 0 0 0);opacity:1}
+#drawer{overscroll-behavior:contain;touch-action:pan-y}
+#drawer.drag{transition:none}
 #drawer::backdrop{background:rgba(5,4,8,0);transition:background .28s ease}
 #drawer.in::backdrop{background:rgba(5,4,8,.6)}
 #drawer.pushed{position:fixed;inset:0 auto 0 0;z-index:50;margin:0;height:100%;max-height:100%;width:380px;border-right:1px solid var(--line);overflow-y:auto}
@@ -2058,6 +2060,26 @@ drawerEl.close=function(){   // every existing close() call animates out first
   matchMedia("(prefers-reduced-motion: reduce)").matches ? done() : setTimeout(done,260);
 };
 drawerEl.addEventListener("cancel",e=>{ e.preventDefault(); drawerEl.close(); });
+// Swipe left to close. Up/down still scrolls the menu; only a mostly sideways swipe moves it.
+(()=>{
+  let x0=null, y0=0, dx=0, t0=0, side=null;
+  drawerEl.addEventListener("touchstart",e=>{ const t=e.touches[0]; x0=t.clientX; y0=t.clientY; dx=0; t0=Date.now(); side=null; },{passive:true});
+  drawerEl.addEventListener("touchmove",e=>{
+    if(x0==null) return;
+    const t=e.touches[0], mx=t.clientX-x0, my=t.clientY-y0;
+    if(side==null){ if(Math.abs(mx)<8 && Math.abs(my)<8) return; side=Math.abs(mx)>Math.abs(my)*1.2; }
+    if(!side){ x0=null; return; }
+    e.preventDefault(); dx=Math.min(0,mx);
+    drawerEl.classList.add("drag"); drawerEl.style.transform="translateX("+dx+"px)";
+  },{passive:false});
+  drawerEl.addEventListener("touchend",()=>{
+    if(x0==null || !side){ x0=null; return; }
+    const fast=dx<-40 && (Date.now()-t0)<250;
+    drawerEl.classList.remove("drag"); drawerEl.style.transform="";
+    if(dx<-80 || fast) drawerEl.close();
+    x0=null;
+  });
+})();
 document.addEventListener("keydown",e=>{ if(e.key==="Escape" && drawerEl.open && drawerEl.classList.contains("pushed") && !document.querySelector("dialog[open]:modal")) drawerEl.close(); });
 $("menuBtn").onclick=()=>{ if(drawerEl.open && drawerEl.classList.contains("pushed")){ drawerEl.close(); return; } showAdd(false); drawSets(); openDrawer(); loadSets().then(drawSets); };
 $("drClose").onclick=()=>$("drawer").close();

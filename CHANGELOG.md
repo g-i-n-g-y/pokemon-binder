@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v2.15.2 (October 11, 2026)
+
+- Sets menu: swipe left to close it on a touch screen. Scrolling up and down still scrolls the menu.
+
 ## v2.15.1 (October 11, 2026)
 
 - Phone filters panel: swipe down to close it (from the top of the panel, or anywhere when it isn't scrolled), without the browser's pull-to-refresh kicking in
