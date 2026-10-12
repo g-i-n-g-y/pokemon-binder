@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v2.13.1 (October 11, 2026)
+
+- Floating windows (Settings, Card shows, What's new, card details) have a title bar: the name on the left and a close button on the right stay put at the top while everything below scrolls
+
 ## v2.13 (October 11, 2026)
 
 - **What's new:** the version number now shows at the bottom of the sets menu. Tap it to read the release notes, grouped into newer versions, this version line (like everything since v2.13) and earlier releases. Each version opens to show its changes, with Installed and Latest tags and a link to all releases on GitHub.

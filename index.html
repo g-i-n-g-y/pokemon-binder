@@ -359,10 +359,13 @@ dialog.float .sheet::-webkit-scrollbar-track{background:transparent;margin:18px 
 @supports not selector(::-webkit-scrollbar){dialog.float .sheet{scrollbar-width:thin;scrollbar-color:var(--line) transparent}}
 dialog.float .sheet::-webkit-scrollbar-thumb{background:var(--line);border-radius:12px;border:4px solid var(--surface)}
 dialog.float .sheet::-webkit-scrollbar-thumb:hover{background:var(--muted)}
-/* Close sits in a solid bar across the top of the window; the content scrolls underneath it */
-dialog.float .close{position:sticky;top:-18px;z-index:2;align-self:stretch;text-align:right;background:var(--surface);
-  margin:-18px -22px -8px;padding:14px 22px 8px;border-radius:14px 14px 0 0}
-dialog.float .close:hover{color:var(--ink)}
+/* title bar: the window's name and a close button, fixed at the top; only the content below scrolls */
+.fbar{flex:none;display:flex;align-items:center;gap:12px;padding:12px 14px 12px 22px;background:var(--surface);border-bottom:1px solid var(--line);transition:box-shadow .2s}
+.fbar.scrolled{box-shadow:0 8px 16px -10px rgba(0,0,0,.7)}
+.fbar h2,.fbar .ftitle{flex:1;min-width:0;margin:0;font-family:var(--f-display);font-weight:700;font-size:20px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fclose{flex:none;width:36px;height:36px;display:grid;place-items:center;border-radius:9px;border:1px solid transparent;background:none;color:var(--muted);cursor:pointer;padding:0}
+.fclose:hover{background:var(--bg);border-color:var(--line);color:var(--ink)}
+.fclose svg{width:18px;height:18px}
 /* What's new */
 .relnote{border-bottom:1px solid var(--line)}
 .relnote summary{display:flex;align-items:center;gap:10px;padding:12px 4px;cursor:pointer;list-style:none}
@@ -392,7 +395,7 @@ dialog.float .close:hover{color:var(--ink)}
 #shKind button{white-space:nowrap}
 dialog.float .sheet>*{flex-shrink:0}   /* scroll instead of squashing things to fit */
 #dlg.float{width:min(560px,calc(100% - 24px))}
-#dlg.float .big-art{margin-top:8px}
+#dlg.float .big-art{margin-top:4px}
 /* every dropdown: our own arrow, 14px in from the right edge, in the theme's colors */
 select{-webkit-appearance:none;appearance:none;padding-right:36px!important;background-repeat:no-repeat!important;
   background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%)!important;
@@ -1618,6 +1621,24 @@ async function doRollback(p){
 }
 $("cog").onclick=()=>{ loadSettings(); loadVersion(); $("settings").showModal(); };
 $("sClose").onclick=()=>$("settings").close();
+
+// Floating windows get a title bar: the window's name on the left, a close icon on the right.
+// The old Close button moves into the bar (keeps its id and click handler); the title is moved, not copied.
+document.querySelectorAll("dialog.float").forEach(dlg=>{
+  const sheet=dlg.querySelector(".sheet"), close=sheet.querySelector(":scope > .close");
+  const bar=document.createElement("div"); bar.className="fbar";
+  const h=dlg.id==="dlg" ? null : sheet.querySelector("h2");
+  if(h){ bar.append(h); }
+  else { const t=document.createElement("span"); t.className="ftitle"; t.textContent="Card details"; bar.append(t); }
+  if(close){
+    close.className="fclose"; close.setAttribute("aria-label","Close"); close.title="Close";
+    close.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+    bar.append(close);
+  }
+  dlg.prepend(bar);
+  sheet.addEventListener("scroll",()=>bar.classList.toggle("scrolled", sheet.scrollTop>4),{passive:true});
+  dlg.addEventListener("close",()=>{ sheet.scrollTop=0; bar.classList.remove("scrolled"); });
+});
 
 // ---------- version, what's new, update notice ----------
 let news=null;
