@@ -10,6 +10,15 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v2.17 (October 12, 2026)
+
+- **Automatic backups:** the binder now saves a backup of all your data on BEN before every update, rollback and spreadsheet import. If the backup can't be saved, the update is skipped.
+  - See them in **Settings → Backup → Saved on BEN**, with **Download** and **Restore** for each. The newest 10 update backups are kept.
+- **Spreadsheet import:** in **Settings → Spreadsheet**, **Download template** gives you every card in the binder with what you own now. Fill in Qty, and optionally Condition, Your Cost and Notes, then **Import spreadsheet**.
+  - Excel (.xlsx) and CSV both work, including the Neo Destiny tracker sheet.
+  - You see what will change before anything is saved. Rows with a wrong card number or name are skipped and listed.
+  - Importing only adds: it never marks a card as needed or removes purchases.
+
 ## v2.16.2 (October 12, 2026)
 
 - Market prices are all in US dollars now. Cardmarket's price is converted from euros with the day's exchange rate (European Central Bank, via Frankfurter), and left out if the rate can't be fetched.

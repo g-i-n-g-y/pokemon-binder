@@ -916,6 +916,18 @@ dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
       <input id="bkUp" type="file" accept=".zip,application/zip" hidden>
     </div>
     <div class="note" id="bkMsg">One file with your cards, purchases, sellers, notes, photos, prices and settings, for every binder. Keep a copy somewhere other than BEN, like your computer or cloud storage.</div>
+    <div class="prev" id="bkAutoWrap" hidden>
+      <div class="k">Saved on BEN</div>
+      <div class="note">Made automatically before each update, spreadsheet import and restore. The newest 10 update backups are kept.</div>
+      <ul class="prevlist" id="bkAuto"></ul>
+    </div>
+    <div class="eyebrow">Spreadsheet <span id="imSet"></span></div>
+    <div class="bk">
+      <a class="btn" href="#" id="imTpl">Download template</a>
+      <label class="btn" for="imUp">Import spreadsheet</label>
+      <input id="imUp" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+    </div>
+    <div class="note" id="imMsg">The template lists every card in this binder with what you own now. Fill in Qty (copies you own), and optionally Condition (NM, LP, MP, HP or DMG), Your Cost (total paid) and Notes, then import it. Excel files (.xlsx) and CSV both work. Importing only adds: it marks cards owned and fills in empty conditions and notes, and never removes anything. A backup is saved first.</div>
     <div class="eyebrow">About</div>
     <div class="ver" id="stVersion">Checking installed version…</div>
     <div class="upd"><button class="btn" type="button" id="stUpdate">Check for updates</button><span class="note" id="stUpdMsg" aria-live="polite"></span></div>
@@ -1647,6 +1659,76 @@ $("bkUp").onchange=async e=>{
     .catch(err=>{ $("bkMsg").textContent=(err&&err.message&&err.message!=="Failed to fetch") ? err.message+"." : "Couldn't restore. Check that the container is running."; });
 };
 
+// ---------- backups saved on BEN ----------
+const bkKind = {update:"Before update", "import":"Before import", restore:"Before restore"};
+function loadAutoBackups(){
+  fetch("api/backups").then(r=>r.json()).then(j=>{
+    const list=(j.backups||[]).slice(0,6), ul=$("bkAuto"); ul.replaceChildren();
+    $("bkAutoWrap").hidden=!list.length;
+    for(const b of list){
+      const li=document.createElement("li"), info=document.createElement("div");
+      const t=document.createElement("b"); t.textContent=bkKind[b.kind]||"Backup";
+      const d=document.createElement("div"); d.className="s"; d.textContent=shortDate(b.created)+", "+new Date(b.created).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})+" · "+(b.size<1048576 ? Math.max(1,Math.round(b.size/1024))+" KB" : (b.size/1048576).toFixed(1)+" MB");
+      info.append(t,d);
+      const btns=document.createElement("div"); btns.className="bk";
+      const dl=document.createElement("a"); dl.className="btn"; dl.href="api/backups/"+enc(b.name); dl.download=""; dl.textContent="Download";
+      const rs=document.createElement("button"); rs.className="btn"; rs.type="button"; rs.textContent="Restore";
+      rs.onclick=async()=>{
+        const ok=await askConfirm("Restore this backup?", t.textContent+" · "+d.textContent, "Restore",
+          {body:Object.assign(document.createElement("div"),{className:"note",textContent:"Everything in the binder goes back to how it was then. A safety copy of your current data is saved first."})});
+        if(!ok) return;
+        $("bkMsg").textContent="Restoring…";
+        fetch("api/backups/restore",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:b.name})})
+          .then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error||"Restore failed"); return j; }))
+          .then(j=>{ $("bkMsg").textContent="Restored "+j.files+" files. Reloading…"; setTimeout(()=>location.reload(),1200); })
+          .catch(err=>{ $("bkMsg").textContent=(err&&err.message&&err.message!=="Failed to fetch") ? err.message+"." : "Couldn't restore. Check that the container is running."; });
+      };
+      btns.append(dl,rs); li.append(info,btns); ul.append(li);
+    }
+  }).catch(()=>{ $("bkAutoWrap").hidden=true; });
+}
+// ---------- spreadsheet import ----------
+const imHelp=$("imMsg").textContent;
+function importSetup(){
+  const dex=/^dex-/.test(state.sid||"");
+  $("imMsg").textContent=imHelp;
+  $("imSet").textContent=state.set.name ? "for "+state.set.name : "";
+  $("imTpl").href = state.sid && !dex ? "api/set/"+enc(state.sid)+"/template.csv" : "#";
+  $("imTpl").toggleAttribute("download", !!state.sid && !dex);
+  $("imTpl").setAttribute("aria-disabled", dex||!state.sid ? "true" : "false");
+  $("imUp").disabled = dex || !state.sid;
+  if(dex) $("imMsg").textContent="Spreadsheets work for set binders. Switch to a set from the menu to use them.";
+}
+$("imTpl").addEventListener("click",e=>{ if($("imTpl").getAttribute("aria-disabled")==="true") e.preventDefault(); });
+$("imUp").onchange=async e=>{
+  const f=e.target.files[0]; e.target.value=""; if(!f || !state.sid) return;
+  if(f.size>10*1048576){ $("imMsg").textContent="That file is too big (10 MB max)."; return; }
+  const url="api/set/"+enc(state.sid)+"/import", post=q=>fetch(url+q,{method:"POST",headers:{"Content-Type":"application/octet-stream"},body:f})
+    .then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error||"Import failed"); return j; }));
+  $("imMsg").textContent="Reading "+f.name+"…";
+  let plan;
+  try { plan=await post(""); }
+  catch(err){ $("imMsg").textContent=(err&&err.message&&err.message!=="Failed to fetch") ? err.message : "Couldn't read the file. Check that the container is running."; return; }
+  const ch=plan.changes, newOwned=ch.filter(c=>c.have===0).length, more=ch.filter(c=>c.have>0&&c.add>0).length, extra=ch.filter(c=>!c.add).length;
+  const ul=document.createElement("ul"); ul.className="changes";
+  const line=t=>{ const li=document.createElement("li"); li.textContent=t; ul.append(li); };
+  if(newOwned) line(newOwned+" card"+(newOwned===1?"":"s")+" marked owned: "+ch.filter(c=>c.have===0).slice(0,12).map(c=>"#"+c.n+" "+c.name).join(", ")+(newOwned>12?", and more":""));
+  if(more) line(more+" card"+(more===1?" gets":"s get")+" extra copies");
+  if(extra) line(extra+" owned card"+(extra===1?" gets":"s get")+" a condition or note filled in");
+  if(plan.already) line(plan.already+" card"+(plan.already===1?" is":"s are")+" already up to date");
+  if(plan.need) line(plan.need+" row"+(plan.need===1?"":"s")+" with Qty 0 left alone (cards you own stay owned)");
+  for(const sk of plan.skipped.slice(0,8)) line("Skipped row "+sk.row+": "+sk.why);
+  if(plan.skippedCount>8) line("…and "+(plan.skippedCount-8)+" more skipped rows");
+  if(!ch.length){ $("imMsg").replaceChildren(); $("imMsg").append("Nothing to change from "+f.name+".", ul); return; }
+  const ok=await askConfirm("Import this spreadsheet?", f.name+" into "+(state.set.name||"this binder"), "Import", {safe:true, body:ul});
+  if(!ok){ $("imMsg").textContent="Import cancelled. Nothing changed."; return; }
+  $("imMsg").textContent="Importing…";
+  try {
+    const done=await post("?apply=1");
+    $("imMsg").textContent="Imported. "+done.changes.length+" card"+(done.changes.length===1?"":"s")+" updated. A backup from just before is saved on BEN.";
+    loadAutoBackups(); if(state.sid) loadState();
+  } catch(err){ $("imMsg").textContent=(err&&err.message&&err.message!=="Failed to fetch") ? err.message : "Couldn't import. Check that the container is running."; }
+};
 // ---------- tab icon ----------
 function setIcon(v){
   const u="favicon?v="+(v||Date.now());
@@ -1663,7 +1745,7 @@ $("icUp").onchange=e=>{
 };
 $("icReset").onclick=()=>fetch("api/icon",{method:"DELETE"}).then(()=>{ setIcon(); $("icMsg").textContent="Back to the default icon."; });
 function loadSettings(){
-  $("stSaved").textContent=""; $("slotMsg").textContent=""; drawSlots(); setIcon(Date.now());
+  $("stSaved").textContent=""; $("slotMsg").textContent=""; drawSlots(); setIcon(Date.now()); loadAutoBackups(); importSetup();
   $("slotSet").textContent=state.set.name ? "for "+state.set.name : "";
   getSlots().then(s=>{ if(!s) throw 0; drawSlots(); return s; }).then(s=>{
     $("stAuto").checked=!!s.auto; $("stTime").value=s.time||"03:00"; showNext(s.next, s.auto);

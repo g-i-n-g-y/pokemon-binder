@@ -24,7 +24,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "2.16.2"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
+APP_VERSION = "2.17"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -1353,9 +1353,261 @@ def set_totals(sid):
     return {k: round(v, 2) if isinstance(v, float) else v for k, v in t.items()}
 
 
+# ---------- spreadsheet import (Excel .xlsx or .csv) ----------
+# Reads a card list like the Neo Destiny tracker spreadsheet: a header row with a card number column
+# ("Set #", "No.", "Number") and any of Qty / Status, Condition, Your Cost, Notes. Only adds: cards the
+# file lists as owned are marked owned; nothing is marked needed and nothing already logged is removed.
+
+MAX_IMPORT = 10 * 1024 * 1024
+XNS = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
+RNS = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
+HEADERS = {
+    "num": ("set#", "setno", "setnumber", "number", "no", "#", "cardnumber", "cardno", "num", "card#"),
+    "name": ("cardname", "name", "card", "pokemon"),
+    "qty": ("qty", "quantity", "copies", "count", "owned#", "have"),
+    "status": ("status", "owned", "own"),
+    "cond": ("condition", "cond"),
+    "cost": ("yourcost", "cost", "paid", "pricepaid", "purchaseprice", "buyprice", "costeach"),
+    "note": ("notes", "note", "comments", "comment"),
+}
+
+
+def _hkey(t):
+    return re.sub(r"[^a-z0-9#]", "", str(t or "").lower())
+
+
+def _xml(z, name, limit=30 * 1024 * 1024):
+    import xml.etree.ElementTree as ET
+    if z.getinfo(name).file_size > limit:
+        raise ValueError("That spreadsheet is too big")
+    data = z.read(name)
+    if b"<!DOCTYPE" in data[:2000].upper() or b"<!ENTITY" in data[:2000].upper():
+        raise ValueError("That spreadsheet can't be read")
+    return ET.fromstring(data)
+
+
+def _col(ref):
+    n = 0
+    for ch in re.match(r"[A-Z]+", ref).group(0):
+        n = n * 26 + ord(ch) - 64
+    return n - 1
+
+
+def read_xlsx(raw):
+    """Every sheet in an .xlsx as {sheet name: [[cell, ...], ...]}, using Python's built-in zip and XML tools."""
+    try:
+        z = zipfile.ZipFile(io.BytesIO(raw))
+    except zipfile.BadZipFile:
+        raise ValueError("That file isn't an Excel spreadsheet or CSV")
+    with z:
+        names = set(z.namelist())
+        if "xl/workbook.xml" not in names:
+            raise ValueError("That file isn't an Excel spreadsheet or CSV")
+        shared = []
+        if "xl/sharedStrings.xml" in names:
+            for si in _xml(z, "xl/sharedStrings.xml").iter(XNS + "si"):
+                shared.append("".join(t.text or "" for t in si.iter(XNS + "t")))
+        rels = {}
+        if "xl/_rels/workbook.xml.rels" in names:
+            for r in _xml(z, "xl/_rels/workbook.xml.rels"):
+                rels[r.get("Id")] = r.get("Target", "")
+        out = {}
+        for sh in _xml(z, "xl/workbook.xml").iter(XNS + "sheet"):
+            target = rels.get(sh.get(RNS + "id"), "")
+            path = target.lstrip("/") if target.startswith("/") else "xl/" + target
+            if path not in names:
+                continue
+            rows = []
+            for row in _xml(z, path).iter(XNS + "row"):
+                cells = {}
+                for c in row.iter(XNS + "c"):
+                    t, v = c.get("t"), c.find(XNS + "v")
+                    if t == "inlineStr":
+                        val = "".join(x.text or "" for x in c.iter(XNS + "t"))
+                    elif v is None or v.text is None:
+                        val = None   # a formula Excel hasn't saved a result for
+                    elif t == "s":
+                        val = shared[int(v.text)] if v.text.isdigit() and int(v.text) < len(shared) else ""
+                    elif t in ("str", "e"):
+                        val = v.text
+                    elif t == "b":
+                        val = v.text == "1"
+                    else:
+                        try:
+                            val = float(v.text)
+                        except ValueError:
+                            val = v.text
+                    if c.get("r"):
+                        cells[_col(c.get("r"))] = val
+                if cells:
+                    rows.append([cells.get(i) for i in range(max(cells) + 1)])
+                if len(rows) > 5000:
+                    break
+            out[sh.get("name", "")] = rows
+        return out
+
+
+def read_sheet(raw):
+    """The card rows of a spreadsheet: [{"row": line number, "num", "name", "qty", "status", "cond", "cost", "note"}]."""
+    import csv
+    if raw[:2] == b"PK":
+        sheets = read_xlsx(raw)
+    else:
+        try:
+            text = raw.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            text = raw.decode("latin-1")
+        sheets = {"csv": list(csv.reader(io.StringIO(text)))}
+    for rows in sheets.values():
+        for hi, header in enumerate(rows[:10]):
+            keys = [_hkey(h) for h in header]
+            cols = {}
+            for field, names in HEADERS.items():
+                for i, k in enumerate(keys):
+                    if k in names and i not in cols.values():
+                        cols[field] = i
+                        break
+            if "num" not in cols or not ({"qty", "status"} & set(cols)):
+                continue
+            out = []
+            for li, r in enumerate(rows[hi + 1:], start=hi + 2):
+                get = lambda f: r[cols[f]] if f in cols and cols[f] < len(r) else None
+                if get("num") in (None, ""):
+                    continue
+                out.append({"row": li, **{f: get(f) for f in HEADERS}})
+            return out
+    raise ValueError("Couldn't find the card list. The file needs a header row with a card number column "
+                     "(like \"Set #\") and a Qty or Status column.")
+
+
+def _clean_num(v):
+    if isinstance(v, float) and v.is_integer():
+        v = int(v)
+    t = str(v).strip().lstrip("#").split("/")[0].strip()
+    return t.lstrip("0") or t if t.isdigit() else t
+
+
+def _simple(t):
+    t = str(t or "").lower().replace("é", "e").replace("♀", "f").replace("♂", "m")
+    return re.sub(r"[^a-z0-9]", "", t)
+
+
+def same_name(a, b):
+    """Card names match, allowing small spelling differences (like Imposter / Impostor)."""
+    import difflib
+    a, b = _simple(a), _simple(b)
+    return a == b or difflib.SequenceMatcher(None, a, b).ratio() >= 0.85
+
+
+def _money(v):
+    if v in (None, ""):
+        return None
+    try:
+        f = float(str(v).replace("$", "").replace(",", "").strip())
+    except ValueError:
+        return None
+    return round(f, 2) if f > 0 else None
+
+
+def import_plan(sid, rows):
+    """What importing these rows would change, without changing anything."""
+    if is_dex(sid):
+        raise ValueError("Spreadsheet import works for set binders, not Pokémon master sets")
+    cards = {c["n"]: c for c in set_cards(sid)}
+    coll = read_json(sdir(sid, "collection.json"), {})
+    changes, skipped, already, need = [], [], 0, 0
+    seen = set()
+    for r in rows:
+        n = _clean_num(r["num"])
+        card = cards.get(n)
+        if not card:
+            skipped.append({"row": r["row"], "why": f"No card number {r['num']} in this set"})
+            continue
+        if r.get("name") and not same_name(r["name"], card["name"]):
+            skipped.append({"row": r["row"], "why": f"#{n} is {card['name']} here, but the file says {r['name']}"})
+            continue
+        if n in seen:
+            skipped.append({"row": r["row"], "why": f"#{n} is listed twice; the first row was used"})
+            continue
+        seen.add(n)
+        qty = None
+        if r.get("qty") not in (None, ""):
+            try:
+                qty = max(0, int(float(str(r["qty"]).strip())))
+            except ValueError:
+                skipped.append({"row": r["row"], "why": f"Qty \"{r['qty']}\" isn't a number"})
+                continue
+        elif str(r.get("status") or "").strip().lower() in ("owned", "own", "yes", "y", "true", "x", "1"):
+            qty = 1
+        if not qty:
+            need += 1
+            continue
+        rec = coll.get(n) or {}
+        have = int(rec.get("qty") or 0)
+        cond = str(r.get("cond") or "").strip().upper()
+        cond = cond if cond in RAW_CONDS else ""
+        cost = _money(r.get("cost"))
+        note = str(r.get("note") or "").strip()[:500]
+        add = max(0, qty - have)
+        ch = {"n": n, "name": card["name"], "qty": qty, "have": have, "add": add}
+        if cond and not rec.get("cond"):
+            ch["cond"] = cond
+        if note and not rec.get("note"):
+            ch["note"] = note
+        if cost and add and have == 0:
+            ch["each"] = round(cost / qty, 2)   # "Your Cost" is what you paid for all your copies
+        if add or "cond" in ch or "note" in ch:
+            changes.append(ch)
+        else:
+            already += 1
+    return {"changes": changes, "skipped": skipped[:50], "skippedCount": len(skipped),
+            "already": already, "need": need, "rows": len(rows)}
+
+
+def import_template(sid):
+    """A CSV of every card in the binder with what's already saved, ready to fill in and import."""
+    import csv
+    coll = read_json(sdir(sid, "collection.json"), {})
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["Set #", "Card Name", "Rarity", "Qty", "Condition", "Your Cost", "Notes"])
+    for c in set_cards(sid):
+        rec = coll.get(c["n"]) or {}
+        paid = sum(b.get("price") or 0 for b in rec.get("purchases") or [] if isinstance(b, dict))
+        w.writerow([c["n"], c["name"], c.get("rarity", ""), int(rec.get("qty") or 0), rec.get("cond") or "",
+                    f"{paid:.2f}" if paid else "", rec.get("note") or ""])
+    return ("\ufeff" + buf.getvalue()).encode("utf-8")   # the mark helps Excel read accents like Pokémon
+
+
+def apply_import(sid, plan):
+    """Make the changes from import_plan. Saves a backup first. Returns the backup's file name."""
+    if not plan["changes"]:
+        return ""
+    name = auto_backup("before-import")
+    with lock:
+        coll = read_json(sdir(sid, "collection.json"), {})
+        for ch in plan["changes"]:
+            rec = coll.get(ch["n"]) or {}
+            buys = [b for b in (rec.get("purchases") or []) if isinstance(b, dict)]
+            for _ in range(ch["add"]):
+                buys.append({"d": "", "price": ch.get("each"), "where": ""})
+            rec["purchases"] = buys
+            rec["qty"] = len(buys)
+            if ch.get("cond"):
+                rec["cond"] = ch["cond"]
+            if ch.get("note"):
+                rec["note"] = ch["note"]
+            coll[ch["n"]] = rec
+        write_json(sdir(sid, "collection.json"), coll)
+    log(f"{sid}: imported a spreadsheet ({len(plan['changes'])} cards changed)")
+    return name
+
+
 # ---------- backup and restore ----------
 
-BACKUPS = os.path.join(APP, "backups")          # safety copies made before a restore (on your server only)
+BACKUPS = os.path.join(APP, "backups")          # safety copies made before a restore, update or import (on your server only)
+AUTO_KEEP = {"before-update": 10, "before-import": 5, "before-restore": 5}
+AUTO_NAME_RE = re.compile(r"(before-(?:update|import|restore))-\d{8}-\d{6}(?:-\d{3})?\.zip")
 MAX_RESTORE = 500 * 1024 * 1024
 SET_FILES = ("collection", "prices", "history", "tcg_ids", "slots", "shop", "pc_urls", "tcgdex_ids", "cards")
 BACKUP_RE = re.compile(rf"(settings\.json|sets\.json|shows\.json|favicon|favicon\.json|sets/{SID_RE}/(?:{'|'.join(SET_FILES)})\.json"
@@ -1388,6 +1640,37 @@ def make_backup(target):
                 z.write(os.path.join(DATA, name), name)
 
 
+def auto_backup(kind):
+    """Save a backup of all binder data in backups/ on BEN before something that changes it a lot
+    (an update, a spreadsheet import, a restore). Keeps the newest few of each kind. Returns the file name."""
+    os.makedirs(BACKUPS, exist_ok=True)
+    name = f"{kind}-{time.strftime('%Y%m%d-%H%M%S')}-{int(time.time() * 1000) % 1000:03d}.zip"
+    tmp = os.path.join(BACKUPS, name + ".tmp")
+    try:
+        make_backup(tmp)
+        os.replace(tmp, os.path.join(BACKUPS, name))
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+    old = sorted(f for f in os.listdir(BACKUPS) if f.startswith(kind + "-") and f.endswith(".zip"))
+    for f in old[:-AUTO_KEEP.get(kind, 5)]:
+        os.remove(os.path.join(BACKUPS, f))
+    log(f"Saved a backup before {kind[7:]}: backups/{name}")
+    return name
+
+
+def list_auto_backups():
+    """Backups saved on BEN, newest first: [{name, kind, created, size}]."""
+    out = []
+    for f in os.listdir(BACKUPS) if os.path.isdir(BACKUPS) else []:
+        m = AUTO_NAME_RE.fullmatch(f)
+        if m:
+            path = os.path.join(BACKUPS, f)
+            out.append({"name": f, "kind": m.group(1)[7:], "size": os.path.getsize(path),
+                        "created": datetime.fromtimestamp(os.path.getmtime(path), timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")})
+    return sorted(out, key=lambda x: x["created"] + x["name"], reverse=True)
+
+
 def restore_backup(path):
     """Replace the binder's data with a backup file. Saves a safety copy of the current data first."""
     try:
@@ -1410,12 +1693,7 @@ def restore_backup(path):
                     json.loads(z.read(n))
                 except Exception:
                     raise ValueError(f"The backup is damaged ({n} can't be read)")
-        os.makedirs(BACKUPS, exist_ok=True)
-        safety = os.path.join(BACKUPS, time.strftime("before-restore-%Y%m%d-%H%M%S") + f"-{int(time.time() * 1000) % 1000:03d}.zip")
-        make_backup(safety)
-        old = sorted(f for f in os.listdir(BACKUPS) if f.startswith("before-restore-"))
-        for f in old[:-5]:
-            os.remove(os.path.join(BACKUPS, f))
+        safety = auto_backup("before-restore")
         with lock:
             for sid in {n.split("/")[1] for n in names if n.startswith("sets/")}:
                 shutil.rmtree(sdir(sid, "photos"), ignore_errors=True)
@@ -1429,9 +1707,9 @@ def restore_backup(path):
                 with z.open(n) as src, open(dest + ".tmp", "wb") as out:
                     shutil.copyfileobj(src, out)
                 os.replace(dest + ".tmp", dest)
-    log(f"Restored a backup ({len(names)} files). Safety copy of the old data: {safety}")
+    log(f"Restored a backup ({len(names)} files). Safety copy of the old data: backups/{safety}")
     threading.Thread(target=warm_up, daemon=True).start()
-    return len(names), os.path.basename(safety)
+    return len(names), safety
 
 
 def warm_up():
@@ -1540,6 +1818,39 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, DEFAULT_ICON, "image/svg+xml", "no-cache")
         if path == "/api/icon":
             return self.send(200, {"custom": os.path.exists(ICON_FILE)}, cache="no-store")
+        if path == "/api/backups":
+            return self.send(200, {"backups": list_auto_backups()}, cache="no-store")
+        m_tp = re.fullmatch(rf"/api/set/({SID_RE})/template\.csv", path)
+        if m_tp:
+            sid = m_tp.group(1)
+            if not self.in_binder(sid) or is_dex(sid):
+                return self.send(400, {"error": "Templates are for set binders"})
+            body = import_template(sid)
+            fname = re.sub(r"[^A-Za-z0-9]+", "-", sets_list()["meta"].get(sid, {}).get("name", sid)).strip("-") or sid
+            self.send_response(200)
+            self.send_header("Content-Type", "text/csv; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Content-Disposition", f'attachment; filename="{fname}-binder-template.csv"')
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        m_bk = re.fullmatch(r"/api/backups/([A-Za-z0-9.\-]+)", path)
+        if m_bk:
+            name = m_bk.group(1)
+            fp = os.path.join(BACKUPS, name)
+            if not AUTO_NAME_RE.fullmatch(name) or not os.path.isfile(fp):
+                return self.send(404, {"error": "That backup isn't on BEN any more"})
+            with open(fp, "rb") as f:
+                body = f.read()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/zip")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Content-Disposition", f'attachment; filename="pokemon-binder-{name}"')
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(body)
+            return
         if path == "/api/backup":
             buf = io.BytesIO()
             try:
@@ -1816,6 +2127,40 @@ class Handler(BaseHTTPRequestHandler):
                 except OSError:
                     pass
             return self.send(200, {"ok": True, "files": count, "safety": safety})
+        if path == "/api/backups/restore":
+            raw = self.body(4096)
+            try:
+                name = json.loads(raw or b"{}").get("name", "")
+                assert AUTO_NAME_RE.fullmatch(name) and os.path.isfile(os.path.join(BACKUPS, name))
+            except Exception:
+                return self.send(400, {"error": "That backup isn't on BEN any more"})
+            try:
+                count, safety = restore_backup(os.path.join(BACKUPS, name))
+            except ValueError as e:
+                return self.send(400, {"error": str(e)})
+            except Exception as e:
+                return self.send(500, {"error": f"Restore failed: {e}"})
+            return self.send(200, {"ok": True, "files": count, "safety": safety})
+        m_imp = re.fullmatch(rf"/api/set/({SID_RE})/import", path)
+        if m_imp:
+            sid = m_imp.group(1)
+            if not self.in_binder(sid):
+                return self.send(400, {"error": "That binder isn't here"})
+            raw = self.body(MAX_IMPORT)
+            if not raw:
+                return self.send(413, {"error": "That file is empty or too big (10 MB max)"})
+            apply = "apply=1" in (self.path.split("?") + [""])[1]
+            try:
+                rows = read_sheet(raw)
+                plan = import_plan(sid, rows)
+                if apply:
+                    plan["backup"] = apply_import(sid, plan)
+            except ValueError as e:
+                return self.send(400, {"error": str(e)})
+            except Exception as e:
+                log(f"{sid}: import failed: {e}")
+                return self.send(500, {"error": f"Import failed: {e}"})
+            return self.send(200, plan)
         if path == "/api/icon":
             ctype = self.headers.get("Content-Type", "").split(";")[0].strip().lower()
             if ctype not in ICON_TYPES:
@@ -2040,6 +2385,11 @@ def install_files(folder, label):
         return []
     if "server.py" in changed and not server_ok(os.path.join(folder, "server.py")):
         return []   # skip the whole update so the page and server never end up mismatched
+    try:
+        auto_backup("before-update")
+    except Exception as e:
+        log(f"Update skipped: couldn't save a backup first ({e})")
+        raise RuntimeError(f"Update skipped because a backup couldn't be saved first: {e}")
     save_current_version()
     for name in changed:
         dst = os.path.join(APP, name)
