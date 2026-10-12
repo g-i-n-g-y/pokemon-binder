@@ -23,7 +23,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "2.12"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
+APP_VERSION = "2.13"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -1415,6 +1415,8 @@ class Handler(BaseHTTPRequestHandler):
                                    "firstScan": st.get("firstScan", ""), "error": st.get("error", ""), "running": shows_job["running"],
                                    "done": shows_job["done"], "total": shows_job["total"],
                                    "today": today_local()}, cache="no-store")
+        if path == "/api/changelog":
+            return self.send(200, changelog(), cache="no-store")
         if path == "/api/progress":
             # everything BEN is working on, for the loading bars
             imgs = {sid: dict(v) for sid, v in list(img_jobs.items()) if isinstance(v, dict)}
@@ -1910,6 +1912,51 @@ def check_github():
     if not changes:
         changes = [latest]
     return {"upToDate": False, "latest": latest, "running": running, "changes": changes}
+
+
+CHANGELOG_CACHE = {"at": 0, "text": "", "error": ""}
+
+
+def ver_tuple(v):
+    return tuple(int(x) for x in re.findall(r"\d+", v or ""))
+
+
+def parse_changelog(text):
+    """CHANGELOG.md -> [{"v": "2.12", "date": "October 11, 2026", "items": [{"t": text, "sub": [..]}], "notes": [..]}]"""
+    entries, cur = [], None
+    for line in text.splitlines():
+        m = re.match(r"##\s+v(\d+(?:\.\d+)+)\s*(?:\((.*?)\))?\s*$", line)
+        if m:
+            cur = {"v": m.group(1), "date": m.group(2) or "", "items": [], "notes": []}
+            entries.append(cur)
+            continue
+        if cur is None or not line.strip():
+            continue
+        m = re.match(r"(\s*)[-*]\s+(.*)", line)
+        if m:
+            if len(m.group(1)) >= 2 and cur["items"]:
+                cur["items"][-1]["sub"].append(m.group(2).strip())
+            else:
+                cur["items"].append({"t": m.group(2).strip(), "sub": []})
+        else:
+            cur["notes"].append(line.strip())
+    return entries
+
+
+def changelog():
+    """Release notes from GitHub (checked at most once an hour), plus whether a newer version is out."""
+    if GH_REPO and time.time() - CHANGELOG_CACHE["at"] > 3600:
+        try:
+            CHANGELOG_CACHE["text"] = gh_get(f"contents/CHANGELOG.md?ref={GH_BRANCH}", "application/vnd.github.raw").decode("utf-8", "ignore")
+            CHANGELOG_CACHE["error"] = ""
+        except Exception as e:
+            CHANGELOG_CACHE["error"] = gh_error(e)
+        CHANGELOG_CACHE["at"] = time.time()
+    entries = parse_changelog(CHANGELOG_CACHE["text"])
+    latest = entries[0]["v"] if entries else ""
+    return {"running": APP_VERSION, "latest": latest, "entries": entries[:40],
+            "updateAvailable": bool(latest) and ver_tuple(latest) > ver_tuple(APP_VERSION),
+            "repo": GH_REPO, "branch": GH_BRANCH, "error": CHANGELOG_CACHE["error"]}
 
 
 def install_from_github(sha=None):

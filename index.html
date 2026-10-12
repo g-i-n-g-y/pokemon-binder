@@ -359,8 +359,36 @@ dialog.float .sheet::-webkit-scrollbar-track{background:transparent;margin:18px 
 @supports not selector(::-webkit-scrollbar){dialog.float .sheet{scrollbar-width:thin;scrollbar-color:var(--line) transparent}}
 dialog.float .sheet::-webkit-scrollbar-thumb{background:var(--line);border-radius:12px;border:4px solid var(--surface)}
 dialog.float .sheet::-webkit-scrollbar-thumb:hover{background:var(--muted)}
-dialog.float .close{position:absolute;top:14px;right:20px;z-index:2;background:var(--surface);border-radius:6px;padding:4px 6px}
-dialog.float .sheet>h2{padding-right:80px;margin-top:6px}
+/* Close sits in a solid bar across the top of the window; the content scrolls underneath it */
+dialog.float .close{position:sticky;top:-18px;z-index:2;align-self:stretch;text-align:right;background:var(--surface);
+  margin:-18px -22px -8px;padding:14px 22px 8px;border-radius:14px 14px 0 0}
+dialog.float .close:hover{color:var(--ink)}
+/* What's new */
+.relnote{border-bottom:1px solid var(--line)}
+.relnote summary{display:flex;align-items:center;gap:10px;padding:12px 4px;cursor:pointer;list-style:none}
+.relnote summary .cnt{font-size:13px;color:var(--muted)}
+.rel-head{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:14px 0 0;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.rel-head:first-child{margin-top:0}
+.sheet-foot{position:sticky;bottom:-24px;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:var(--surface);border-top:1px solid var(--line);margin:4px -22px -24px;padding:12px 22px;border-radius:0 0 14px 14px}
+.sheet-foot a{font-size:14px;color:var(--ink);text-decoration:none}
+.sheet-foot a:hover{text-decoration:underline}
+.relnote summary::-webkit-details-marker{display:none}
+.relnote summary::before{content:"›";color:var(--muted);transition:transform .15s;display:inline-block}
+.relnote[open] summary::before{transform:rotate(90deg)}
+.relnote summary b{font-family:var(--f-display);font-size:17px}
+.relnote summary .d{margin-left:auto;font-size:13px;color:var(--muted);white-space:nowrap}
+.relnote ul{margin:0;padding:0 16px 14px 34px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.relnote ul ul{padding:6px 0 0 18px;gap:4px;font-size:13px;color:var(--muted)}
+.relnote p{margin:0;padding:0 16px 10px 34px;font-size:13px;color:var(--muted)}
+.rel-list{display:flex;flex-direction:column}
+.upd-banner{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;border:1px solid var(--light);background:var(--light-soft);border-radius:10px;padding:12px 14px}
+.upd-banner span{flex:1 1 200px}
+.verline{display:flex;align-items:center;gap:8px;margin-top:6px;border:0;background:none;color:var(--muted);font:inherit;font-size:13px;cursor:pointer;padding:6px 0;align-self:flex-start;font-family:var(--f-mono)}
+.verline:hover{color:var(--ink)}
+.verline .new{font-family:var(--f-body);font-size:12px;color:var(--bg);background:var(--light);border-radius:999px;padding:2px 8px}
+#menuBtn{position:relative}
+#menuBtn .dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--light);box-shadow:0 0 0 2px var(--surface)}
 #shKind button{white-space:nowrap}
 dialog.float .sheet>*{flex-shrink:0}   /* scroll instead of squashing things to fit */
 #dlg.float{width:min(560px,calc(100% - 24px))}
@@ -721,6 +749,7 @@ dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
       <div class="allsum" id="allSum" hidden></div>
       <div class="setlist" id="setList"></div>
       <button class="btn primary" type="button" id="addOpen">+ Add a set or Pokémon</button>
+      <button class="verline" type="button" id="verLine" title="What's new">Pokémon Binder <span id="verNum"></span></button>
     </div>
     <div id="drAdd" hidden>
       <button class="close back" type="button" id="addBack">‹ Back to your sets</button>
@@ -734,6 +763,19 @@ dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
       <div class="pbar" id="addBar" role="progressbar" aria-label="Making the Pokémon list" hidden><i></i></div>
       <div class="catalog" id="catalog"></div>
     </div>
+  </div>
+</dialog>
+
+<dialog id="news" class="float" aria-labelledby="nwTitle">
+  <div class="sheet">
+    <button class="close" type="button" id="nwClose">Close ✕</button>
+    <div>
+      <h2 id="nwTitle">What's new</h2>
+      <div class="note" id="nwSub"></div>
+    </div>
+    <div class="upd-banner" id="nwUpd" hidden><span id="nwUpdText"></span><button class="btn primary" type="button" id="nwInstall">Install update</button></div>
+    <div class="rel-list" id="nwList"></div>
+    <div class="sheet-foot"><a id="nwAll" target="_blank" rel="noopener">All releases on GitHub ↗</a><button class="btn primary" type="button" id="nwDone">Close</button></div>
   </div>
 </dialog>
 
@@ -1576,6 +1618,75 @@ async function doRollback(p){
 }
 $("cog").onclick=()=>{ loadSettings(); loadVersion(); $("settings").showModal(); };
 $("sClose").onclick=()=>$("settings").close();
+
+// ---------- version, what's new, update notice ----------
+let news=null;
+function inlineMd(t){   // **bold** and `code` from the changelog, everything else as plain text
+  const frag=document.createDocumentFragment();
+  t.split(/(\*\*[^*]+\*\*|`[^`]+`)/).forEach(part=>{
+    if(/^\*\*.+\*\*$/.test(part)){ const b=document.createElement("b"); b.textContent=part.slice(2,-2); frag.append(b); }
+    else if(/^`.+`$/.test(part)){ const c=document.createElement("code"); c.textContent=part.slice(1,-1); frag.append(c); }
+    else if(part) frag.append(part);
+  });
+  return frag;
+}
+function loadNews(){
+  return fetch("api/changelog").then(r=>r.json()).then(j=>{ news=j; showUpdateDot(); return j; }).catch(()=>null);
+}
+function showUpdateDot(){
+  const j=news; if(!j) return;
+  $("verNum").replaceChildren("v"+j.running);
+  if(j.updateAvailable){ const s=document.createElement("span"); s.className="new"; s.textContent="v"+j.latest+" available"; $("verNum").append(" ",s); }
+  let dot=$("menuBtn").querySelector(".dot");
+  if(j.updateAvailable && !dot){ dot=document.createElement("span"); dot.className="dot"; dot.title="Update available"; $("menuBtn").append(dot); $("menuBtn").setAttribute("aria-label","Your sets (update available)"); }
+  if(!j.updateAvailable && dot){ dot.remove(); $("menuBtn").setAttribute("aria-label","Your sets"); }
+}
+function drawNews(){
+  const j=news, L=$("nwList"); L.replaceChildren();
+  if(!j){ $("nwSub").textContent="Couldn't load the release notes."; return; }
+  $("nwSub").textContent="Release notes for Pokémon Binder. You're on v"+j.running+".";
+  $("nwUpd").hidden=!j.updateAvailable;
+  if(j.updateAvailable) $("nwUpdText").textContent="v"+j.latest+" is available. Installing asks you to confirm first.";
+  $("nwAll").href=j.repo ? "https://github.com/"+j.repo+"/blob/"+(j.branch||"main")+"/CHANGELOG.md" : "#";
+  $("nwAll").hidden=!j.repo;
+  if(!j.entries.length){ const p=document.createElement("p"); p.className="note"; p.textContent=j.error ? "Couldn't reach GitHub ("+j.error+")." : "No release notes yet."; L.append(p); return; }
+  const run=vt(j.running), line=run.slice(0,2).join("."), latest=j.entries[0].v;
+  // groups: newer than yours, this version line (like everything since v2.12), then earlier releases
+  const groups=[["Newer than yours",[]],["Since v"+line,[]],["Earlier releases",[]]];
+  j.entries.forEach(e=>{ const c=cmpV(vt(e.v),run); groups[c>0?0:(vt(e.v).slice(0,2).join(".")===line?1:2)][1].push(e); });
+  const shortDate=s=>{ const d=new Date(s); return isNaN(d) ? s : d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}); };
+  groups.filter(g=>g[1].length).forEach(([title,list])=>{
+   const h=document.createElement("div"); h.className="rel-head"; h.textContent=title; L.append(h);
+   list.forEach(e=>{
+    const d=document.createElement("details"); d.className="relnote";
+    const newer=cmpV(vt(e.v),run)>0, here=e.v===j.running;
+    if(here || newer) d.open=true;
+    const sm=document.createElement("summary"); const b=document.createElement("b"); b.textContent="v"+e.v; sm.append(b);
+    const tag=(t,c)=>{ const x=document.createElement("span"); x.className="tag "+c; x.textContent=t; sm.append(x); };
+    if(here) tag("Installed","own");
+    if(e.v===latest) tag("Latest","tcg");
+    if(e.items.length){ const n=document.createElement("span"); n.className="cnt"; n.textContent=e.items.length+" change"+(e.items.length===1?"":"s"); sm.append(n); }
+    const dt=document.createElement("span"); dt.className="d"; dt.textContent=shortDate(e.date); sm.append(dt);
+    d.append(sm);
+    e.notes.forEach(n=>{ const p=document.createElement("p"); p.append(inlineMd(n)); d.append(p); });
+    if(e.items.length){
+      const ul=document.createElement("ul");
+      e.items.forEach(it=>{ const li=document.createElement("li"); li.append(inlineMd(it.t));
+        if(it.sub.length){ const u2=document.createElement("ul"); it.sub.forEach(x=>{ const l2=document.createElement("li"); l2.append(inlineMd(x)); u2.append(l2); }); li.append(u2); }
+        ul.append(li); });
+      d.append(ul);
+    }
+    L.append(d);
+   });
+  });
+}
+const vt = v => (v||"").split(".").map(Number);
+const cmpV = (a,b) => { for(let i=0;i<Math.max(a.length,b.length);i++){ const x=a[i]||0, y=b[i]||0; if(x!==y) return x-y; } return 0; };
+$("verLine").onclick=()=>{ $("drawer").close(); drawNews(); $("news").showModal(); loadNews().then(drawNews); };
+$("nwClose").onclick=$("nwDone").onclick=()=>$("news").close();
+$("news").addEventListener("click",e=>{ if(e.target===$("news")) $("news").close(); });
+$("nwInstall").onclick=()=>{ $("news").close(); loadSettings(); loadVersion(); $("settings").showModal(); setTimeout(()=>$("stUpdate").click(),150); };
+loadNews(); setInterval(loadNews, 3*3600*1000);
 
 // ---------- local card shows ----------
 let showsKind=recall("nd-shows-kind")||"tcg", showsData=null, showsPoll=null;

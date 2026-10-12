@@ -10,6 +10,12 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v2.13 (October 11, 2026)
+
+- **What's new:** the version number now shows at the bottom of the sets menu. Tap it to read the release notes, grouped into newer versions, this version line (like everything since v2.13) and earlier releases. Each version opens to show its changes, with Installed and Latest tags and a link to all releases on GitHub.
+- **Update notice:** when a newer version is on GitHub, a small dot appears on the menu button and the version line says which one is available. Tap through to What's new and use Install update (it still asks you to confirm). The binder checks about once an hour and never installs anything by itself.
+- Floating windows: Close sits in a solid bar across the top with more room from the edge, so text no longer scrolls underneath or beside it
+
 ## v2.12 (October 11, 2026)
 
 - Card details open as a floating window in the middle of the screen, like Settings and Card shows (was a side panel)
