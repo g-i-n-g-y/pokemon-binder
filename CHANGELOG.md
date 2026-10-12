@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v2.14.1 (October 11, 2026)
+
+- Refresh prices asks first, showing when prices were last updated and about how long a refresh takes, so a stray tap doesn't start one
+
 ## v2.14 (October 11, 2026)
 
 - **Sets menu animation:** the menu grows out from the left. On a computer it sits beside the binder and pushes the page over (the cards re-flow to fit) instead of covering it; tap the menu button again, Close, or Esc to slide it away. On a phone it slides in over the page.

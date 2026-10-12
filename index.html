@@ -2027,8 +2027,12 @@ function showJob(j){
   }
 }
 function poll(){ pollTimer=null; fetch("api/refresh").then(r=>r.json()).then(showJob).catch(()=>{ pollTimer=setTimeout(poll,10000); }); }
-$("refresh").onclick=()=>{
+$("refresh").onclick=async()=>{
   if(!state.sid) return;
+  const name=state.set.name||"this binder", n=state.cards.length;
+  const last=state.updated ? "Prices were last updated "+when(state.updated)+". " : "";
+  const ok=await askConfirm("Refresh "+name+" prices?", last+"This checks recent sales for all "+n+" cards and takes about "+Math.max(1,Math.round(n*1.1/60))+" minute"+(Math.round(n*1.1/60)>1?"s":"")+". Prices also refresh by themselves once a day.", "Refresh", {safe:true});
+  if(!ok) return;
   $("refresh").disabled=true;
   fetch("api/refresh",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({set:state.sid})}).then(r=>r.json()).then(showJob)
     .catch(()=>{ $("refresh").disabled=false; $("sync").textContent="Couldn't start a refresh. Check that the container is running."; });
