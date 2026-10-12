@@ -23,7 +23,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "2.15.2"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
+APP_VERSION = "2.15.3"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -1318,6 +1318,24 @@ def warm_up():
 
 # ---------- web ----------
 
+# Which web addresses the binder answers to. IP addresses, localhost, one-word names (like "ben") and
+# home/Tailscale names always work. Add others, like a reverse proxy name, in BINDER_HOSTS (comma separated).
+# This blocks "DNS rebinding", where an outside website points its own name at your binder.
+EXTRA_HOSTS = {h.strip().lower() for h in os.environ.get("BINDER_HOSTS", "").split(",") if h.strip()}
+LOCAL_SUFFIXES = (".local", ".lan", ".home", ".home.arpa", ".internal", ".ts.net")
+
+
+def host_ok(host_header):
+    h = (host_header or "").strip().lower()
+    if h.startswith("["):                       # IPv6 like [::1]:8765
+        return True
+    name = h.rsplit(":", 1)[0] if h.count(":") == 1 else h
+    if not name or name in EXTRA_HOSTS or name == "localhost" or "." not in name:
+        return True
+    if re.fullmatch(r"\d{1,3}(?:\.\d{1,3}){3}", name):
+        return True
+    return name.endswith(LOCAL_SUFFIXES)
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass
@@ -1346,10 +1364,34 @@ class Handler(BaseHTTPRequestHandler):
             return None
         return self.rfile.read(size)
 
+    def blocked(self, change):
+        """Refuse requests sent to an unfamiliar address, and changes sent by another website.
+        Browsers say where a request came from (Origin / Sec-Fetch-Site); changes must come from the binder's own page."""
+        if not host_ok(self.headers.get("Host")):
+            self.send(403, {"error": "Open the binder by its IP address (or add this name to BINDER_HOSTS)."})
+            return True
+        if change:
+            site = (self.headers.get("Sec-Fetch-Site") or "").lower()
+            origin = self.headers.get("Origin")
+            if site and site not in ("same-origin", "none"):
+                log(f"Blocked a {self.command} to {self.path} from another website ({site}).")
+                self.send(403, {"error": "Changes can only come from the binder's own page."})
+                return True
+            if origin and origin != "null" and urllib.parse.urlparse(origin).netloc.lower() != (self.headers.get("Host") or "").lower():
+                log(f"Blocked a {self.command} to {self.path} from {origin}.")
+                self.send(403, {"error": "Changes can only come from the binder's own page."})
+                return True
+            if origin == "null":
+                self.send(403, {"error": "Changes can only come from the binder's own page."})
+                return True
+        return False
+
     def in_binder(self, sid):
         return sid in sets_list()["order"]
 
     def do_GET(self):
+        if self.blocked(False):
+            return
         path = self.path.split("?")[0]
         if path in ("/", "/index.html"):
             return self.send_file(os.path.join(APP, "index.html"), "text/html; charset=utf-8", "no-cache")
@@ -1470,6 +1512,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send(404, b"not found", "text/plain")
 
     def do_PUT(self):
+        if self.blocked(True):
+            return
         if self.path == "/api/settings":
             return self.do_PUT_settings()
         if self.path == "/api/shows":
@@ -1588,6 +1632,8 @@ class Handler(BaseHTTPRequestHandler):
         return self.send(200, out)
 
     def do_DELETE(self):
+        if self.blocked(True):
+            return
         if self.path == "/api/icon":
             for f in (ICON_FILE, ICON_FILE + ".json"):
                 if os.path.exists(f):
@@ -1600,6 +1646,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send(200, {"ok": True})
 
     def do_POST(self):
+        if self.blocked(True):
+            return
         path = self.path.split("?")[0]
         if path == "/api/restore":
             size = int(self.headers.get("Content-Length") or 0)

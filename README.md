@@ -79,6 +79,7 @@ Stored in `data/` next to `server.py`:
 | App data | a folder on the host → `/app` (put `server.py` and `index.html` in it) |
 | Extra parameters | `-w /app` |
 | Post arguments | `python -u server.py` |
+| Variable (optional) | `BINDER_HOSTS`: extra names the binder answers to, like a reverse proxy name (IP addresses, one-word names and Tailscale names already work) |
 
 Without Docker: put `server.py` and `index.html` in a folder and run `python server.py` (Python 3.9 or newer), then open `http://localhost:8080`.
 

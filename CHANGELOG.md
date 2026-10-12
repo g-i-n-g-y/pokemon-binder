@@ -10,6 +10,11 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v2.15.3 (October 11, 2026)
+
+- **Security fix:** other websites can no longer make changes to your binder. Before, a web page open in the same browser could quietly send it commands (like adding a set or restoring a backup) if it knew the binder's address. Changes are now only accepted from the binder's own page.
+- The binder only answers to IP addresses, localhost, one-word names and home or Tailscale names. To reach it by another name (like a reverse proxy), add that name to the `BINDER_HOSTS` container setting.
+
 ## v2.15.2 (October 11, 2026)
 
 - Sets menu: swipe left to close it on a touch screen. Scrolling up and down still scrolls the menu.
