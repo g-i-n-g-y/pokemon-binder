@@ -24,7 +24,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "2.16"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
+APP_VERSION = "2.16.1"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -864,7 +864,9 @@ def tcgdex_market(tc, rarity=""):
                     "unlimited" not in kl)
         k = sorted(vars_, key=rank)[0]
         v = vars_[k]
-        out.update(tp=_num(v.get("marketPrice")) or _num(v.get("midPrice")), tpLow=_num(v.get("lowPrice")),
+        price = _num(v.get("marketPrice")) or _num(v.get("midPrice"))
+        low = _num(v.get("lowPrice"))
+        out.update(tp=price, tpLow=low if low and low <= price else None,   # a "low" above market is bad data
                    tpVar=k, tpUpd=str(tp.get("updated") or "")[:10])
     cm = pr.get("cardmarket") or {}
     if _num(cm.get("avg30")) or _num(cm.get("trend")):
