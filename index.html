@@ -457,6 +457,8 @@ dialog.float .sheet::-webkit-scrollbar-thumb:hover{background:var(--muted)}
 #menuBtn{position:relative}
 #menuBtn .dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--light);box-shadow:0 0 0 2px var(--surface)}
 #shKind button{white-space:nowrap}
+/* scrolling inside a window never spills over to the page behind it, and the page stays put while a window is open */
+dialog .sheet,dialog#drawer,dialog#fsheet{overscroll-behavior:contain}
 dialog.float .sheet>*{flex-shrink:0}   /* scroll instead of squashing things to fit */
 #dlg.float{width:min(560px,calc(100% - 24px))}
 #dlg.float .big-art{margin-top:4px}
@@ -1993,6 +1995,12 @@ async function doRollback(p){
 }
 $("cog").onclick=()=>{ loadSettings(); loadVersion(); $("settings").showModal(); };
 $("sClose").onclick=()=>$("settings").close();
+// While a window is open on top of the page (modal), scrolling outside its scrolling area does nothing,
+// so a fast scroll can't move the binder behind it. Inside the window, scrolling stops at its edges (CSS above).
+const modalOpen = () => !!document.querySelector("dialog[open]:modal");
+const stopBehind = e => { if(modalOpen() && !e.target.closest("dialog[open] .sheet, dialog#drawer[open]")) e.preventDefault(); };
+document.addEventListener("wheel", stopBehind, {passive:false});
+document.addEventListener("touchmove", stopBehind, {passive:false});
 
 // Floating windows get a title bar: the window's name on the left, a close icon on the right.
 // The old Close button moves into the bar (keeps its id and click handler); the title is moved, not copied.

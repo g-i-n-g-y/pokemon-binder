@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v2.19.3 (October 12, 2026)
+
+- Scrolling fast inside Settings or any other floating window no longer scrolls the binder behind it. The page behind stays still while a window is open.
+
 ## v2.19.2 (October 12, 2026)
 
 - The PokéCottage button only shows for Pokémon #1 to #251 (Gen 1 and 2), since those are the only master set pages PokéCottage has finished so far. Later Pokémon can still use **+ Add a card**.
