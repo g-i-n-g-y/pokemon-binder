@@ -111,6 +111,7 @@ dialog::backdrop{background:rgba(5,4,8,.6)}
 .box .v{font-family:var(--f-mono);font-size:22px;font-variant-numeric:tabular-nums}
 .box .s{font-size:13px;color:var(--muted)}
 .box .yours{color:var(--ink);margin-top:4px}
+.box .mkt{margin-top:4px}
 .lpmp{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:8px}
 .lpmp .half{display:flex;flex-direction:column;gap:2px;min-width:0}
 .lpmp .half+.half{border-left:1px solid var(--line);padding-left:14px}
@@ -720,6 +721,7 @@ dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
       </div>
       <span class="s comb"><span id="dPk">Combined LP/MP</span> <b id="dP"></b> · <span id="dPsrc"></span></span>
       <span class="s yours" id="dYours" hidden></span>
+      <span class="s mkt" id="dMkt" hidden></span>
       <div class="spark" id="dSpark"></div></div>
     <div class="links" id="dLinks"></div>
     <div class="row own-only">
@@ -894,6 +896,8 @@ dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
     <div class="note">Pick the two prices shown on each card. Each binder keeps its own choice, so switch sets from the menu to change another one. Raw conditions come from TCGplayer sales. Graded prices come from eBay sold listings collected by PriceCharting, sorted by the grading company and grade in each listing's title.</div>
     <div id="slotRows"></div>
     <div class="slotmsg" id="slotMsg" aria-live="polite"></div>
+    <label class="toggle" for="stBackup"><input type="checkbox" id="stBackup" checked> Use the market price when there are no recent sales</label>
+    <div class="note" id="stBackupMsg">Each refresh also gets TCGplayer's market price and Cardmarket's 30-day average from TCGdex, a free card database. They show on each card as a second opinion. When a card has no recent sales for your price options, this uses TCGplayer's market price instead of keeping an old price. Applies to every binder.</div>
     <div class="eyebrow">Daily price refresh</div>
     <label class="toggle" for="stAuto"><input type="checkbox" id="stAuto"> Refresh all sets automatically every day</label>
     <label class="f">Refresh time
@@ -1235,8 +1239,16 @@ function priceSource(n){
   }
   if(i && i.src==="tcgplayer" && !allRaw()) return "no recent "+slotName(state.slots[0])+" sales, so this uses "+slotName(activeSlots().find(sl=>sl.t==="raw")||state.slots[0])+": "+sales+late+". Used for set totals.";
   if(i && i.src==="tcgplayer") return "from "+sales+late+". Used for set totals.";
+  if(i && i.src==="tcgdex") return "no recent sales for your price options, so this uses TCGplayer's market price (via TCGdex)"+(i.last?", updated "+when(i.last):"")+". Used for set totals.";
   if(i && i.note) return i.note+".";
   return priceOf(n) ? "starting price from PriceCharting. Replaced on the next refresh." : "fills in after the next refresh.";
+}
+function mktLine(n){
+  const m=(state.info[n]||{}).mkt||{}, el=$("dMkt"), bits=[];
+  if(m.tp) bits.push("TCGplayer "+money(m.tp)+(m.tpLow?" (low "+money(m.tpLow)+")":""));
+  if(m.cm30||m.cmTrend) bits.push("Cardmarket 30-day avg €"+(m.cm30||m.cmTrend).toFixed(2));
+  el.hidden=!bits.length;
+  el.textContent = bits.length ? "Market prices: "+bits.join(" · ")+". From TCGdex, a rough second opinion (may mix editions)." : "";
 }
 function lpmpBox(n){
   const i=state.info[n]||{};
@@ -1314,7 +1326,7 @@ function openCard(n){
   $("dName").textContent=c.name;
   $("dRar").textContent=(c.set ? c.set+(c.rarity?" · "+c.rarity:"") : cat(c))+(isSecret(c)?" · secret rare":"");
   $("dP").textContent=basePrice(n) ? money(basePrice(n)) : "–";
-  lpmpBox(n); drawSales(n); setCardTab(cardTab);
+  lpmpBox(n); mktLine(n); drawSales(n); setCardTab(cardTab);
   $("dPsrc").textContent=priceSource(n);
   condOptions(n);
   const L=$("dLinks"); L.replaceChildren();
@@ -1654,6 +1666,7 @@ function loadSettings(){
   $("slotSet").textContent=state.set.name ? "for "+state.set.name : "";
   getSlots().then(s=>{ if(!s) throw 0; drawSlots(); return s; }).then(s=>{
     $("stAuto").checked=!!s.auto; $("stTime").value=s.time||"03:00"; showNext(s.next, s.auto);
+    $("stBackup").checked = s.backup!==false;
     if(s.tz!==TZ) saveSettings({tz:TZ, offset:-new Date().getTimezoneOffset()}, true);
   }).catch(()=>{ $("stNext").textContent="Can't reach BEN."; });
 }
@@ -1666,6 +1679,7 @@ function saveSettings(patch, quiet){
 }
 $("stAuto").onchange=e=>saveSettings({auto:e.target.checked, tz:TZ, offset:-new Date().getTimezoneOffset()});
 $("stTime").onchange=e=>{ if(/^\d\d:\d\d$/.test(e.target.value)) saveSettings({time:e.target.value, tz:TZ, offset:-new Date().getTimezoneOffset()}); };
+$("stBackup").onchange=e=>saveSettings({backup:e.target.checked}).then(()=>state.sid && loadState());
 $("stEd").checked=showEd;
 $("stEd").onchange=e=>{ showEd=e.target.checked; store("nd-ed", showEd?"on":"off"); render(); };
 const shortDate = d => d ? new Date(d).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "";

@@ -10,6 +10,14 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v2.16 (October 12, 2026)
+
+- **Backup prices:** each price refresh also gets TCGplayer's market price and Cardmarket's 30-day average from TCGdex, a free card database (no key needed).
+- When a card has no recent sales for your price options, it now uses TCGplayer's market price instead of keeping an old price. The card says when this happens.
+  - Turn it off in **Settings → Price average** if you only want prices from real sales.
+- Card details show a **Market prices** line as a second opinion. Cardmarket can mix 1st Edition and Unlimited for older sets, so treat it as rough.
+- Test one card from the terminal (`python server.py --test neo4-107`) now shows the TCGdex prices too.
+
 ## v2.15.3 (October 11, 2026)
 
 - **Security fix:** other websites can no longer make changes to your binder. Before, a web page open in the same browser could quietly send it commands (like adding a set or restoring a backup) if it knew the binder's address. Changes are now only accepted from the binder's own page.

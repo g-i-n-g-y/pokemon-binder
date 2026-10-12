@@ -4,6 +4,7 @@
 - Card lists come from the PokemonTCG/pokemon-tcg-data project on GitHub
 - Card images are downloaded to BEN when a set is added
 - Prices refresh once a day from TCGplayer recent sales (Unlimited, English, LP/MP)
+- TCGdex (free, no key) adds TCGplayer market and Cardmarket prices as a backup and second opinion
 Python standard library only. Listens on port 8080 inside the container.
 
 Test one card's price lookup:  docker exec neo-binder python server.py --test neo4-107
@@ -23,7 +24,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "2.15.3"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
+APP_VERSION = "2.16"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -32,7 +33,7 @@ SETS_FILE = os.path.join(DATA, "sets.json")
 SETTINGS = os.path.join(DATA, "settings.json")
 DEFAULT_SLOTS = [{"t": "raw", "c": "LP"}, {"t": "raw", "c": "MP"}]
 DEFAULT_SETTINGS = {"auto": True, "time": "03:00", "tz": "America/New_York", "offset": -240, "lastAuto": "",
-                    "slots": DEFAULT_SLOTS}
+                    "slots": DEFAULT_SLOTS, "backup": True}
 RAW_CONDS = ("NM", "LP", "MP", "HP", "DMG")
 GRADERS = ("PSA", "BGS", "CGC", "SGC", "TAG", "ACE", "Any")
 GRADES = ("10", "9.5", "9", "8.5", "8", "7.5", "7", "6", "5", "4", "3", "2", "1")
@@ -594,19 +595,25 @@ def slot_value(info_n, sl):
     return None
 
 
-def main_price(info_n, slots):
+def main_price(info_n, slots, backup=None):
     """The price used in the grid and totals. Both slots raw: their combined average. Otherwise slot 1,
-    falling back to slot 2. Returns (price, count, latest, source) or None."""
+    falling back to slot 2. With no sales for either, TCGplayer's market price from TCGdex (if the
+    backup setting is on). Returns (price, count, latest, source) or None."""
     vals = [(sl, slot_value(info_n, sl)) for sl in slots if sl["t"] != "none"]
     if all(sl["t"] == "raw" for sl, _ in vals):
         got = [v for _, v in vals if v]
-        if not got:
-            return None
-        cnt = sum(v[1] for v in got)
-        return (round(sum(v[0] * v[1] for v in got) / cnt, 2), cnt, max(v[2] or "" for v in got), "tcgplayer")
-    for sl, v in vals:
-        if v:
-            return (v[0], v[1], v[2], "pricecharting" if sl["t"] == "graded" else "tcgplayer")
+        if got:
+            cnt = sum(v[1] for v in got)
+            return (round(sum(v[0] * v[1] for v in got) / cnt, 2), cnt, max(v[2] or "" for v in got), "tcgplayer")
+    else:
+        for sl, v in vals:
+            if v:
+                return (v[0], v[1], v[2], "pricecharting" if sl["t"] == "graded" else "tcgplayer")
+    if backup is None:
+        backup = get_settings().get("backup", True)
+    mkt = info_n.get("mkt") or {}
+    if backup and mkt.get("tp"):
+        return (mkt["tp"], 0, mkt.get("tpUpd") or "", "tcgdex")
     return None
 
 
@@ -637,6 +644,7 @@ def recompute_prices(sids=None):
     """Recalculate each card's main price from stored sales after the slots change (no downloads).
     Returns True if a graded slot needs data that hasn't been downloaded yet."""
     missing = False
+    backup = get_settings().get("backup", True)
     for sid in (sids or list(sets_list()["order"])):
         slots = set_slots(sid)
         with lock:
@@ -645,10 +653,13 @@ def recompute_prices(sids=None):
             for n, inf in info.items():
                 if wants_graded(slots) and "graded" not in inf:
                     missing = True
-                mp = main_price(inf, slots)
+                mp = main_price(inf, slots, backup)
                 if mp:
                     p[n] = [mp[0]]
                     inf.update(count=mp[1], last=mp[2], src=mp[3])
+                    inf.pop("note", None)
+                elif inf.get("src") == "tcgdex":
+                    inf["note"] = "No recent sales for your price options; kept last price"
             if info:
                 write_json(sdir(sid, "prices.json"), prices)
     return missing
@@ -777,6 +788,90 @@ def graded_for(sid, card, cache):
     return graded_groups(sales), url, graded_recent(sales)
 
 
+# ---------- market prices from TCGdex (free backup and cross-check) ----------
+# TCGdex is a free card API (no key) that includes TCGplayer's market price and Cardmarket's averages
+# in every card. The binder stores them as a second opinion, and uses TCGplayer's market price as the
+# card's price when there are no recent sales for your price options (Settings -> Price average).
+
+TCGDEX = "https://api.tcgdex.net/v2/en"
+TCGDEX_SETS = {"fetched": 0, "byname": {}}
+
+
+def tcgdex_get(path):
+    req = urllib.request.Request(TCGDEX + path, headers={"User-Agent": APP_UA, "Accept": "application/json"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return json.load(r)
+
+
+def tcgdex_set_id(set_name):
+    """TCGdex's id for a set, matched by name (their ids don't always match the card database's)."""
+    if time.time() - TCGDEX_SETS["fetched"] > DAY:
+        try:
+            TCGDEX_SETS["byname"] = {s.get("name", "").lower(): s["id"] for s in tcgdex_get("/sets") if s.get("id")}
+            TCGDEX_SETS["fetched"] = time.time()
+        except Exception as e:
+            log(f"TCGdex sets: {e}")
+    return TCGDEX_SETS["byname"].get((set_name or "").lower())
+
+
+def tcgdex_card(sid, card, cache):
+    """The TCGdex card for one binder card, or None. Found ids are remembered in tcgdex_ids.json."""
+    card_id, set_name, num = card_ref(sid, card)
+    if cache.get(card["n"]):
+        try:
+            return tcgdex_get("/cards/" + urllib.parse.quote(cache[card["n"]]))
+        except urllib.error.HTTPError as e:
+            if e.code != 404:
+                raise
+            cache.pop(card["n"], None)
+    tries = ["/cards/" + urllib.parse.quote(card_id)]
+    tid = tcgdex_set_id(set_name)
+    if tid:
+        tries += [f"/sets/{urllib.parse.quote(tid)}/{urllib.parse.quote(x)}"
+                  for x in dict.fromkeys([num, num.zfill(3) if num.isdigit() else num])]
+    for path in tries:
+        try:
+            got = tcgdex_get(path)
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                continue
+            raise
+        if isinstance(got, dict) and got.get("id"):
+            cache[card["n"]] = got["id"]
+            return got
+    return None
+
+
+def _num(v):
+    return round(float(v), 2) if isinstance(v, (int, float)) and v > 0 else None
+
+
+def tcgdex_market(tc, rarity=""):
+    """{"tp": TCGplayer market USD, "tpLow", "tpVar", "tpUpd", "cm30": Cardmarket 30-day avg EUR, "cmTrend", "cmUpd"}
+    from a TCGdex card. Skips 1st Edition prices; prefers Unlimited, then holo or normal to match the card."""
+    pr = (tc or {}).get("pricing") or {}
+    out = {}
+    tp = pr.get("tcgplayer") or {}
+    vars_ = {k: v for k, v in tp.items() if isinstance(v, dict) and not re.search(r"1st|first", k, re.I)
+             and _num(v.get("marketPrice") or v.get("midPrice"))}
+    if vars_:
+        holo = "holo" in (rarity or "").lower()
+
+        def rank(k):
+            kl = k.lower()
+            return ("reverse" in kl,
+                    ("holo" in kl) != holo,
+                    "unlimited" not in kl)
+        k = sorted(vars_, key=rank)[0]
+        v = vars_[k]
+        out.update(tp=_num(v.get("marketPrice")) or _num(v.get("midPrice")), tpLow=_num(v.get("lowPrice")),
+                   tpVar=k, tpUpd=str(tp.get("updated") or "")[:10])
+    cm = pr.get("cardmarket") or {}
+    if _num(cm.get("avg30")) or _num(cm.get("trend")):
+        out.update(cm30=_num(cm.get("avg30")), cmTrend=_num(cm.get("trend")), cmUpd=str(cm.get("updated") or "")[:10])
+    return out
+
+
 def refresh_prices(sid, reason="daily"):
     with job_lock:
         if job["running"]:
@@ -793,6 +888,8 @@ def refresh_prices(sid, reason="daily"):
         PAGING["works"] = None
         graded_on = wants_graded(slots)
         pc_cache = read_json(sdir(sid, "pc_urls.json"), {})
+        backup = get_settings().get("backup", True)
+        dex_ids = read_json(sdir(sid, "tcgdex_ids.json"), {})
         with lock:
             prices = read_json(sdir(sid, "prices.json"), {})
         p = prices.setdefault("p", {})
@@ -823,7 +920,18 @@ def refresh_prices(sid, reason="daily"):
                         log(f"{sid}-{n}: no PriceCharting page found")
                 except Exception as e:
                     log(f"{sid}-{n}: PriceCharting: {e}")
-            mp = main_price(inf, slots)
+            if backup:
+                try:
+                    tc = tcgdex_card(sid, c, dex_ids)
+                    if tc:
+                        mkt = tcgdex_market(tc, c.get("rarity", ""))
+                        if mkt:
+                            inf["mkt"] = mkt
+                    else:
+                        log(f"{sid}-{n}: no TCGdex card found")
+                except Exception as e:
+                    log(f"{sid}-{n}: TCGdex: {e}")
+            mp = main_price(inf, slots, backup)
             if mp:
                 p[n] = [mp[0]]
                 inf.update(src=mp[3], count=mp[1], last=mp[2])
@@ -838,6 +946,8 @@ def refresh_prices(sid, reason="daily"):
         write_json(sdir(sid, "tcg_ids.json"), ids)
         if graded_on:
             write_json(sdir(sid, "pc_urls.json"), pc_cache)
+        if backup:
+            write_json(sdir(sid, "tcgdex_ids.json"), dex_ids)
         prices["lastRun"] = int(time.time())
         if priced:
             prices["updated"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
@@ -1218,7 +1328,7 @@ def set_totals(sid):
 
 BACKUPS = os.path.join(APP, "backups")          # safety copies made before a restore (on your server only)
 MAX_RESTORE = 500 * 1024 * 1024
-SET_FILES = ("collection", "prices", "history", "tcg_ids", "slots", "shop", "pc_urls", "cards")
+SET_FILES = ("collection", "prices", "history", "tcg_ids", "slots", "shop", "pc_urls", "tcgdex_ids", "cards")
 BACKUP_RE = re.compile(rf"(settings\.json|sets\.json|shows\.json|favicon|favicon\.json|sets/{SID_RE}/(?:{'|'.join(SET_FILES)})\.json"
                        rf"|sets/{SID_RE}/photos/{NUM_RE}(?:_back)?(?:\.json)?)")
 
@@ -1471,6 +1581,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/settings":
             st = get_settings()
             out = {k: st[k] for k in ("auto", "time", "tz", "slots")}
+            out["backup"] = bool(st.get("backup", True))
             out["options"] = {"raw": RAW_CONDS, "graders": GRADERS, "grades": GRADES}
             out["next"] = next_run(st).isoformat() if st["auto"] else ""
             out["lastAuto"] = st.get("lastAuto", "")
@@ -1611,9 +1722,11 @@ class Handler(BaseHTTPRequestHandler):
                 st["tz"] = new["tz"]
             if "offset" in new:
                 st["offset"] = int(new["offset"])
-            slots_changed = "slots" in new
-            if slots_changed:
+            slots_changed = "slots" in new or "backup" in new
+            if "slots" in new:
                 st["slots"] = clean_slots(new["slots"])
+            if "backup" in new:
+                st["backup"] = bool(new["backup"])
             # a new time today shouldn't be skipped just because today's run already happened earlier
             if "time" in new:
                 merged = dict(DEFAULT_SETTINGS); merged.update(st)
@@ -1766,6 +1879,19 @@ def test_card(card_id):
     card = next((c for c in set_cards(sid) if c["n"] == n), None)
     if not card:
         return
+    print("Market prices (TCGdex):")
+    try:
+        tc = tcgdex_card(sid, card, {})
+        mkt = tcgdex_market(tc, card.get("rarity", "")) if tc else {}
+        print(f"  Card: {tc.get('id') if tc else 'not found'}")
+        if tc and not mkt:
+            print("  No prices on this card")
+        if mkt.get("tp"):
+            print(f"  TCGplayer market ${mkt['tp']} ({mkt.get('tpVar')}), low ${mkt.get('tpLow')}, updated {mkt.get('tpUpd')}")
+        if mkt.get("cm30") or mkt.get("cmTrend"):
+            print(f"  Cardmarket 30-day avg EUR {mkt.get('cm30')}, trend EUR {mkt.get('cmTrend')}, updated {mkt.get('cmUpd')}")
+    except Exception as e:
+        print(f"  Couldn't reach TCGdex: {e}")
     print("Graded (PriceCharting sold listings, Unlimited only):")
     try:
         groups, url, _ = graded_for(sid, card, {})

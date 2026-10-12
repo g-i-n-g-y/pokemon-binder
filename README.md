@@ -11,6 +11,7 @@ A self-hosted Pokémon TCG collection tracker. One small Python server (standard
 - Search by name or by the number on the card (like `1/105`)
 - Recent sales tab on each card: the last 5 sales for every condition, side by side
 - Prices from recent sales, Unlimited English only: pick any two per binder in Settings, raw conditions (NM to Damaged, from TCGplayer) or graded (PSA, BGS, CGC, SGC, TAG, ACE, from eBay sales on PriceCharting). LP and MP by default.
+- Market prices as a backup and second opinion: TCGplayer's market price and Cardmarket's 30-day average from [TCGdex](https://tcgdex.dev) (free, no key). Used when a card has no recent sales for your price options (can be turned off in Settings).
 - Daily automatic price refresh at a time you choose, plus a manual refresh button
 - Price history, biggest movers, shopping list with a budget and your own drag-to-reorder priority
 - Upgrades list: worn copies you own and what a better one costs
@@ -114,6 +115,6 @@ docker exec <container name> python server.py --test neo4-1
 - Card lists and images: [PokemonTCG/pokemon-tcg-data](https://github.com/PokemonTCG/pokemon-tcg-data)
 - Pokémon sprites: [PokeAPI/sprites](https://github.com/PokeAPI/sprites)
 - Card show listings: [TreasureHunter.show](https://www.treasurehunter.show)
-- Prices: TCGplayer recent sales and PriceCharting
+- Prices: TCGplayer recent sales and PriceCharting, plus market prices from [TCGdex](https://tcgdex.dev)
 
 Pokémon and all related names and images are trademarks of Nintendo, Creatures and GAME FREAK. This is a personal, unofficial project.
