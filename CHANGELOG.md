@@ -1,6 +1,12 @@
 # Changelog
 
-Versions go up by 0.1 for each app update (new features or fixes) and by a whole number for big changes, like a redesign or a change to how data is stored. Changes that don't touch the app, like README edits, don't get a new number.
+Version numbers, starting after v2.11:
+
+- **Whole number** (3.0): big changes, like a redesign or a change to how data is stored
+- **Middle number** (2.12): new features or bigger changes you'll notice
+- **Last number** (2.11.1): small fixes and touch-ups, like spacing or a scroll bar
+
+Versions up to v2.11 went up by 0.1 for every update, including small fixes, and keep their numbers. Changes that don't touch the app, like README edits, don't get a new number.
 
 The binder shows these in **Settings → About → Check for updates**.
 
