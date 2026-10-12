@@ -10,6 +10,12 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v2.14 (October 11, 2026)
+
+- **Sets menu animation:** the menu grows out from the left. On a computer it sits beside the binder and pushes the page over (the cards re-flow to fit) instead of covering it; tap the menu button again, Close, or Esc to slide it away. On a phone it slides in over the page.
+- More space between "Your sets", the All binders box and the list
+- Animations turn off if your device is set to reduce motion
+
 ## v2.13.1 (October 11, 2026)
 
 - Floating windows (Settings, Card shows, What's new, card details) have a title bar: the name on the left and a close button on the right stay put at the top while everything below scrolls

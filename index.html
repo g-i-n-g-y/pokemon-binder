@@ -339,7 +339,20 @@ dialog.left{margin:0 auto 0 0}
 .catrow .sprite,.setrow .sprite{width:40px;height:40px;margin:0}
 .setrow .go b{display:flex;align-items:center;gap:6px}
 .setrow .go b .sprite{width:32px;height:32px;margin:-6px 0}
-#drAdd{display:flex;flex-direction:column;gap:12px}
+#drAdd,#drSets{display:flex;flex-direction:column;gap:12px}
+#drSets .allsum{margin-bottom:0}
+#drSets h2{margin-bottom:4px}
+#drSets #addOpen{align-self:flex-start}
+/* sets menu: grows out from the left. On a computer it sits beside the binder and pushes it over;
+   on a phone it slides in over the page. */
+#drawer{clip-path:inset(0 100% 0 0);opacity:.6;transition:clip-path .28s cubic-bezier(.2,.8,.2,1),opacity .2s ease}
+#drawer.in{clip-path:inset(0 0 0 0);opacity:1}
+#drawer::backdrop{background:rgba(5,4,8,0);transition:background .28s ease}
+#drawer.in::backdrop{background:rgba(5,4,8,.6)}
+#drawer.pushed{position:fixed;inset:0 auto 0 0;z-index:50;margin:0;height:100%;max-height:100%;width:380px;border-right:1px solid var(--line);overflow-y:auto}
+body{transition:padding-left .28s cubic-bezier(.2,.8,.2,1)}
+body.nav-open{padding-left:380px}
+@media (prefers-reduced-motion:reduce){#drawer,#drawer::backdrop,body{transition:none}}
 #drAdd h2{margin-bottom:2px}
 .addkind{align-self:flex-start}
 .gap-note{font-size:13px;color:var(--muted);margin:8px 0 0;max-width:60ch}
@@ -1919,7 +1932,25 @@ function showAdd(on){
     if(!state.catalog) fetch("api/catalog").then(r=>r.json()).then(j=>{ state.catalog=j.sets||[]; drawCatalog(); if(!state.catalog.length) $("addMsg").textContent="Couldn't load the set list. Check that BEN is online."; }).catch(()=>{ $("addMsg").textContent="Couldn't load the set list. Check that BEN is online."; });
   }
 }
-$("menuBtn").onclick=()=>{ showAdd(false); drawSets(); $("drawer").showModal(); loadSets().then(drawSets); };
+// Sets menu open/close with the grow-out animation. Wide screens: beside the binder, pushing it over.
+const wideNav = () => matchMedia("(min-width: 900px)").matches;
+const drawerEl=$("drawer"), dialogClose=HTMLDialogElement.prototype.close;
+function openDrawer(){
+  if(drawerEl.open) return;
+  const push=wideNav();
+  drawerEl.classList.toggle("pushed", push);
+  push ? drawerEl.show() : drawerEl.showModal();
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ drawerEl.classList.add("in"); if(push) document.body.classList.add("nav-open"); }));
+}
+drawerEl.close=function(){   // every existing close() call animates out first
+  if(!this.open || this.dataset.closing) return;
+  this.dataset.closing="1"; this.classList.remove("in"); document.body.classList.remove("nav-open");
+  const done=()=>{ delete this.dataset.closing; dialogClose.call(this); this.classList.remove("pushed"); };
+  matchMedia("(prefers-reduced-motion: reduce)").matches ? done() : setTimeout(done,260);
+};
+drawerEl.addEventListener("cancel",e=>{ e.preventDefault(); drawerEl.close(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape" && drawerEl.open && drawerEl.classList.contains("pushed") && !document.querySelector("dialog[open]:modal")) drawerEl.close(); });
+$("menuBtn").onclick=()=>{ if(drawerEl.open && drawerEl.classList.contains("pushed")){ drawerEl.close(); return; } showAdd(false); drawSets(); openDrawer(); loadSets().then(drawSets); };
 $("drClose").onclick=()=>$("drawer").close();
 $("drawer").addEventListener("click",e=>{ if(e.target===$("drawer")) $("drawer").close(); });
 $("addOpen").onclick=()=>showAdd(true);
