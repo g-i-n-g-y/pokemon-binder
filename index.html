@@ -328,12 +328,18 @@ dialog.left{margin:0 auto 0 0}
 .catrow span{font-size:13px;color:var(--muted)}
 .catrow .btn{padding:6px 12px}
 .catrow em{font-style:normal;font-size:13px;color:var(--muted)}
+.sprite{width:64px;height:64px;image-rendering:pixelated;flex:none;margin-bottom:-6px}
+.catrow .sprite,.setrow .sprite{width:40px;height:40px;margin:0}
+.setrow .go b{display:flex;align-items:center;gap:6px}
+.setrow .go b .sprite{width:32px;height:32px;margin:-6px 0}
+.addkind{align-self:flex-start;margin:6px 0 10px}
 @media (prefers-reduced-motion:reduce){.sleeve{transition:none}.sleeve:hover{transform:none}}
 /* Phones: compact sticky top bar, 2x2 stats, two-row filters, bigger tap targets */
 @media (max-width:640px){
   .wrap{padding-inline:16px;padding-block:0 48px;gap:16px}
   header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);margin-inline:-16px;padding:10px 16px;flex-wrap:wrap;align-items:center;gap:6px 10px;border-bottom:1px solid var(--line)}
   .title{flex:1 1 0;align-items:center;gap:10px}
+  .title .sprite{width:44px;height:44px;margin:0}
   .title .eyebrow{display:none}
   h1{font-size:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0}
   .actions{display:contents}
@@ -404,6 +410,7 @@ dialog.left{margin:0 auto 0 0}
       <button class="icon-btn" type="button" id="menuBtn" aria-label="Your sets">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
       </button>
+      <img class="sprite" id="sprite" alt="" hidden>
       <div>
         <div class="eyebrow" id="eyebrow">Loading…</div>
         <h1 id="setTitle"></h1>
@@ -657,11 +664,15 @@ dialog.left{margin:0 auto 0 0}
       <h2 id="drTitle">Your sets</h2>
       <div class="allsum" id="allSum" hidden></div>
       <div class="setlist" id="setList"></div>
-      <button class="btn primary" type="button" id="addOpen">+ Add a set</button>
+      <button class="btn primary" type="button" id="addOpen">+ Add a set or Pokémon</button>
     </div>
     <div id="drAdd" hidden>
       <button class="close back" type="button" id="addBack">‹ Back to your sets</button>
-      <h2>Add a set</h2>
+      <h2 id="addTitle">Add a set</h2>
+      <div class="seg addkind" id="addKind" role="group" aria-label="What to add">
+        <button type="button" data-k="set" aria-pressed="true">A set</button>
+        <button type="button" data-k="dex" aria-pressed="false">A Pokémon</button>
+      </div>
       <input type="search" id="addQ" class="field" placeholder="Search sets, like Neo Genesis" aria-label="Search sets">
       <div class="note" id="addMsg"></div>
       <div class="catalog" id="catalog"></div>
@@ -750,16 +761,22 @@ function matchQ(c, q){
   // A search that's just a number ("2", "#2", "002", "2/105") matches the card number only,
   // so "2" finds card 2 and not every name with a 2 in it (like Porygon2).
   const m=/^(?:no\.?\s*)?#?\s*([a-z]{0,2}\d+[a-z]?)\s*(?:\/\s*(\d*))?$/.exec(q);
-  if(m && /\d/.test(q) && !/^[a-z]{3,}/.test(q)) return normNum(m[1])===normNum(c.n);
-  return c.name.toLowerCase().includes(q);
+  if(m && /\d/.test(q) && !/^[a-z]{3,}/.test(q)) return normNum(m[1])===normNum(c.num||c.n);
+  return c.name.toLowerCase().includes(q) || (c.set||"").toLowerCase().includes(q);
 }
 const numVal = n => { const m=/^([A-Za-z]*)(\d+)/.exec(n); return m ? [m[1], +m[2]] : [n,0]; };
-const byNum = (a,b) => { const x=numVal(a.n), y=numVal(b.n); return x[0]<y[0]?-1:x[0]>y[0]?1:x[1]-y[1]; };
+// A Pokémon master set binder (id like dex-158) holds one Pokémon's cards from every set.
+// Each of its cards carries its own set name (set), printed number (num) and set size (pt).
+const isDex = id => /^dex-\d+$/.test(id||"");
+const byNum = (a,b) => { if(a.i!=null && b.i!=null) return a.i-b.i; const x=numVal(a.n), y=numVal(b.n); return x[0]<y[0]?-1:x[0]>y[0]?1:x[1]-y[1]; };
 const printed = () => state.set.printedTotal || 0;
-const label = c => { const n=numVal(c.n); return (n[0] ? c.n : String(n[1]).padStart(3,"0")) + (printed() ? "/"+printed() : ""); };
-const isSecret = c => { const n=numVal(c.n); return printed() && !n[0] && n[1] > printed(); };
+const label = c => {
+  const num=c.num||c.n, pt=c.num ? c.pt : printed(), n=numVal(num);
+  return (n[0] ? num : String(n[1]).padStart(3,"0")) + (pt ? "/"+pt : "");
+};
+const isSecret = c => { const pt=c.num ? c.pt : printed(), n=numVal(c.num||c.n); return pt && !n[0] && n[1] > pt; };
 const tint = c => /Shining|Secret|Star/.test(c.rarity) || isSecret(c) ? "t-shine" : c.name.startsWith("Dark ") ? "t-dark" : c.name.startsWith("Light ") ? "t-light" : "";
-const cat = c => (c.rarity || "Unlisted") + (c.type==="Trainer" ? " · Trainer" : c.type==="Energy" ? " · Energy" : "");
+const cat = c => c.set ? c.set : (c.rarity || "Unlisted") + (c.type==="Trainer" ? " · Trainer" : c.type==="Energy" ? " · Energy" : "");
 const rec = n => state.own[n] || {};
 const qty = n => Number(rec(n).qty)||0;
 const basePrice = n => (state.prices[n]||[0])[0] || 0;
@@ -828,11 +845,17 @@ function cardImg(c){
 function header(){
   const s=state.set, name=s.name||"";
   const t=$("setTitle"); t.replaceChildren();
-  const parts=name.split(" "); const a=document.createElement("span"); a.className="l"; a.textContent=parts[0]||"";
+  const dex=isDex(state.sid), sp=$("sprite");
+  sp.hidden=!dex; if(dex){ sp.src=base()+"/sprite.png"; sp.alt=name+" sprite"; sp.onerror=()=>{ sp.hidden=true; }; } else sp.removeAttribute("src");
+  const parts=dex ? [name] : name.split(" "); const a=document.createElement("span"); a.className="l"; a.textContent=parts[0]||"";
   const b=document.createElement("span"); b.className="d"; b.textContent=parts.length>1 ? " "+parts.slice(1).join(" ") : "";
   t.append(a,b);
   const secret=state.cards.filter(isSecret).length;
-  $("eyebrow").textContent=[s.series, year(s.releaseDate), "Unlimited", (printed()||state.cards.length)+" cards"+(secret?" + "+secret+" secret":"")].filter(Boolean).join(" · ");
+  $("eyebrow").textContent=dex
+    ? ["Master set", "#"+String(s.dex||state.sid.slice(4)).padStart(4,"0"), "all sets", "Unlimited", state.cards.length+" cards"].join(" · ")
+    : [s.series, year(s.releaseDate), "Unlimited", (printed()||state.cards.length)+" cards"+(secret?" + "+secret+" secret":"")].filter(Boolean).join(" · ");
+  $("fSort").options[0].textContent=dex ? "Sort: release date" : "Sort: set number";
+  $("fQ").placeholder=dex ? "Search set or number (80/111)" : "Search name or number (1/105)";
   document.title=(name ? name+" · " : "")+"Pokémon Binder";
 }
 function stats(){
@@ -858,7 +881,8 @@ function stats(){
 
 // ---------- grid ----------
 function rarityOptions(){
-  const sel=$("fRar"); sel.replaceChildren(); const o=document.createElement("option"); o.value=""; o.textContent="All rarities"; sel.append(o);
+  const sel=$("fRar"); sel.replaceChildren(); const o=document.createElement("option"); o.value=""; o.textContent=isDex(state.sid) ? "All sets" : "All rarities"; sel.append(o);
+  sel.setAttribute("aria-label", isDex(state.sid) ? "Set" : "Rarity");
   [...new Set(state.cards.map(cat))].forEach(r=>{ const x=document.createElement("option"); x.value=r; x.textContent=r; sel.append(x); });
   sel.value=""; state.rar="";
 }
@@ -890,7 +914,8 @@ function render(){
     t.title=qty(c.n)>0 ? "Tap to mark as needed" : "Tap to mark as owned";
     t.setAttribute("aria-label",(qty(c.n)>0?"Owned. Mark "+c.name+" as needed":"Needed. Mark "+c.name+" as owned"));
     m.append(p,t); b.append(f);
-    if(showEd){ const ed=document.createElement("div"); ed.className="ed"; ed.textContent="Unlimited"; b.append(ed); }
+    if(c.set){ const ed=document.createElement("div"); ed.className="ed"; ed.textContent=c.set; ed.title=c.set+(showEd?" · Unlimited":""); b.append(ed); }
+    else if(showEd){ const ed=document.createElement("div"); ed.className="ed"; ed.textContent="Unlimited"; b.append(ed); }
     b.append(m); g.append(b);
   }
   $("count").textContent=list.length+" of "+state.cards.length+" cards";
@@ -1022,7 +1047,7 @@ function openCard(n){
   art.classList.toggle("need",qty(n)===0);
   $("dNo").textContent="No. "+label(c);
   $("dName").textContent=c.name;
-  $("dRar").textContent=cat(c)+(isSecret(c)?" · secret rare":"");
+  $("dRar").textContent=(c.set ? c.set+(c.rarity?" · "+c.rarity:"") : cat(c))+(isSecret(c)?" · secret rare":"");
   $("dP").textContent=basePrice(n) ? money(basePrice(n)) : "–";
   lpmpBox(n); drawSales(n); setCardTab(cardTab);
   $("dPsrc").textContent=priceSource(n);
@@ -1481,6 +1506,7 @@ function drawSets(){
     const row=document.createElement("div"); row.className="setrow"; row.setAttribute("aria-current", s.id===state.sid);
     const go=document.createElement("button"); go.type="button"; go.className="go";
     const b=document.createElement("b"); b.textContent=s.name;
+    if(isDex(s.id)){ const im=document.createElement("img"); im.className="sprite"; im.alt=""; im.src="set/"+enc(s.id)+"/sprite.png"; im.onerror=()=>im.remove(); b.prepend(im); }
     const sp=document.createElement("span"); sp.textContent=(s.owned||0)+" of "+(s.count||s.total||0)+" owned"+(s.totals?" · "+money0(s.totals.value):"")+" · "+[s.series,year(s.releaseDate)].filter(Boolean).join(" · ");
     const bar=document.createElement("div"); bar.className="mini"; const i=document.createElement("i"); i.style.width=((s.owned||0)/Math.max(1,s.count||s.total||1)*100).toFixed(1)+"%"; bar.append(i);
     go.append(b,sp,bar); go.onclick=()=>{ $("drawer").close(); openSet(s.id); };
@@ -1494,7 +1520,71 @@ function drawSets(){
     row.append(go,rm); L.append(row);
   }
 }
+// ---------- add a Pokémon (master set binder) ----------
+let addKind="set", dexTimer=null;
+function loadDex(){
+  clearTimeout(dexTimer);
+  return fetch("api/pokedex").then(r=>r.json()).then(j=>{
+    state.dex=j;
+    if(!j.ready && addKind==="dex" && !$("drAdd").hidden) dexTimer=setTimeout(()=>loadDex().then(drawCatalog),4000);
+  }).catch(()=>{ state.dex={ready:false, error:"Couldn't reach BEN"}; });
+}
+function drawDex(){
+  const C=$("catalog"); C.replaceChildren();
+  const d=state.dex;
+  if(!d){ $("addMsg").textContent="Loading the Pokémon list…"; return; }
+  if(!d.ready){
+    $("addMsg").textContent = d.error && !d.building ? "Couldn't make the Pokémon list ("+d.error+"). Check that BEN is online and reopen this menu."
+      : "Making the Pokémon list from every set (first time only, about 2 minutes)… "+(d.total ? d.done+" of "+d.total+" sets" : "");
+    return;
+  }
+  const term=$("addQ").value.trim().toLowerCase().replace(/^#/,"");
+  const have=new Set(state.sets.map(s=>s.id));
+  const list=d.list.filter(p=>!term || p.name.toLowerCase().includes(term) || String(p.dex)===term.replace(/^0+/,""));
+  $("addMsg").textContent = !term ? "Search for a Pokémon to collect every English card of it, from every set." : list.length ? "" : "No Pokémon match that search.";
+  if(!term) return;
+  for(const p of list.slice(0,40)){
+    const id="dex-"+p.dex;
+    const row=document.createElement("div"); row.className="catrow";
+    const im=document.createElement("img"); im.className="sprite"; im.alt=""; im.loading="lazy";
+    im.src=p.dex<=251 ? "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-ii/crystal/transparent/"+p.dex+".png"
+      : p.dex<=649 ? "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/"+p.dex+".png"
+      : "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/"+p.dex+".png";
+    im.onerror=()=>im.remove();
+    const dv=document.createElement("div"); const b=document.createElement("b"); b.textContent=p.name;
+    const sp=document.createElement("span"); sp.textContent="#"+String(p.dex).padStart(4,"0")+" · "+p.count+" cards"; dv.append(b,sp);
+    row.append(im,dv);
+    if(have.has(id)){ const em=document.createElement("em"); em.textContent="In your binder"; row.append(em); }
+    else {
+      const add=document.createElement("button"); add.type="button"; add.className="btn"; add.textContent="Add";
+      add.onclick=async()=>{
+        add.disabled=true; add.textContent="Adding…";
+        try{
+          const r=await fetch("api/sets",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id})});
+          const j=await r.json(); if(!r.ok) throw new Error(j.error||"Couldn't add that Pokémon");
+          await loadSets(); $("drawer").close(); showAdd(false); openSet(id);
+          $("sync").textContent=p.name+" master set added. Downloading card images and checking prices in the background.";
+        }catch(err){ add.disabled=false; add.textContent="Add"; $("addMsg").textContent=err.message+"."; }
+      };
+      row.append(add);
+    }
+    C.append(row);
+  }
+}
+function setAddKind(k){
+  addKind=k;
+  [...$("addKind").children].forEach(x=>x.setAttribute("aria-pressed", x.dataset.k===k));
+  $("addTitle").textContent=k==="dex" ? "Add a Pokémon" : "Add a set";
+  $("addQ").placeholder=k==="dex" ? "Search Pokémon, like Totodile or 158" : "Search sets, like Neo Genesis";
+  $("addQ").setAttribute("aria-label", k==="dex" ? "Search Pokémon" : "Search sets");
+  $("addQ").value="";
+  if(k==="dex") loadDex().then(drawCatalog);
+  drawCatalog(); $("addQ").focus();
+}
+$("addKind").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b) setAddKind(b.dataset.k); });
+
 function drawCatalog(){
+  if(addKind==="dex") return drawDex();
   const C=$("catalog"); C.replaceChildren();
   if(!state.catalog){ $("addMsg").textContent="Loading the set list…"; return; }
   const term=$("addQ").value.trim().toLowerCase();
@@ -1531,8 +1621,9 @@ function drawCatalog(){
 }
 function showAdd(on){
   $("drSets").hidden=on; $("drAdd").hidden=!on;
+  if(!on) clearTimeout(dexTimer);
   if(on){
-    $("addQ").value=""; drawCatalog(); setTimeout(()=>$("addQ").focus(),50);
+    $("addQ").value=""; setAddKind("set"); setTimeout(()=>$("addQ").focus(),50);
     if(!state.catalog) fetch("api/catalog").then(r=>r.json()).then(j=>{ state.catalog=j.sets||[]; drawCatalog(); if(!state.catalog.length) $("addMsg").textContent="Couldn't load the set list. Check that BEN is online."; }).catch(()=>{ $("addMsg").textContent="Couldn't load the set list. Check that BEN is online."; });
   }
 }
@@ -1722,7 +1813,7 @@ function drawShop(){
     tdI.append(im);
     const tdN=document.createElement("td");
     const nb=document.createElement("button"); nb.type="button"; nb.className="nm"; nb.textContent=c.name; nb.onclick=()=>openCard(c.n);
-    const sub=document.createElement("span"); sub.className="sub"; sub.textContent=label(c)+" · "+(c.rarity||"");
+    const sub=document.createElement("span"); sub.className="sub"; sub.textContent=(c.set?c.set+" · ":"")+label(c)+" · "+(c.rarity||"");
     tdN.append(nb,sub);
     const tdP=document.createElement("td"); tdP.className="num"; tdP.textContent=pr?money(pr):"–";
     const tdT=document.createElement("td"); tdT.className="num hide-sm"; tdT.append(trendEl(trend(c.n)));
@@ -1768,7 +1859,7 @@ function drawUpg(){
     tdI.append(im);
     const tdN=document.createElement("td");
     const nb=document.createElement("button"); nb.type="button"; nb.className="nm"; nb.textContent=c.name; nb.onclick=()=>openCard(c.n);
-    const sub=document.createElement("span"); sub.className="sub"; sub.textContent=label(c)+(qty(c.n)>1?" · "+qty(c.n)+" copies":"");
+    const sub=document.createElement("span"); sub.className="sub"; sub.textContent=(c.set?c.set+" · ":"")+label(c)+(qty(c.n)>1?" · "+qty(c.n)+" copies":"");
     tdN.append(nb,sub);
     const tdY=document.createElement("td"); tdY.className="num"; tdY.textContent=rec(c.n).cond+" "+(r.mine?money(r.mine):"–");
     const tdU=document.createElement("td"); tdU.className="num"; tdU.textContent=r.up ? money(r.up) : "No "+p.to+" sales";

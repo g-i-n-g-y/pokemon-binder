@@ -4,6 +4,14 @@ Versions go up by 0.1 for each app update (new features or fixes) and by a whole
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v2.2 (October 11, 2026)
+
+- **Pokémon master set binders:** Menu → + Add a set or Pokémon → A Pokémon. Search by name or Pokédex number (like Totodile or 158) to make a binder of every English card of that Pokémon, from every set, oldest first.
+- Looks and works like a set binder (prices, shopping list, upgrades, stats, photos, backup). Each card shows which set it's from, and the set filter replaces the rarity filter.
+- The Pokémon's game sprite shows next to the binder name and in the sets menu (Crystal sprites for #1 to #251, Black/White for #252 to #649, see-through backgrounds). Sprites come from PokeAPI and are saved on your server.
+- The Pokémon list is made once from every set (about 2 minutes, in the background) and refreshed about once a month so new cards join your master set binders.
+- One copy of each card (Unlimited), same as set binders. Some promos and trainer kit cards aren't in the card database yet, so they won't show up.
+
 ## v2.1 (October 11, 2026)
 
 - Purchase log fits phone screens: each purchase shows the card and price on top, with date, set, place and seller underneath (no sideways scrolling)

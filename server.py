@@ -22,7 +22,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "2.1"   # bump for every app update: 1.0 -> 1.1 for features/fixes, 2.0 for big changes
+APP_VERSION = "2.2"   # bump for every app update: 1.0 -> 1.1 for features/fixes, 2.0 for big changes
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -52,12 +52,16 @@ DEFAULT_ICON = b"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
 <rect x="13" y="37" width="17" height="17" rx="3" fill="#5CC3CC"/><rect x="34" y="37" width="17" height="17" rx="3" fill="#6B6380"/>
 </svg>"""
 SID_RE = r"[a-z0-9][a-z0-9.\-]{0,40}"
-NUM_RE = r"[A-Za-z0-9\-]{1,12}"
+NUM_RE = r"[A-Za-z0-9\-]{1,24}"
+DEX_RE = re.compile(r"dex-(\d{1,4})")   # a Pokémon master set binder, like dex-158 for Totodile
+DEX_INDEX = os.path.join(DATA, "dex_index.json")
+SPRITES = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon"
 
 lock = threading.Lock()
 job_lock = threading.Lock()
 job = {"running": False, "set": "", "name": "", "done": 0, "total": 0, "priced": 0, "message": ""}
 img_jobs = {}
+dex_job = {"running": False, "done": 0, "total": 0, "error": ""}
 
 
 # ---------- small helpers ----------
@@ -130,8 +134,158 @@ def fetch_cards(sid):
 def set_cards(sid):
     cards = read_json(sdir(sid, "cards.json"), None)
     if cards is None:
-        cards = fetch_cards(sid)
+        cards = dex_cards(sid) if is_dex(sid) else fetch_cards(sid)
     return cards
+
+
+def card_ref(sid, c):
+    """(card id for price lookups, set name, number printed on the card).
+    In a Pokémon master set binder each card remembers its own set."""
+    if is_dex(sid):
+        return c["n"], c.get("set", ""), c.get("num", c["n"])
+    return f"{sid}-{c['n']}", sets_list()["meta"].get(sid, {}).get("name", sid), c["n"]
+
+
+# ---------- Pokémon master set binders ----------
+
+def is_dex(sid):
+    return bool(DEX_RE.fullmatch(sid or ""))
+
+
+def build_dex_index():
+    """One pass over every English set: which cards show each Pokémon (by Pokédex number).
+    Takes a minute or two and is saved in data/dex_index.json."""
+    with job_lock:
+        if dex_job["running"]:
+            return
+        dex_job.update(running=True, done=0, total=0, error="")
+    try:
+        sets = sorted(catalog(), key=lambda s: (s.get("releaseDate", ""), s["id"]))
+        dex_job["total"] = len(sets)
+        log(f"Pokémon list: reading {len(sets)} sets...")
+        by_dex, done_sets = {}, []
+        for i, st in enumerate(sets):
+            dex_job["done"] = i
+            try:
+                raw = json.loads(http_get(f"{GH}/cards/en/{st['id']}.json"))
+            except Exception as e:
+                log(f"Pokémon list: {st['id']}: {e}")
+                continue
+            done_sets.append(st["id"])
+            for c in raw:
+                if c.get("supertype") != "Pokémon":
+                    continue
+                n = f"{st['id']}-{c['number']}"
+                if not re.fullmatch(NUM_RE, n):
+                    continue
+                card = {"n": n, "num": str(c["number"]), "set": st["name"], "pt": st.get("printedTotal", 0),
+                        "date": st.get("releaseDate", ""), "name": c["name"], "rarity": c.get("rarity") or "",
+                        "type": "Pokémon",
+                        "img": (c.get("images") or {}).get("large") or (c.get("images") or {}).get("small", "")}
+                for d in c.get("nationalPokedexNumbers") or []:
+                    by_dex.setdefault(str(d), []).append(card)
+            time.sleep(0.1)
+        if not done_sets:
+            raise RuntimeError("couldn't read any sets")
+        names = {}
+        for d, cards in by_dex.items():
+            counts = {}
+            for c in cards:
+                counts[c["name"]] = counts.get(c["name"], 0) + 1
+            names[d] = min(counts, key=lambda k: (-counts[k], len(k)))
+        write_json(DEX_INDEX, {"fetched": time.time(), "sets": done_sets, "names": names, "cards": by_dex})
+        dex_job["done"] = len(sets)
+        log(f"Pokémon list ready: {len(by_dex)} Pokémon.")
+        for sid in sets_list()["order"]:   # new sets may have new cards for your master set binders
+            if is_dex(sid):
+                dex_cards(sid)
+    except Exception as e:
+        dex_job["error"] = str(e)
+        log(f"Pokémon list failed: {e}")
+    finally:
+        dex_job["running"] = False
+
+
+def dex_index():
+    return read_json(DEX_INDEX, None)
+
+
+def dex_stale(idx):
+    if not idx:
+        return True
+    have = set(idx.get("sets") or [])
+    return time.time() - idx.get("fetched", 0) > 30 * DAY or any(s["id"] not in have for s in catalog())
+
+
+def start_dex_index(force=False):
+    if not dex_job["running"] and (force or dex_stale(dex_index())):
+        threading.Thread(target=build_dex_index, daemon=True).start()
+
+
+def dex_cards(sid):
+    """Every English card for one Pokémon, oldest set first. Saved as the binder's card list."""
+    idx = dex_index()
+    if not idx:
+        raise RuntimeError("The Pokémon list isn't ready yet")
+    num = DEX_RE.fullmatch(sid).group(1)
+    cards = [dict(c) for c in idx["cards"].get(num, [])]
+    seen, out = set(), []
+    for c in sorted(cards, key=lambda c: (c["date"], c["set"], num_key(c["num"]))):
+        if c["n"] not in seen:
+            seen.add(c["n"])
+            c["i"] = len(out)
+            out.append(c)
+    write_json(sdir(sid, "cards.json"), out)
+    return out
+
+
+def sprite_url(num):
+    num = int(num)
+    if num <= 251:
+        return f"{SPRITES}/versions/generation-ii/crystal/transparent/{num}.png"
+    if num <= 649:
+        return f"{SPRITES}/versions/generation-v/black-white/{num}.png"
+    return f"{SPRITES}/{num}.png"
+
+
+def fetch_sprite(sid):
+    """The Pokémon's game sprite (see-through background), saved next to the binder."""
+    dest = sdir(sid, "sprite.png")
+    if os.path.exists(dest) and os.path.getsize(dest) > 0:
+        return
+    try:
+        body = http_get(sprite_url(DEX_RE.fullmatch(sid).group(1)))
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        with open(dest + ".tmp", "wb") as f:
+            f.write(body)
+        os.replace(dest + ".tmp", dest)
+    except Exception as e:
+        log(f"{sid}: sprite: {e}")
+
+
+def add_dex(sid):
+    idx = dex_index()
+    if not idx:
+        start_dex_index()
+        raise ValueError("The Pokémon list is still being made. Try again in a minute")
+    num = DEX_RE.fullmatch(sid).group(1)
+    name = (idx.get("names") or {}).get(num)
+    if not name:
+        raise ValueError("No English cards found for that Pokémon")
+    cards = dex_cards(sid)
+    meta = {"id": sid, "name": name, "series": "Master set", "dex": int(num), "kind": "dex",
+            "printedTotal": 0, "total": len(cards), "releaseDate": ""}
+    with lock:
+        sl = sets_list()
+        if sid not in sl["order"]:
+            sl["order"].append(sid)
+        sl["meta"][sid] = meta
+        write_json(SETS_FILE, sl)
+    fetch_sprite(sid)
+    start_images(sid)
+    threading.Thread(target=refresh_prices, args=(sid, "new binder"), daemon=True).start()
+    log(f"Added master set {name} ({len(cards)} cards)")
+    return meta
 
 
 def sets_list():
@@ -139,6 +293,8 @@ def sets_list():
 
 
 def add_set(sid):
+    if is_dex(sid):
+        return add_dex(sid)
     meta = next((s for s in catalog() if s["id"] == sid), None)
     if not meta:
         raise ValueError("Unknown set")
@@ -512,10 +668,10 @@ def pc_get(url):
         return r.geturl(), r.read().decode("utf-8", "ignore")
 
 
-def pc_is_card(html, card):
+def pc_is_card(html, num):
     m = re.search(r"<title>(.*?)</title>", html, re.S | re.I)
     title = (m.group(1) if m else "").lower()
-    return re.search(rf"#\s*{re.escape(card['n'].lower())}(?![0-9a-z])", title) is not None
+    return re.search(rf"#\s*{re.escape(num.lower())}(?![0-9a-z])", title) is not None
 
 
 def pc_url(sid, card, cache):
@@ -523,27 +679,27 @@ def pc_url(sid, card, cache):
     key = card["n"]
     if key in cache:
         return cache[key]
-    set_name = sets_list()["meta"].get(sid, {}).get("name", sid)
-    tries = [f"{PC}/game/pokemon-{slugify(set_name)}/{slugify(card['name'])}-{slugify(card['n'])}",
-             f"{PC}/game/pokemon-{slugify(set_name)}-set/{slugify(card['name'])}-{slugify(card['n'])}"]
+    _, set_name, num = card_ref(sid, card)
+    tries = [f"{PC}/game/pokemon-{slugify(set_name)}/{slugify(card['name'])}-{slugify(num)}",
+             f"{PC}/game/pokemon-{slugify(set_name)}-set/{slugify(card['name'])}-{slugify(num)}"]
     for url in tries:
         try:
             final, html = pc_get(url)
-            if "/game/" in final and pc_is_card(html, card):
+            if "/game/" in final and pc_is_card(html, num):
                 cache[key] = final
                 return final
         except urllib.error.HTTPError:
             pass
     # fall back to PriceCharting's own search
-    q = urllib.parse.quote_plus(f"pokemon {set_name} {card['name']} {card['n']}")
+    q = urllib.parse.quote_plus(f"pokemon {set_name} {card['name']} {num}")
     final, html = pc_get(f"{PC}/search-products?type=prices&q={q}")
-    if "/game/" in final and pc_is_card(html, card):
+    if "/game/" in final and pc_is_card(html, num):
         cache[key] = final
         return final
     for path in re.findall(r'href="(/game/pokemon-[^"/]+/[^"#?]+)"', html):
         if "1st-edition" in path or "japanese" in path:
             continue
-        if path.endswith("-" + slugify(card["n"])):
+        if path.endswith("-" + slugify(num)):
             cache[key] = PC + path
             return PC + path
     cache[key] = ""
@@ -643,7 +799,7 @@ def refresh_prices(sid, reason="daily"):
             n = c["n"]
             inf = dict(info.get(n) or {})
             try:
-                pid = product_id(f"{sid}-{n}", ids)
+                pid = product_id(card_ref(sid, c)[0], ids)
                 if pid:
                     sales = condition_sales(pid)
                     inf["cond"] = by_condition(sales)
@@ -848,6 +1004,8 @@ def scheduler():
         if ticks % 30 == 0:
             for sid in list(sets_list()["order"]):
                 start_images(sid)  # retries any images that failed earlier
+            if os.path.exists(DEX_INDEX):
+                start_dex_index()  # picks up new sets for master set binders (about once a month)
         ticks += 1
         try:
             st = get_settings()
@@ -1015,9 +1173,12 @@ def warm_up():
         try:
             set_cards(sid)
             start_images(sid)
+            if is_dex(sid):
+                fetch_sprite(sid)
         except Exception as e:
             log(f"{sid}: couldn't load card list yet: {e}")
     catalog()
+    start_dex_index()
 
 
 # ---------- web ----------
@@ -1102,6 +1263,16 @@ class Handler(BaseHTTPRequestHandler):
                     m["totals"] = set_totals(sid)
                 out.append(m)
             return self.send(200, {"sets": out}, cache="no-store")
+        if path == "/api/pokedex":
+            idx = dex_index()
+            if dex_stale(idx):
+                start_dex_index()
+            out = {"ready": bool(idx), "building": dex_job["running"], "done": dex_job["done"],
+                   "total": dex_job["total"], "error": dex_job["error"], "list": []}
+            if idx:
+                out["list"] = sorted(({"dex": int(d), "name": nm, "count": len(idx["cards"].get(d, []))}
+                                      for d, nm in (idx.get("names") or {}).items()), key=lambda x: x["dex"])
+            return self.send(200, out, cache="no-store")
         if path == "/api/catalog":
             return self.send(200, {"sets": catalog()}, cache="no-store")
         if path == "/api/refresh":
@@ -1136,6 +1307,9 @@ class Handler(BaseHTTPRequestHandler):
                         "prices": read_json(sdir(sid, "prices.json"), {}), "slots": set_slots(sid),
                         "shop": read_json(sdir(sid, "shop.json"), {})}
             return self.send(200, body, cache="no-store")
+        m = re.fullmatch(rf"/set/({SID_RE})/sprite\.png", path)
+        if m:
+            return self.send_file(sdir(m.group(1), "sprite.png"), "image/png")
         m = re.fullmatch(rf"/set/({SID_RE})/img/({NUM_RE})\.png", path)
         if m:
             return self.send_file(image_path(m.group(1), m.group(2)), "image/png")
