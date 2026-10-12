@@ -724,7 +724,6 @@ dialog.left{margin:0 auto 0 0}
     <div class="note" id="bkMsg">One file with your cards, purchases, sellers, notes, photos, prices and settings, for every binder. Keep a copy somewhere other than BEN, like your computer or cloud storage.</div>
     <div class="eyebrow">About</div>
     <div class="ver" id="stVersion">Checking installed version…</div>
-    <div class="paused" id="stPaused" hidden>You rolled back to an older version, so automatic updates are paused. Use Check for updates to install the latest.</div>
     <div class="upd"><button class="btn" type="button" id="stUpdate">Check for updates</button><span class="note" id="stUpdMsg" aria-live="polite"></span></div>
     <div class="prev" id="stPrevWrap" hidden>
       <div class="k">Previous versions</div>
@@ -1416,7 +1415,6 @@ function loadVersion(){
     s.append(shaTag(v.commit, v.version), " Installed "+shortDate(v.installed||v["server.py"])+" · "+(v.github?"updates from GitHub":v.updatesFolder?"updates from the updates folder":"updates not set up"));
     box.append(k,t,s);
     if(v.error){ const e=document.createElement("span"); e.className="s"; e.style.color="var(--bad)"; e.textContent="Last check failed: "+v.error+"."; box.append(e); }
-    $("stPaused").hidden=!v.paused;
     $("stUpdate").hidden = !(v.github || v.updatesFolder);
     const prev=v.previous||[], ul=$("stPrev"); ul.replaceChildren(); $("stPrevWrap").hidden=!prev.length;
     for(const p of prev){
@@ -1470,7 +1468,7 @@ $("stUpdate").onclick=async()=>{
   }catch(e){ msg.textContent=e.message+"."; b.disabled=false; }
 };
 async function doRollback(p){
-  const ok=await askConfirm(p.version?"Roll back to v"+p.version+"?":"Roll back to this version?", "“"+verTitle(p)+"” will be reinstalled. Automatic updates pause until you install an update yourself. Your collection, purchases and photos are not affected.", "Roll back", {safe:true});
+  const ok=await askConfirm(p.version?"Roll back to v"+p.version+"?":"Roll back to this version?", "“"+verTitle(p)+"” will be reinstalled. Your collection, purchases and photos are not affected.", "Roll back", {safe:true});
   if(!ok) return;
   const msg=$("stUpdMsg"); msg.textContent="Rolling back…";
   try{

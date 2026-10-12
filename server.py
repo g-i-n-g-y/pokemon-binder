@@ -8,10 +8,10 @@ Python standard library only. Listens on port 8080 inside the container.
 
 Test one card's price lookup:  docker exec neo-binder python server.py --test neo4-107
 
-Updates: the latest server.py and index.html are downloaded from the public GitHub
-repository (GITHUB_REPO, default g-i-n-g-y/pokemon-binder) on every start and from the
-"Check for updates" button. No key is needed. Set GITHUB_REPO to an empty value to turn
-this off and use a folder mounted at /updates instead. GITHUB_TOKEN is optional and only
+Updates: only when you choose them. Settings -> About -> Check for updates shows what's new
+from the public GitHub repository (GITHUB_REPO, default g-i-n-g-y/pokemon-binder) and asks
+before installing anything. Restarting never installs updates. No key is needed. Set
+GITHUB_REPO to an empty value to use a folder mounted at /updates instead (same button). GITHUB_TOKEN is optional and only
 needed for a private copy of the repository. Replaced files are kept in previous/.
 """
 import io, json, os, re, shutil, sys, tempfile, threading, time, urllib.error, urllib.parse, urllib.request, zipfile
@@ -22,7 +22,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "2.3"   # bump for every app update: 1.0 -> 1.1 for features/fixes, 2.0 for big changes
+APP_VERSION = "2.4"   # bump for every app update: 1.0 -> 1.1 for features/fixes, 2.0 for big changes
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -1771,22 +1771,8 @@ def rollback(version_id):
     return installed
 
 
-def apply_updates():
-    """Run on start. Returns True if server.py changed (the server then restarts itself)."""
-    if GH_REPO:
-        if current_version().get("paused"):
-            log("Automatic updates are paused after a rollback. Use Check for updates to install the latest.")
-            return False
-        try:
-            return "server.py" in install_from_github()
-        except Exception as e:
-            update_status["error"] = gh_error(e)
-            log(f"Update check: {update_status['error']}")
-            return False
-    if os.path.isdir(UPDATES):
-        update_status.update(source="folder", checked=now_iso(), error="")
-        return "server.py" in install_files(UPDATES, "update from the updates folder")
-    return False
+# Updates are never installed by themselves (not on start, not on a schedule).
+# The only way in is Settings -> About -> Check for updates, which shows the changes and asks first.
 
 
 def restart_self(delay=0):
@@ -1816,8 +1802,6 @@ if __name__ == "__main__":
     if len(sys.argv) == 3 and sys.argv[1] == "--test":
         test_card(sys.argv[2] if "-" in sys.argv[2] else f"neo4-{sys.argv[2]}")
         sys.exit(0)
-    if apply_updates():
-        restart_self()
     setup()
     threading.Thread(target=warm_up, daemon=True).start()
     threading.Thread(target=scheduler, daemon=True).start()

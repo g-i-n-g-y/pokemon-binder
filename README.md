@@ -83,12 +83,9 @@ Without Docker: put `server.py` and `index.html` in a folder and run `python ser
 
 ## Updating
 
-The binder updates itself from this repository. No key or password is needed.
+Updates only install when you choose them: **Settings → About → Check for updates** shows what's new and asks before installing anything (no restart needed). Restarting the container never installs updates. No key or password is needed.
 
-- **Settings → About → Check for updates** (no restart needed), or
-- **Restart** the container (it checks for updates on every start).
-
-Check for updates shows what's new and asks before installing. Settings → About shows the installed version, any update problem, and up to 3 previous versions you can roll back to. After a rollback, automatic updates pause until you install an update yourself. Version history is in [CHANGELOG.md](CHANGELOG.md).
+Settings → About shows the installed version, any update problem, and up to 3 previous versions you can roll back to. Version history is in [CHANGELOG.md](CHANGELOG.md).
 
 Safety nets:
 - A new `server.py` with an error is skipped entirely, and the current version keeps running.

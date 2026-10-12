@@ -21,7 +21,7 @@ Four pieces. You probably own two of them already.
 | A way to run the app | The program that turns the AI's code into a working website | Python inside Docker (a container) | Python, installed for free from python.org. Skip Docker at first. |
 | A private connection | Lets your phone reach the home computer from anywhere, without opening it to the internet | Tailscale | Tailscale, free for personal use |
 
-Optional later: **GitHub**, a free site that stores your code and its history. Mine updates itself from GitHub, but you don't need it to start.
+Optional later: **GitHub**, a free site that stores your code and its history. Mine gets updates from GitHub when I tap a button and confirm, but you don't need it to start.
 
 ## Tailscale, in plain words
 
