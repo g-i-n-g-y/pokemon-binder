@@ -4,6 +4,10 @@ Versions go up by 0.1 for each app update (new features or fixes) and by a whole
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v2.9 (October 11, 2026)
+
+- Add a set / Add a Pokémon: even spacing between the title, the Set/Pokémon switch, the search box and the list, so the search box's highlight no longer touches the switch
+
 ## v2.8 (October 11, 2026)
 
 - Card shows opens as a floating window in the middle of the screen instead of a side panel
