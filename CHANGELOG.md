@@ -4,6 +4,13 @@ Versions go up by 0.1 for each app update (new features or fixes) and by a whole
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v2.6 (October 11, 2026)
+
+- **Card shows:** new calendar button at the top. Lists upcoming card shows in your towns from TreasureHunter.show, by month, with the date, venue and a link to each show. Pokémon/TCG shows are tagged, with a Pokémon / TCG or All filter. Shows found since your last scan are marked New.
+- Checks once a week by itself (turn off in the panel), or tap **Scan now** any time.
+- Towns are editable in the panel. Default: Richmond, Midlothian, Chesterfield, Chester, Glen Allen, Henrico, Short Pump, Mechanicsville, Ashland, Petersburg, Colonial Heights, Hopewell, Powhatan and Sandston.
+- Your towns are included in backups. Past shows drop off by themselves.
+
 ## v2.5 (October 11, 2026)
 
 - **Card list gap warning.** When a binder's card list might be incomplete, an asterisk (*) shows on the card count at the top, with a short note under the binder name:

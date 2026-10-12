@@ -335,6 +335,19 @@ dialog.left{margin:0 auto 0 0}
 .addkind{align-self:flex-start;margin:6px 0 10px}
 .gap-note{font-size:13px;color:var(--muted);margin:8px 0 0;max-width:60ch}
 .gap-note b{color:var(--light);font-weight:600}
+.shows-list{display:flex;flex-direction:column}
+.shows-list h3{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:14px 0 4px;font-weight:500}
+.show{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);align-items:flex-start}
+.show .when{flex:none;width:48px;text-align:center;border:1px solid var(--line);border-radius:8px;padding:4px 0;line-height:1.15}
+.show .when b{display:block;font-family:var(--f-display);font-size:20px}
+.show .when span{font-family:var(--f-mono);font-size:11px;text-transform:uppercase;color:var(--muted)}
+.show .what{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.show .what a{font-weight:600;text-decoration:none}
+.show .what a:hover{text-decoration:underline}
+.show .what .s{font-size:13px;color:var(--muted)}
+.show .tags{display:flex;gap:6px;flex-wrap:wrap}
+.show .tag.tcg{border-color:var(--light);color:var(--light)}
+.show .tag.new{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 @media (prefers-reduced-motion:reduce){.sleeve{transition:none}.sleeve:hover{transform:none}}
 /* Phones: compact sticky top bar, 2x2 stats, two-row filters, bigger tap targets */
 @media (max-width:640px){
@@ -422,6 +435,9 @@ dialog.left{margin:0 auto 0 0}
     <div class="actions">
       <div class="row">
         <button class="btn" type="button" id="refresh" aria-label="Refresh prices"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg><span id="refreshLbl">Refresh prices</span></button>
+        <button class="icon-btn" type="button" id="showsBtn" aria-label="Card shows" title="Local card shows">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+        </button>
         <button class="icon-btn" type="button" id="privBtn" aria-pressed="false" aria-label="Privacy mode" title="Privacy mode: hide what you own and spent">
           <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
           <svg class="eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.2M6.6 6.6C3.9 8.3 2 12 2 12s3.6 7 10 7a10 10 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
@@ -680,6 +696,27 @@ dialog.left{margin:0 auto 0 0}
       <div class="note" id="addMsg"></div>
       <div class="catalog" id="catalog"></div>
     </div>
+  </div>
+</dialog>
+
+<dialog id="shows" aria-labelledby="shTitle">
+  <div class="sheet">
+    <button class="close" type="button" id="shClose">Close ✕</button>
+    <h2 id="shTitle">Card shows</h2>
+    <div class="note" id="shInfo">Loading…</div>
+    <div class="row" style="align-items:center">
+      <button class="btn" type="button" id="shScan" style="flex:0 0 auto">Scan now</button>
+      <div class="seg" id="shKind" role="group" aria-label="Which shows" style="flex:0 0 auto">
+        <button type="button" data-k="tcg" aria-pressed="true">Pokémon / TCG</button>
+        <button type="button" data-k="all" aria-pressed="false">All</button>
+      </div>
+    </div>
+    <div class="shows-list" id="shList"></div>
+    <div class="eyebrow">Options</div>
+    <label class="toggle" for="shAuto"><input type="checkbox" id="shAuto"> Check for new shows every week</label>
+    <label class="f">Towns to include (separate with commas)<textarea class="field" id="shAreas" rows="3"></textarea></label>
+    <div class="row" style="align-items:center"><button class="btn" type="button" id="shSave" style="flex:0 0 auto">Save towns</button><span class="note" id="shSaved"></span></div>
+    <div class="note">Shows come from TreasureHunter.show. Small shows that are only posted on Facebook or Instagram won't show up here, so check your local groups too.</div>
   </div>
 </dialog>
 
@@ -1500,6 +1537,67 @@ async function doRollback(p){
 }
 $("cog").onclick=()=>{ loadSettings(); loadVersion(); $("settings").showModal(); };
 $("sClose").onclick=()=>$("settings").close();
+
+// ---------- local card shows ----------
+let showsKind=recall("nd-shows-kind")||"tcg", showsData=null, showsPoll=null;
+function loadShows(){
+  clearTimeout(showsPoll);
+  return fetch("api/shows").then(r=>r.json()).then(j=>{
+    showsData=j; drawShows();
+    if(j.running && $("shows").open) showsPoll=setTimeout(loadShows,3000);
+  }).catch(()=>{ $("shInfo").textContent="Couldn't reach BEN."; });
+}
+function drawShows(){
+  const j=showsData; if(!j) return;
+  [...$("shKind").children].forEach(x=>x.setAttribute("aria-pressed", x.dataset.k===showsKind));
+  $("shAuto").checked=!!j.auto;
+  if(document.activeElement!==$("shAreas")) $("shAreas").value=(j.areas||[]).join(", ");
+  $("shScan").disabled=!!j.running; $("shScan").textContent=j.running ? "Scanning…" : "Scan now";
+  const list=(j.shows||[]).filter(x=>showsKind==="all" || x.tcg);
+  const isNew=x=>j.firstScan && x.first>j.firstScan && (Date.now()-new Date(x.first))<14*864e5;
+  const newN=list.filter(isNew).length;
+  let info=j.scanned ? "Last checked "+when(j.scanned)+". "+list.length+" upcoming"+(showsKind==="tcg"?" Pokémon/TCG":"")+" show"+(list.length===1?"":"s")+(newN?", "+newN+" new":"")+"." : "Not checked yet. Tap Scan now.";
+  if(j.running) info="Checking for shows… this takes about a minute.";
+  else if(j.error) info+=" Last scan had a problem: "+j.error+".";
+  $("shInfo").textContent=info;
+  const L=$("shList"); L.replaceChildren(); let month="";
+  if(j.scanned && !list.length && !j.running){ const p=document.createElement("p"); p.className="note"; p.textContent=showsKind==="tcg" ? "No upcoming Pokémon/TCG shows found. Try All." : "No upcoming shows found in these towns."; L.append(p); }
+  for(const x of list){
+    const d=new Date(x.date+"T12:00:00");
+    const m=d.toLocaleString("en-US",{month:"long",year:"numeric"});
+    if(m!==month){ month=m; const h=document.createElement("h3"); h.textContent=m; L.append(h); }
+    const row=document.createElement("div"); row.className="show";
+    const w=document.createElement("div"); w.className="when";
+    const wd=document.createElement("span"); wd.textContent=d.toLocaleString("en-US",{weekday:"short"});
+    const dn=document.createElement("b"); dn.textContent=d.getDate();
+    const mo=document.createElement("span"); mo.textContent=d.toLocaleString("en-US",{month:"short"});
+    w.append(wd,dn,mo);
+    const wh=document.createElement("div"); wh.className="what";
+    const a=document.createElement("a"); a.href=x.url; a.target="_blank"; a.rel="noopener"; a.textContent=x.name+" ↗";
+    const sub=document.createElement("span"); sub.className="s"; sub.textContent=x.town+(x.desc ? " · "+x.desc : "");
+    const tags=document.createElement("div"); tags.className="tags";
+    if(isNew(x)){ const t=document.createElement("span"); t.className="tag new"; t.textContent="New"; tags.append(t); }
+    if(x.tcg){ const t=document.createElement("span"); t.className="tag tcg"; t.textContent="Pokémon / TCG"; tags.append(t); }
+    wh.append(a,sub); if(tags.children.length) wh.append(tags);
+    row.append(w,wh); L.append(row);
+  }
+}
+$("showsBtn").onclick=()=>{ $("shSaved").textContent=""; $("shows").showModal(); loadShows(); };
+$("shClose").onclick=()=>$("shows").close();
+$("shows").addEventListener("click",e=>{ if(e.target===$("shows")) $("shows").close(); });
+$("shows").addEventListener("close",()=>clearTimeout(showsPoll));
+$("shKind").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; showsKind=b.dataset.k; store("nd-shows-kind",showsKind); drawShows(); });
+$("shScan").onclick=async()=>{
+  $("shScan").disabled=true; $("shScan").textContent="Scanning…";
+  try{ await fetch("api/shows/scan",{method:"POST"}); }catch(_){}
+  loadShows();
+};
+const saveShows=body=>fetch("api/shows",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(async r=>{ const j=await r.json(); if(!r.ok) throw new Error(j.error||"Couldn't save"); return j; });
+$("shAuto").onchange=e=>saveShows({auto:e.target.checked}).then(()=>{ $("shSaved").textContent="Saved"; }).catch(err=>{ $("shSaved").textContent=err.message; });
+$("shSave").onclick=()=>{
+  const areas=$("shAreas").value.split(",").map(x=>x.trim()).filter(Boolean);
+  saveShows({areas}).then(()=>{ $("shSaved").textContent="Saved. Tap Scan now to check these towns."; loadShows(); }).catch(err=>{ $("shSaved").textContent=err.message+"."; });
+};
 $("settings").addEventListener("click",e=>{ if(e.target===$("settings")) $("settings").close(); });
 
 // ---------- set menu ----------

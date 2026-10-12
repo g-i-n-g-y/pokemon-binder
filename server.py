@@ -14,6 +14,7 @@ before installing anything. Restarting never installs updates. No key is needed.
 GITHUB_REPO to an empty value to use a folder mounted at /updates instead (same button). GITHUB_TOKEN is optional and only
 needed for a private copy of the repository. Replaced files are kept in previous/.
 """
+from html import unescape
 import io, json, os, re, shutil, sys, tempfile, threading, time, urllib.error, urllib.parse, urllib.request, zipfile
 from datetime import datetime, timedelta, timezone
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
@@ -22,7 +23,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "2.5"   # bump for every app update: 1.0 -> 1.1 for features/fixes, 2.0 for big changes
+APP_VERSION = "2.6"   # bump for every app update: 1.0 -> 1.1 for features/fixes, 2.0 for big changes
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -62,6 +63,7 @@ job_lock = threading.Lock()
 job = {"running": False, "set": "", "name": "", "done": 0, "total": 0, "priced": 0, "message": ""}
 img_jobs = {}
 dex_job = {"running": False, "done": 0, "total": 0, "error": ""}
+shows_job = {"running": False, "error": ""}
 
 
 # ---------- small helpers ----------
@@ -1006,6 +1008,8 @@ def scheduler():
                 start_images(sid)  # retries any images that failed earlier
             if os.path.exists(DEX_INDEX):
                 start_dex_index()  # picks up new sets for master set binders (about once a month)
+            if shows_due() and not shows_job["running"]:
+                threading.Thread(target=scan_shows, args=("weekly",), daemon=True).start()
         ticks += 1
         try:
             st = get_settings()
@@ -1053,6 +1057,124 @@ def setup():
         write_json(SETS_FILE, sl)
 
 
+# ---------- local card shows (from treasurehunter.show) ----------
+
+SHOWS_FILE = os.path.join(DATA, "shows.json")
+TH = "https://www.treasurehunter.show"
+DEFAULT_AREAS = ["Richmond", "Midlothian", "Chesterfield", "Chester", "Glen Allen", "Henrico", "Short Pump",
+                 "Mechanicsville", "Ashland", "Petersburg", "Colonial Heights", "Hopewell", "Powhatan", "Sandston"]
+SHOW_RE = re.compile(r'/show/([a-z0-9-]+?)-va-(\d{4}-\d{2}-\d{2})(?=["\'#?/])')
+TCG_RE = re.compile(r"pok[eé]?mon|pokmon|\btcg\b|trading card game", re.I)
+
+
+def area_slug(name):
+    return slugify(name)
+
+
+def shows_state():
+    st = read_json(SHOWS_FILE, {})
+    st.setdefault("shows", {})
+    st.setdefault("areas", DEFAULT_AREAS)
+    st.setdefault("auto", True)
+    return st
+
+
+def show_details(url):
+    """Name, description and image from one show's page (only fetched the first time it's seen)."""
+    _, html = pc_get(url)
+    def meta(prop):
+        m = re.search(rf'<meta[^>]+(?:property|name)=["\']{prop}["\'][^>]+content=["\']([^"\']*)', html, re.I) or \
+            re.search(rf'<meta[^>]+content=["\']([^"\']*)["\'][^>]+(?:property|name)=["\']{prop}["\']', html, re.I)
+        return unescape(m.group(1)).strip() if m else ""
+    title = meta("og:title")
+    if not title:
+        m = re.search(r"<title>(.*?)</title>", html, re.S | re.I)
+        title = unescape(m.group(1)).strip() if m else ""
+    title = re.split(r"\s+[|·–-]\s+Treasure Hunter", title)[0].strip()
+    return {"name": title, "desc": meta("og:description") or meta("description")}
+
+
+def scan_shows(reason="manual"):
+    """Read the Virginia show pages for each area, keep shows in those towns, remember new ones."""
+    with job_lock:
+        if shows_job["running"]:
+            return False
+        shows_job.update(running=True, error="")
+    try:
+        st = shows_state()
+        areas = [a for a in st["areas"] if area_slug(a)]
+        slugs = {area_slug(a): a for a in areas}
+        pages = [f"{TH}/shows/virginia"] + [f"{TH}/shows/virginia/{s}" for s in slugs]
+        found, ok = {}, 0
+        for url in pages:
+            try:
+                _, html = pc_get(url)
+                ok += 1
+            except urllib.error.HTTPError as e:
+                if e.code != 404:
+                    log(f"card shows: {url}: {e}")
+                continue
+            except Exception as e:
+                log(f"card shows: {url}: {e}")
+                continue
+            for slug, d in SHOW_RE.findall(html):
+                town = next((s for s in sorted(slugs, key=len, reverse=True) if slug.endswith("-" + s) or slug == s), None)
+                if town:
+                    found[f"{slug}-va-{d}"] = {"town": slugs[town], "date": d, "slug": slug[: -len(town)].strip("-")}
+            time.sleep(1)
+        if not ok:
+            raise RuntimeError("couldn't reach treasurehunter.show")
+        now = now_iso()
+        shows = st["shows"]
+        new = 0
+        for key, f in found.items():
+            if key in shows:
+                shows[key]["seen"] = now
+                continue
+            url = f"{TH}/show/{key}"
+            rec = {"url": url, "date": f["date"], "town": f["town"], "first": now, "seen": now,
+                   "name": f["slug"].replace("-", " ").title(), "desc": ""}
+            try:
+                det = show_details(url)
+                rec["name"] = det["name"] or rec["name"]
+                rec["desc"] = det["desc"][:300]
+                time.sleep(1)
+            except Exception as e:
+                log(f"card shows: {url}: {e}")
+            rec["tcg"] = bool(TCG_RE.search(rec["name"] + " " + rec["desc"] + " " + key))
+            shows[key] = rec
+            new += 1
+        today = today_local()
+        st["shows"] = {k: v for k, v in shows.items() if v["date"] >= today}   # drop past shows
+        st.setdefault("firstScan", now)   # shows found on the very first scan aren't marked new
+        st.update(scanned=now, lastNew=new, error="")
+        with lock:
+            write_json(SHOWS_FILE, st)
+        log(f"Card shows scan ({reason}): {len(found)} in your area, {new} new.")
+    except Exception as e:
+        shows_job["error"] = str(e)
+        with lock:
+            st = shows_state()
+            st["error"] = str(e)
+            write_json(SHOWS_FILE, st)
+        log(f"Card shows scan failed: {e}")
+    finally:
+        shows_job["running"] = False
+    return True
+
+
+def shows_due():
+    st = shows_state()
+    if not st.get("auto"):
+        return False
+    last = st.get("scanned", "")
+    try:
+        age = time.time() - datetime.strptime(last, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).timestamp()
+    except ValueError:
+        return True
+    return age > 7 * DAY
+
+
 # ---------- totals per set (for the all-binders summary) ----------
 
 def set_totals(sid):
@@ -1084,7 +1206,7 @@ def set_totals(sid):
 BACKUPS = os.path.join(APP, "backups")          # safety copies made before a restore (on your server only)
 MAX_RESTORE = 500 * 1024 * 1024
 SET_FILES = ("collection", "prices", "history", "tcg_ids", "slots", "shop", "pc_urls", "cards")
-BACKUP_RE = re.compile(rf"(settings\.json|sets\.json|favicon|favicon\.json|sets/{SID_RE}/(?:{'|'.join(SET_FILES)})\.json"
+BACKUP_RE = re.compile(rf"(settings\.json|sets\.json|shows\.json|favicon|favicon\.json|sets/{SID_RE}/(?:{'|'.join(SET_FILES)})\.json"
                        rf"|sets/{SID_RE}/photos/{NUM_RE}(?:_back)?(?:\.json)?)")
 
 
@@ -1092,7 +1214,7 @@ def backup_names():
     """Every file a backup holds: your collection, prices, history, settings and photos.
     Card images and the set catalog are left out because they download again by themselves."""
     out = []
-    for name in ("settings.json", "sets.json", "favicon", "favicon.json"):
+    for name in ("settings.json", "sets.json", "shows.json", "favicon", "favicon.json"):
         if os.path.isfile(os.path.join(DATA, name)):
             out.append(name)
     sets_root = os.path.join(DATA, "sets")
@@ -1273,6 +1395,12 @@ class Handler(BaseHTTPRequestHandler):
                 out["list"] = sorted(({"dex": int(d), "name": nm, "count": len(idx["cards"].get(d, []))}
                                       for d, nm in (idx.get("names") or {}).items()), key=lambda x: x["dex"])
             return self.send(200, out, cache="no-store")
+        if path == "/api/shows":
+            st = shows_state()
+            return self.send(200, {"shows": sorted(st["shows"].values(), key=lambda s: (s["date"], s["name"])),
+                                   "areas": st["areas"], "auto": st["auto"], "scanned": st.get("scanned", ""),
+                                   "firstScan": st.get("firstScan", ""), "error": st.get("error", ""), "running": shows_job["running"],
+                                   "today": today_local()}, cache="no-store")
         if path == "/api/catalog":
             return self.send(200, {"sets": catalog()}, cache="no-store")
         if path == "/api/refresh":
@@ -1323,6 +1451,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_PUT(self):
         if self.path == "/api/settings":
             return self.do_PUT_settings()
+        if self.path == "/api/shows":
+            return self.do_PUT_shows()
         m = re.fullmatch(rf"/api/set/({SID_RE})/slots", self.path)
         if m:
             return self.do_PUT_slots(m.group(1))
@@ -1344,6 +1474,23 @@ class Handler(BaseHTTPRequestHandler):
             coll[n] = rec
             write_json(sdir(sid, "collection.json"), coll)
         self.send(200, {"ok": True})
+
+    def do_PUT_shows(self):
+        """Card show options: the towns to look in and whether to scan every week."""
+        try:
+            new = json.loads(self.body(4096) or b"{}")
+            st = shows_state()
+            if "auto" in new:
+                st["auto"] = bool(new["auto"])
+            if "areas" in new:
+                areas = [str(a).strip() for a in new["areas"] if str(a).strip()]
+                assert 1 <= len(areas) <= 40 and all(len(a) <= 40 and re.fullmatch(r"[A-Za-z .'\-]+", a) for a in areas)
+                st["areas"] = list(dict.fromkeys(areas))
+        except Exception:
+            return self.send(400, {"error": "Use town names separated by commas, like Richmond, Midlothian"})
+        with lock:
+            write_json(SHOWS_FILE, st)
+        return self.send(200, {"ok": True})
 
     def do_PUT_shop(self, sid):
         """Save the shopping list order: a sort mode, plus your own card order for "My order"."""
@@ -1509,6 +1656,11 @@ class Handler(BaseHTTPRequestHandler):
             if restarting:
                 threading.Thread(target=restart_self, args=(1,), daemon=True).start()
             return
+        if path == "/api/shows/scan":
+            if not shows_job["running"]:
+                threading.Thread(target=scan_shows, args=("manual",), daemon=True).start()
+                time.sleep(0.2)
+            return self.send(200, {"running": shows_job["running"]})
         if path == "/api/refresh":
             raw = self.body(4096)
             sid = json.loads(raw or b"{}").get("set", "") if raw else ""
