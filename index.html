@@ -350,6 +350,7 @@ dialog.float{margin:auto;height:fit-content;max-height:min(86vh,900px);width:min
 dialog.float .sheet{padding:18px 22px 24px}
 dialog.float .close{position:sticky;top:0}
 #shKind button{white-space:nowrap}
+dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
 @media (max-width:480px){dialog.float{max-height:calc(100% - 24px)} dialog.float .sheet{padding:14px 16px 20px}}
 .show{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);align-items:flex-start}
 .show .when{flex:none;width:48px;text-align:center;border:1px solid var(--line);border-radius:8px;padding:4px 0;line-height:1.15}
@@ -737,7 +738,7 @@ dialog.float .close{position:sticky;top:0}
   </div>
 </dialog>
 
-<dialog id="settings" aria-labelledby="stTitle">
+<dialog id="settings" class="float" aria-labelledby="stTitle">
   <div class="sheet">
     <button class="close" type="button" id="sClose">Close ✕</button>
     <h2 id="stTitle">Settings</h2>
