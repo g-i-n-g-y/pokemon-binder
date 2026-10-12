@@ -10,6 +10,11 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v2.12 (October 11, 2026)
+
+- Card details open as a floating window in the middle of the screen, like Settings and Card shows (was a side panel)
+- Floating windows scroll instead of squeezing their contents when there is a lot in them (the card tabs could shrink to a thin line)
+
 ## v2.11.2 (October 11, 2026)
 
 - Dropdown menus everywhere: the arrow sits further in from the right edge and matches the theme colors

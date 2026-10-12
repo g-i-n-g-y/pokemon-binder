@@ -362,6 +362,9 @@ dialog.float .sheet::-webkit-scrollbar-thumb:hover{background:var(--muted)}
 dialog.float .close{position:absolute;top:14px;right:20px;z-index:2;background:var(--surface);border-radius:6px;padding:4px 6px}
 dialog.float .sheet>h2{padding-right:80px;margin-top:6px}
 #shKind button{white-space:nowrap}
+dialog.float .sheet>*{flex-shrink:0}   /* scroll instead of squashing things to fit */
+#dlg.float{width:min(560px,calc(100% - 24px))}
+#dlg.float .big-art{margin-top:8px}
 /* every dropdown: our own arrow, 14px in from the right edge, in the theme's colors */
 select{-webkit-appearance:none;appearance:none;padding-right:36px!important;background-repeat:no-repeat!important;
   background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%)!important;
@@ -611,7 +614,7 @@ dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
   <footer id="foot">Prices are averages of recent Unlimited sales (pick which ones per binder in Settings) and refresh automatically once a day. Tap Need on a card to mark it owned, or tap the card to log what you paid, set its condition, or add a photo of your copy. Open the menu at the top left to switch sets or add a new one. Everything saves on BEN.</footer>
 </div>
 
-<dialog id="dlg" aria-labelledby="dName">
+<dialog id="dlg" class="float" aria-labelledby="dName">
   <div class="sheet">
     <button class="close" type="button" id="dClose">Close ✕</button>
     <img class="big-art" id="dArt" alt="">
