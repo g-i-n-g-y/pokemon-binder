@@ -10,6 +10,12 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v2.15 (October 11, 2026)
+
+- **Tidier phone layout:** on phones, the card filters fold into one row: the search box and a **Filters** button. The button shows how many filters are on, and a short line under it says what you're seeing (like "Need · 72 of 113 cards").
+- Filters opens a panel from the bottom with Show (All / Need / Owned), Rarity (or Set in master set binders) and Sort as tap-friendly buttons, a Reset, and "Show N cards" to close it. Changes apply as you tap.
+- Computers keep the full filter row as before
+
 ## v2.14.1 (October 11, 2026)
 
 - Refresh prices asks first, showing when prices were last updated and about how long a refresh takes, so a stray tap doesn't start one

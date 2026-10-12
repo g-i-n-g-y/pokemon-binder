@@ -339,6 +339,35 @@ dialog.left{margin:0 auto 0 0}
 .catrow .sprite,.setrow .sprite{width:40px;height:40px;margin:0}
 .setrow .go b{display:flex;align-items:center;gap:6px}
 .setrow .go b .sprite{width:32px;height:32px;margin:-6px 0}
+/* phone filters: search + a Filters button; the filter controls move into a panel from the bottom */
+#fBtn,#fSum{display:none}
+#fBtn{flex:none;gap:8px;align-items:center;height:42px}
+#fBtn svg{width:18px;height:18px}
+#fBtn .n{background:var(--light);color:var(--bg);border-radius:999px;font-size:11px;font-weight:600;padding:1px 7px;line-height:1.5}
+#fSum{font-size:13px;color:var(--muted);margin-top:-12px}
+@media (max-width:640px){
+  #vCards .tools{flex-wrap:nowrap}
+  #vCards .tools #fOwn,#vCards .tools #fRar,#vCards .tools #fSort,#vCards .tools #count{display:none}
+  #vCards .tools #fQ{flex:1 1 auto;min-width:0}
+  #fBtn{display:inline-flex}
+  #fSum{display:block}
+}
+dialog#fsheet{margin:auto auto 0;width:100%;max-width:560px;height:auto;max-height:85vh;border-radius:16px 16px 0 0;border:1px solid var(--line);border-bottom:0;
+  transform:translateY(100%);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+dialog#fsheet.in{transform:none}
+dialog#fsheet::backdrop{background:rgba(5,4,8,.6)}
+#fsheet .sheet{gap:14px;padding:10px 20px 22px}
+#fsheet .grab{width:40px;height:4px;border-radius:2px;background:var(--line);align-self:center}
+#fsheet .hd{display:flex;justify-content:space-between;align-items:center}
+#fsheet .hd b{font-family:var(--f-display);font-size:20px}
+#fsheet .hd button{border:0;background:none;color:var(--muted);font:inherit;font-size:14px;cursor:pointer;padding:6px 2px}
+#fsheet .seg{display:flex}
+#fsheet .seg button{flex:1;padding:10px}
+#fsheet .chips{display:flex;flex-wrap:wrap;gap:8px}
+#fsheet .chip{border:1px solid var(--line);background:none;color:var(--ink);border-radius:999px;padding:7px 13px;font:inherit;font-size:14px;cursor:pointer}
+#fsheet .chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+#fsheet .go{justify-content:center;height:46px;margin-top:4px}
+@media (prefers-reduced-motion:reduce){dialog#fsheet{transition:none}}
 #drAdd,#drSets{display:flex;flex-direction:column;gap:12px}
 #drSets .allsum{margin-bottom:0}
 #drSets h2{margin-bottom:4px}
@@ -560,7 +589,9 @@ dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
     </select>
     <input type="search" id="fQ" placeholder="Search name or number (1/105)" aria-label="Search cards by name or number">
     <span class="count" id="count"></span>
+    <button class="btn" type="button" id="fBtn" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span>Filters</span></button>
   </div>
+  <div id="fSum" aria-live="polite"></div>
 
   <main class="grid" id="grid"></main>
   </div>
@@ -782,6 +813,20 @@ dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
   </div>
 </dialog>
 
+<dialog id="fsheet" aria-labelledby="fsTitle">
+  <div class="sheet">
+    <div class="grab" aria-hidden="true"></div>
+    <div class="hd"><b id="fsTitle">Filters</b><button type="button" id="fsReset">Reset</button></div>
+    <div class="eyebrow">Show</div>
+    <div class="seg" id="fsOwn" role="group" aria-label="Show"></div>
+    <div class="eyebrow" id="fsRarLbl">Rarity</div>
+    <div class="chips" id="fsRar" role="group" aria-labelledby="fsRarLbl"></div>
+    <div class="eyebrow">Sort</div>
+    <div class="chips" id="fsSort" role="group" aria-label="Sort"></div>
+    <button class="btn primary go" type="button" id="fsGo"></button>
+  </div>
+</dialog>
+
 <dialog id="news" class="float" aria-labelledby="nwTitle">
   <div class="sheet">
     <button class="close" type="button" id="nwClose">Close ✕</button>
@@ -992,7 +1037,8 @@ function header(){
     : [s.series, year(s.releaseDate), "Unlimited", (printed()||state.cards.length)+" cards"+(secret?" + "+secret+" secret":"")].filter(Boolean).join(" · ");
   gapNote(dex);
   $("fSort").options[0].textContent=dex ? "Sort: release date" : "Sort: set number";
-  $("fQ").placeholder=dex ? "Search set or number (80/111)" : "Search name or number (1/105)";
+  $("fQ").placeholder=matchMedia("(max-width:640px)").matches ? (dex ? "Search set or number" : "Search name or number")
+    : (dex ? "Search set or number (80/111)" : "Search name or number (1/105)");
   document.title=(name ? name+" · " : "")+"Pokémon Binder";
 }
 // Flags binders whose card list may be incomplete. Set binders: numbers 1 to the printed
@@ -1073,8 +1119,41 @@ function render(){
     b.append(m); g.append(b);
   }
   $("count").textContent=list.length+" of "+state.cards.length+" cards";
+  filterSummary(list.length);
   stats();
 }
+// ---------- phone filters panel ----------
+// It drives the same controls as the desktop toolbar (fOwn, fRar, fSort), so both stay in sync.
+const OWN_LABELS={all:"All",need:"Need",own:"Owned"};
+function activeFilters(){ return (state.filter!=="all")+(!!state.rar)+(state.sort!=="num"); }
+function filterSummary(shown){
+  const parts=[]; if(state.filter!=="all") parts.push(OWN_LABELS[state.filter]); if(state.rar) parts.push(state.rar);
+  if(state.sort!=="num") parts.push($("fSort").selectedOptions[0].textContent.replace(/^Sort: /,""));
+  $("fSum").textContent=(parts.length?parts.join(" · ")+" · ":"")+shown+" of "+state.cards.length+" cards";
+  const n=activeFilters(); let badge=$("fBtn").querySelector(".n");
+  if(n){ if(!badge){ badge=document.createElement("span"); badge.className="n"; $("fBtn").append(badge); } badge.textContent=n; }
+  else if(badge) badge.remove();
+  $("fBtn").setAttribute("aria-label","Filters"+(n?" ("+n+" on)":""));
+  if($("fsheet").open) drawFilterSheet(shown);
+}
+function setOwnFilter(v){ state.filter=v; [...$("fOwn").children].forEach(x=>x.setAttribute("aria-pressed",x.dataset.v===v)); render(); }
+function chip(label, on, fn){ const b=document.createElement("button"); b.type="button"; b.className="chip"; b.textContent=label; b.setAttribute("aria-pressed",on); b.onclick=fn; return b; }
+function drawFilterSheet(shown){
+  const own=$("fsOwn"); own.replaceChildren(...["all","need","own"].map(v=>{ const b=document.createElement("button"); b.type="button"; b.textContent=OWN_LABELS[v]; b.setAttribute("aria-pressed",state.filter===v); b.onclick=()=>setOwnFilter(v); return b; }));
+  $("fsRarLbl").textContent=isDex(state.sid) ? "Set" : "Rarity";
+  $("fsRar").replaceChildren(...[...$("fRar").options].map(o=>chip(o.value ? o.textContent : "All", state.rar===o.value, ()=>{ $("fRar").value=o.value; state.rar=o.value; render(); })));
+  $("fsSort").replaceChildren(...[...$("fSort").options].map(o=>chip(o.textContent.replace(/^Sort: /,"").replace(/^./,c=>c.toUpperCase()), state.sort===o.value, ()=>{ $("fSort").value=o.value; state.sort=o.value; render(); })));
+  const n = shown ?? $("grid").querySelectorAll(".sleeve").length;
+  $("fsGo").textContent="Show "+n+" card"+(n===1?"":"s");
+}
+const fsheet=$("fsheet");
+$("fBtn").onclick=()=>{ drawFilterSheet(); fsheet.showModal(); requestAnimationFrame(()=>requestAnimationFrame(()=>fsheet.classList.add("in"))); };
+function closeFilterSheet(){ if(!fsheet.open) return; fsheet.classList.remove("in"); setTimeout(()=>fsheet.close(), matchMedia("(prefers-reduced-motion: reduce)").matches?0:220); }
+$("fsGo").onclick=closeFilterSheet;
+fsheet.addEventListener("click",e=>{ if(e.target===fsheet) closeFilterSheet(); });
+fsheet.addEventListener("cancel",e=>{ e.preventDefault(); closeFilterSheet(); });
+$("fsReset").onclick=()=>{ $("fRar").value=""; state.rar=""; $("fSort").value="num"; state.sort="num"; setOwnFilter("all"); };
+
 $("fOwn").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; state.filter=b.dataset.v; [...$("fOwn").children].forEach(x=>x.setAttribute("aria-pressed",x===b)); render(); });
 $("fRar").addEventListener("change",e=>{state.rar=e.target.value;render();});
 $("fSort").addEventListener("change",e=>{state.sort=e.target.value;render();});
