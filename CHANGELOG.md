@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- What's new on phones: each version's tags, change count and date fit without squeezing or cutting off the date. Dates leave out the year when it's this year.
+
 ## v2.19.3 (October 12, 2026)
 
 - Scrolling fast inside Settings or any other floating window no longer scrolls the binder behind it. The page behind stays still while a window is open.

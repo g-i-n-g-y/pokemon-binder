@@ -432,8 +432,16 @@ dialog.float .sheet::-webkit-scrollbar-thumb:hover{background:var(--muted)}
 .fclose svg{width:18px;height:18px}
 /* What's new */
 .relnote{border-bottom:1px solid var(--line)}
-.relnote summary{display:flex;align-items:center;gap:10px;padding:12px 4px;cursor:pointer;list-style:none}
-.relnote summary .cnt{font-size:13px;color:var(--muted)}
+.relnote summary{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;padding:12px 4px;cursor:pointer;list-style:none}
+.relnote summary .cnt{font-size:13px;color:var(--muted);white-space:nowrap}
+/* phones: version and tags on top, change count and date on a second line */
+@media (max-width:480px){
+  .relnote summary{gap:4px 8px}
+  .relnote summary .cnt{order:5;flex-basis:100%;padding-left:22px}
+  .relnote summary .d{order:6;position:absolute;right:4px;margin-top:0}
+  .relnote summary{position:relative}
+  .relnote summary .tag{font-size:10px;padding:2px 7px}
+}
 .rel-head{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:14px 0 0;padding-bottom:6px;border-bottom:1px solid var(--line)}
 .rel-head:first-child{margin-top:0}
 .sheet-foot{position:sticky;bottom:-24px;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;
@@ -2055,7 +2063,8 @@ function drawNews(){
   // groups: newer than yours, this version line (like everything since v2.12), then earlier releases
   const groups=[["Newer than yours",[]],["Since v"+line,[]],["Earlier releases",[]]];
   j.entries.forEach(e=>{ const c=cmpV(vt(e.v),run); groups[c>0?0:(vt(e.v).slice(0,2).join(".")===line?1:2)][1].push(e); });
-  const shortDate=s=>{ const d=new Date(s); return isNaN(d) ? s : d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}); };
+  // year only when it isn't this year (keeps rows short on phones)
+  const shortDate=s=>{ const d=new Date(s); if(isNaN(d)) return s; const o={month:"short",day:"numeric"}; if(d.getFullYear()!==new Date().getFullYear()) o.year="numeric"; return d.toLocaleDateString("en-US",o); };
   groups.filter(g=>g[1].length).forEach(([title,list])=>{
    const h=document.createElement("div"); h.className="rel-head"; h.textContent=title; L.append(h);
    list.forEach(e=>{
