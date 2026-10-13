@@ -802,7 +802,7 @@ dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
         <div class="photo" id="dPhoto">No front photo yet</div>
         <div style="display:flex;flex-direction:column;gap:8px">
           <label class="btn" for="dUp" id="dUpLabel">Add front photo</label>
-          <input id="dUp" type="file" accept="image/*" hidden>
+          <input id="dUp" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,image/avif" hidden>
           <span class="note" id="dUpMsg"></span>
         </div>
       </div>
@@ -827,7 +827,7 @@ dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
       <label class="f">TCGplayer link (optional, for prices)<input id="cTcg" inputmode="url" autocomplete="off" placeholder="https://www.tcgplayer.com/product/…"></label>
       <div class="note">Paste the card's TCGplayer page and it gets recent sales and a price on the next refresh, like any other card. No link? Type a price below instead.</div>
       <label class="f">Your price (optional, used when there are no sales)<input id="cPrice" inputmode="decimal" autocomplete="off" placeholder="0.00"></label>
-      <div class="bk"><label class="btn" for="cPic">Choose picture</label><input id="cPic" type="file" accept="image/*" hidden><span class="note" id="cPicName">Optional. A photo of the card becomes its picture.</span></div>
+      <div class="bk"><label class="btn" for="cPic">Choose picture</label><input id="cPic" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,image/avif" hidden><span class="note" id="cPicName">Optional. A photo of the card becomes its picture.</span></div>
       <div class="err" id="cErr" aria-live="polite"></div>
       <div class="row-end"><button class="btn" type="button" id="cCancel">Cancel</button><button class="btn primary" type="submit" id="cSave">Add card</button></div>
     </form>
@@ -1365,7 +1365,7 @@ $("cForm").onsubmit=async e=>{
     const j=await r.json(); if(!r.ok) throw new Error(j.error||"Couldn't save");
     if(pic){
       const up=await fetch("api/set/"+enc(state.sid)+"/photo/"+enc(j.n),{method:"POST",headers:{"Content-Type":pic.type||"image/jpeg"},body:pic});
-      if(!up.ok) throw new Error("The card was saved, but the picture didn't upload. Try adding it again from the card.");
+      if(!up.ok){ const uj=await up.json().catch(()=>({})); throw new Error("The card was saved, but the picture didn't upload"+(uj.error?" ("+uj.error+")":"")+". Try adding it again from the card."); }
     }
     $("cErr").textContent=""; $("cdlg").close();
     $("sync").textContent=(editing?"Saved changes to ":"Added ")+j.name+(body.tcg&&!editing?". Its price fills in on the next refresh.":".");
@@ -1715,9 +1715,10 @@ $("dUp").onchange=async e=>{
   $("dUpMsg").textContent="Uploading…";
   try{
     const r=await fetch("api/set/"+enc(state.sid)+"/photo/"+enc(n)+(back?"/back":""),{method:"POST",headers:{"Content-Type":f.type||"image/jpeg"},body:f});
-    if(!r.ok) throw 0;
-    const j=await r.json(); save(back?{photoBack:j.v}:{photo:j.v}); $("dUpMsg").textContent=(back?"Back":"Front")+" photo added"; drawPhoto(n);
-  }catch(_){ $("dUpMsg").textContent="Upload failed. Try again."; }
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(j.error||"");
+    save(back?{photoBack:j.v}:{photo:j.v}); $("dUpMsg").textContent=(back?"Back":"Front")+" photo added"; drawPhoto(n);
+  }catch(e){ $("dUpMsg").textContent=(e&&e.message) ? e.message+"." : "Upload failed. Try again."; }
 };
 
 // ---------- settings / themes ----------

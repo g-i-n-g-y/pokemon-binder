@@ -16,7 +16,7 @@ GITHUB_REPO to an empty value to use a folder mounted at /updates instead (same 
 needed for a private copy of the repository. Replaced files are kept in previous/.
 """
 from html import unescape
-import io, json, os, re, shutil, sys, tempfile, threading, time, urllib.error, urllib.parse, urllib.request, zipfile
+import io, json, os, re, shutil, socket, subprocess, sys, tempfile, threading, time, traceback, urllib.error, urllib.parse, urllib.request, zipfile
 from datetime import datetime, timedelta, timezone
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 try:
@@ -44,6 +44,11 @@ WANT_COND = ("Lightly Played", "Moderately Played")   # updated from the price s
 SALES_TO_AVERAGE = 10
 DAY = 24 * 3600
 MAX_PHOTO = 15 * 1024 * 1024
+# Card photo types. SVG is left out on purpose: an SVG file can carry a script.
+PHOTO_TYPES = ("image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif", "image/avif")
+# BINDER_PORT and BINDER_TRIAL are only used by the update check, which test-starts a new version on a spare port.
+PORT = int(os.environ.get("BINDER_PORT") or 8080)
+TRIAL = os.environ.get("BINDER_TRIAL") == "1"
 # Browser tab icon. Your own icon (uploaded in Settings) lives in data/, so it never goes into the repository.
 ICON_FILE = os.path.join(DATA, "favicon")
 ICON_TYPES = ("image/png", "image/jpeg", "image/webp", "image/gif", "image/x-icon", "image/vnd.microsoft.icon")
@@ -1038,8 +1043,8 @@ def refresh_prices(sid, reason="daily"):
         usd = eur_to_usd() if backup else None
         with lock:
             prices = read_json(sdir(sid, "prices.json"), {})
-        p = prices.setdefault("p", {})
-        info = prices.setdefault("info", {})
+        info = prices.get("info") or {}
+        fresh = {}   # what this refresh found; merged into the newest prices.json at the end
         priced = 0
         for i, c in enumerate(cards):
             job["done"] = i
@@ -1081,16 +1086,10 @@ def refresh_prices(sid, reason="daily"):
                         log(f"{sid}-{n}: no TCGdex card found")
                 except Exception as e:
                     log(f"{sid}-{n}: TCGdex: {e}")
-            mp = main_price(inf, slots, backup)
-            if mp:
-                p[n] = [mp[0]]
-                inf.update(src=mp[3], count=mp[1], last=mp[2])
-                inf.pop("note", None)
+            if main_price(inf, slots, backup):
                 priced += 1
                 job["priced"] = priced
-            else:
-                inf["note"] = "No recent sales for your price options; kept last price"
-            info[n] = inf
+            fresh[n] = inf
             time.sleep(1)
         job["done"] = len(cards)
         write_json(sdir(sid, "tcg_ids.json"), ids)
@@ -1098,10 +1097,31 @@ def refresh_prices(sid, reason="daily"):
             write_json(sdir(sid, "pc_urls.json"), pc_cache)
         if backup:
             write_json(sdir(sid, "tcgdex_ids.json"), dex_ids)
-        prices["lastRun"] = int(time.time())
-        if priced:
-            prices["updated"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        # A refresh takes minutes. Anything that changed prices.json meanwhile (new price options, a restore)
+        # is kept: read the newest copy, add this refresh's results, and work out main prices with today's options.
         with lock:
+            if sid not in sets_list()["order"]:
+                job["message"] = f"{name} was removed during the refresh."
+                return True
+            prices = read_json(sdir(sid, "prices.json"), {})
+            p = prices.setdefault("p", {})
+            info = prices.setdefault("info", {})
+            slots_now, backup_now = set_slots(sid), get_settings().get("backup", True)
+            priced = 0
+            for n, inf in fresh.items():
+                mp = main_price(inf, slots_now, backup_now)
+                if mp:
+                    p[n] = [mp[0]]
+                    inf.update(src=mp[3], count=mp[1], last=mp[2])
+                    inf.pop("note", None)
+                    priced += 1
+                else:
+                    inf["note"] = "No recent sales for your price options; kept last price"
+                info[n] = inf
+            job["priced"] = priced
+            prices["lastRun"] = int(time.time())
+            if priced:
+                prices["updated"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             write_json(sdir(sid, "prices.json"), prices)
             snapshot_history(sid, prices)
         job["message"] = f"{name}: updated {priced} of {len(cards)} prices."
@@ -1234,24 +1254,31 @@ def spending():
                 ratio = (cp[0] / b0) if (cp and b0) else 1.0
                 owned.append((sid, n, q, dated[0] if dated else "", ratio))
 
-    def price_at(sid, n, d):
-        val = None
-        for hd, snap in hist_by_set[sid]:
-            if hd > d:
-                break
-            if n in snap:
-                val = snap[n]
-        return val if val is not None else cur_by_set[sid].get(n, 0)
-
     today = today_local()
     dates.add(today)
     timeline = []
+    # Walk the dates in order once, keeping each card's latest known price (much faster than
+    # searching the whole history for every card on every date, which slowed down as history grew).
+    pos = {sid: 0 for sid in hist_by_set}
+    known = {sid: {} for sid in hist_by_set}
+    buys = sorted((r["d"], r["price"]) for r in log_rows)
+    bi, spent = 0, 0.0
     for d in sorted(dates):
-        spent = sum(r["price"] for r in log_rows if not r["d"] or r["d"] <= d)
+        while bi < len(buys) and (not buys[bi][0] or buys[bi][0] <= d):
+            spent += buys[bi][1]
+            bi += 1
+        for sid, hist in hist_by_set.items():
+            while pos[sid] < len(hist) and hist[pos[sid]][0] <= d:
+                known[sid].update(hist[pos[sid]][1])
+                pos[sid] += 1
         value = 0.0
         for sid, n, q, acq, ratio in owned:
             if not acq or acq <= d:
-                p = cur_by_set[sid].get(n, 0) if d == today else price_at(sid, n, d)
+                if d == today:
+                    p = cur_by_set[sid].get(n, 0)
+                else:
+                    p = known[sid].get(n)
+                    p = cur_by_set[sid].get(n, 0) if p is None else p
                 value += p * ratio * q
         timeline.append({"d": d, "spent": round(spent, 2), "value": round(value, 2)})
     log_rows.sort(key=lambda r: (r["d"] or "0000"), reverse=True)
@@ -1418,11 +1445,12 @@ def scan_shows(reason="manual"):
             new += 1
             shows_job["done"] += 1
         today = today_local()
-        st["shows"] = {k: v for k, v in shows.items() if v["date"] >= today}   # drop past shows
-        st.setdefault("firstScan", now)   # shows found on the very first scan aren't marked new
-        st.update(scanned=now, lastNew=new, error="")
         with lock:
-            write_json(SHOWS_FILE, st)
+            cur = shows_state()   # newest copy, so town or weekly-scan changes made during the scan are kept
+            cur["shows"] = {k: v for k, v in shows.items() if v["date"] >= today}   # drop past shows
+            cur.setdefault("firstScan", now)   # shows found on the very first scan aren't marked new
+            cur.update(scanned=now, lastNew=new, error="")
+            write_json(SHOWS_FILE, cur)
         log(f"Card shows scan ({reason}): {len(found)} in your area, {new} new.")
     except Exception as e:
         shows_job["error"] = str(e)
@@ -1880,6 +1908,15 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass
 
+    def send_response(self, code, message=None):
+        self.replied = True
+        super().send_response(code, message)
+
+    def end_headers(self):
+        # browsers must use the type we say (never guess a file is a web page)
+        self.send_header("X-Content-Type-Options", "nosniff")
+        super().end_headers()
+
     def send(self, code, body=b"", ctype="application/json", cache=None):
         if isinstance(body, (dict, list)):
             body = json.dumps(body).encode()
@@ -2083,7 +2120,8 @@ class Handler(BaseHTTPRequestHandler):
         if m:
             name = m.group(2) + ("_back" if m.group(3) else "")
             meta = read_json(sdir(m.group(1), "photos", name + ".json"), {})
-            return self.send_file(sdir(m.group(1), "photos", name), meta.get("type", "image/jpeg"), "no-cache")
+            ctype = meta.get("type", "image/jpeg")
+            return self.send_file(sdir(m.group(1), "photos", name), ctype if ctype in PHOTO_TYPES else "application/octet-stream", "no-cache")
         self.send(404, b"not found", "text/plain")
 
     def do_PUT(self):
@@ -2127,16 +2165,18 @@ class Handler(BaseHTTPRequestHandler):
         """Card show options: the towns to look in and whether to scan every week."""
         try:
             new = json.loads(self.body(4096) or b"{}")
+            assert isinstance(new, dict)
+            if "areas" in new:
+                areas = [str(a).strip() for a in new["areas"] if str(a).strip()]
+                assert 1 <= len(areas) <= 40 and all(len(a) <= 40 and re.fullmatch(r"[A-Za-z .'\-]+", a) for a in areas)
+        except Exception:
+            return self.send(400, {"error": "Use town names separated by commas, like Richmond, Midlothian"})
+        with lock:   # read and save together, so a scan finishing at the same moment can't undo this
             st = shows_state()
             if "auto" in new:
                 st["auto"] = bool(new["auto"])
             if "areas" in new:
-                areas = [str(a).strip() for a in new["areas"] if str(a).strip()]
-                assert 1 <= len(areas) <= 40 and all(len(a) <= 40 and re.fullmatch(r"[A-Za-z .'\-]+", a) for a in areas)
                 st["areas"] = list(dict.fromkeys(areas))
-        except Exception:
-            return self.send(400, {"error": "Use town names separated by commas, like Richmond, Midlothian"})
-        with lock:
             write_json(SHOWS_FILE, st)
         return self.send(200, {"ok": True})
 
@@ -2183,30 +2223,32 @@ class Handler(BaseHTTPRequestHandler):
         raw = self.body(4096)
         try:
             new = json.loads(raw or b"{}")
-            st = read_json(SETTINGS, {})
-            if "auto" in new:
-                st["auto"] = bool(new["auto"])
-            if "time" in new:
-                assert re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", new["time"])
-                st["time"] = new["time"]
-            if "tz" in new:
-                assert re.fullmatch(r"[A-Za-z_]+(/[A-Za-z_+\-]+){0,2}", new["tz"])
-                st["tz"] = new["tz"]
-            if "offset" in new:
-                st["offset"] = int(new["offset"])
-            slots_changed = "slots" in new or "backup" in new
-            if "slots" in new:
-                st["slots"] = clean_slots(new["slots"])
-            if "backup" in new:
-                st["backup"] = bool(new["backup"])
-            # a new time today shouldn't be skipped just because today's run already happened earlier
-            if "time" in new:
-                merged = dict(DEFAULT_SETTINGS); merged.update(st)
-                now = local_now(merged)
-                h, m = map(int, merged["time"].split(":"))
-                if now < now.replace(hour=h, minute=m, second=0, microsecond=0):
-                    st["lastAuto"] = ""
+            assert isinstance(new, dict)
+            # read and save together, so the scheduler saving "last run" at the same moment can't undo this
             with lock:
+                st = read_json(SETTINGS, {})
+                if "auto" in new:
+                    st["auto"] = bool(new["auto"])
+                if "time" in new:
+                    assert re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", new["time"])
+                    st["time"] = new["time"]
+                if "tz" in new:
+                    assert re.fullmatch(r"[A-Za-z_]+(/[A-Za-z_+\-]+){0,2}", new["tz"])
+                    st["tz"] = new["tz"]
+                if "offset" in new:
+                    st["offset"] = int(new["offset"])
+                slots_changed = "slots" in new or "backup" in new
+                if "slots" in new:
+                    st["slots"] = clean_slots(new["slots"])
+                if "backup" in new:
+                    st["backup"] = bool(new["backup"])
+                # a new time today shouldn't be skipped just because today's run already happened earlier
+                if "time" in new:
+                    merged = dict(DEFAULT_SETTINGS); merged.update(st)
+                    now = local_now(merged)
+                    h, m = map(int, merged["time"].split(":"))
+                    if now < now.replace(hour=h, minute=m, second=0, microsecond=0):
+                        st["lastAuto"] = ""
                 write_json(SETTINGS, st)
         except Exception as e:
             return self.send(400, {"error": str(e) if isinstance(e, ValueError) and str(e) else "Invalid settings"})
@@ -2336,6 +2378,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, meta)
         if path == "/api/update":
             # install the latest version (from GitHub, or the updates folder)
+            if job["running"]:
+                return self.send(409, {"error": f"A price refresh is running ({job['done']} of {job['total']} cards). Try again when it finishes"})
             try:
                 if GH_REPO:
                     installed = install_from_github()
@@ -2351,6 +2395,8 @@ class Handler(BaseHTTPRequestHandler):
                 threading.Thread(target=restart_self, args=(1,), daemon=True).start()
             return
         if path == "/api/rollback":
+            if job["running"]:
+                return self.send(409, {"error": f"A price refresh is running ({job['done']} of {job['total']} cards). Try again when it finishes"})
             raw = self.body(4096)
             try:
                 vid = json.loads(raw or b"{}").get("id", "")
@@ -2369,15 +2415,20 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, {"running": shows_job["running"]})
         if path == "/api/refresh":
             raw = self.body(4096)
-            sid = json.loads(raw or b"{}").get("set", "") if raw else ""
+            try:
+                sid = str(json.loads(raw or b"{}").get("set", ""))
+            except Exception:
+                return self.send(400, {"error": "bad request"})
             if not job["running"] and sid and self.in_binder(sid):
                 threading.Thread(target=refresh_prices, args=(sid, "manual"), daemon=True).start()
                 time.sleep(0.2)
             return self.send(200, job)
         m = re.fullmatch(rf"/api/set/({SID_RE})/photo/({NUM_RE})(?:/(back))?", path)
-        ctype = self.headers.get("Content-Type", "")
-        if not m or not ctype.startswith("image/") or not self.in_binder(m.group(1)):
+        ctype = self.headers.get("Content-Type", "").split(";")[0].strip().lower()
+        if not m or not self.in_binder(m.group(1)):
             return self.send(400, {"error": "bad request"})
+        if ctype not in PHOTO_TYPES:
+            return self.send(400, {"error": "Use a JPG, PNG, WebP, GIF or HEIC photo"})
         raw = self.body(MAX_PHOTO)
         if raw is None:
             return self.send(413, {"error": "too large"})
@@ -2388,6 +2439,29 @@ class Handler(BaseHTTPRequestHandler):
             f.write(raw)
         write_json(sdir(sid, "photos", name + ".json"), {"type": ctype})
         self.send(200, {"v": int(time.time())})
+
+
+def _safe(fn):
+    """Any unexpected error in a request still gets an answer (instead of the page waiting on nothing),
+    and the details go to the container log."""
+    def run(self):
+        self.replied = False
+        try:
+            return fn(self)
+        except (BrokenPipeError, ConnectionResetError):
+            pass   # the browser went away
+        except Exception as e:
+            log(f"{self.command} {self.path} failed:\n{traceback.format_exc().rstrip()}")
+            if not self.replied:
+                try:
+                    self.send(500, {"error": f"Something went wrong on BEN ({e.__class__.__name__}). The container log has details"})
+                except OSError:
+                    pass
+    return run
+
+
+for _name in ("do_GET", "do_PUT", "do_POST", "do_DELETE"):
+    setattr(Handler, _name, _safe(getattr(Handler, _name)))
 
 
 def test_card(card_id):
@@ -2499,6 +2573,85 @@ def server_ok(path):
         return False
 
 
+def trial_run(folder):
+    """Start the new version on a spare port, with a copy of your data, and check that its pages answer.
+    Nothing it does touches the real binder. Returns "" if it works, or what went wrong."""
+    with open(os.path.join(folder, "server.py"), encoding="utf-8", errors="ignore") as f:
+        if "BINDER_TRIAL" not in f.read():
+            return ""   # versions from before v2.20 can't be test-started; the syntax check still ran
+    tmp = tempfile.mkdtemp(prefix=".trial-", dir=APP)
+    proc = logf = None
+    try:
+        for name in UPDATE_FILES:
+            src = os.path.join(folder, name)
+            shutil.copyfile(src if os.path.isfile(src) else os.path.join(APP, name), os.path.join(tmp, name))
+        # a copy of the small data files only (no card pictures or photos)
+        for root, dirs, files in os.walk(DATA):
+            dirs[:] = [d for d in dirs if d not in ("images", "photos")]
+            for fn in files:
+                if fn.endswith(".json"):
+                    dst = os.path.join(tmp, "data", os.path.relpath(os.path.join(root, fn), DATA))
+                    os.makedirs(os.path.dirname(dst), exist_ok=True)
+                    shutil.copyfile(os.path.join(root, fn), dst)
+        with socket.socket() as s:
+            s.bind(("127.0.0.1", 0))
+            port = s.getsockname()[1]
+        logf = open(os.path.join(tmp, "trial.log"), "w+")
+        proc = subprocess.Popen([sys.executable, "-u", os.path.join(tmp, "server.py")], cwd=tmp, stdout=logf,
+                                stderr=subprocess.STDOUT, env=dict(os.environ, BINDER_PORT=str(port), BINDER_TRIAL="1"))
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        order = sets_list()["order"]
+        pages = ["/", "/api/sets", "/api/settings", "/api/version", "/api/spending", "/api/changelog"] + \
+                [f"/api/set/{sid}/state" for sid in order[:3]]
+
+        def status(page):
+            try:
+                with opener.open(f"http://127.0.0.1:{port}{page}", timeout=15) as r:
+                    return r.status
+            except urllib.error.HTTPError as e:
+                return e.code
+
+        deadline = time.time() + 25
+        while True:   # wait for it to start
+            if proc.poll() is not None:
+                break
+            try:
+                status("/")
+                break
+            except (urllib.error.URLError, OSError):
+                if time.time() > deadline:
+                    break
+                time.sleep(0.5)
+        problem = ""
+        if proc.poll() is not None:
+            problem = "it stopped right after starting"
+        else:
+            for page in pages:
+                try:
+                    code = status(page)
+                except Exception as e:
+                    problem = f"{page} didn't answer ({e.__class__.__name__})"
+                    break
+                if code >= 500 and code != 502:   # 502 = a website it needs is down, not a problem with the app
+                    problem = f"{page} gave error {code}"
+                    break
+        if problem:
+            logf.seek(0)
+            tail = [ln for ln in logf.read().splitlines() if ln.strip()][-8:]
+            log("Update test failed: " + problem + ("\n  " + "\n  ".join(tail) if tail else ""))
+        return problem
+    finally:
+        if proc and proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+        if logf:
+            logf.close()
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def save_current_version():
     """Keep a copy of the running version so it can be rolled back to later (newest 3 are kept)."""
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S-%f")
@@ -2533,8 +2686,14 @@ def install_files(folder, label):
                if os.path.isfile(os.path.join(folder, n)) and not same_file(os.path.join(folder, n), os.path.join(APP, n))]
     if not changed:
         return []
+    # skip the whole update if the new version is broken, so you keep a working binder
     if "server.py" in changed and not server_ok(os.path.join(folder, "server.py")):
-        return []   # skip the whole update so the page and server never end up mismatched
+        raise RuntimeError("The new version has a mistake in its code, so nothing was installed. You're still on the current version")
+    if "server.py" in changed or "index.html" in changed:
+        problem = trial_run(folder)
+        if problem:
+            raise RuntimeError(f"The new version failed a test start ({problem}), so nothing was installed. "
+                               "You're still on the current version")
     try:
         auto_backup("before-update")
     except Exception as e:
@@ -2571,6 +2730,8 @@ def gh_error(e):
         if e.code == 401:
             return "GitHub key was rejected (it may have expired)"
         return f"GitHub error {e.code}"
+    if isinstance(e, RuntimeError):   # our own message, like "the new version didn't start"
+        return str(e)
     return f"Couldn't reach GitHub ({e.__class__.__name__})"
 
 
@@ -2726,7 +2887,13 @@ if __name__ == "__main__":
         test_card(sys.argv[2] if "-" in sys.argv[2] else f"neo4-{sys.argv[2]}")
         sys.exit(0)
     setup()
+    if TRIAL:   # an update test start: answer pages only (no downloads, no schedule), and only on this machine
+        def _no_downloads(*args, **kwargs):
+            raise urllib.error.URLError("no downloads during an update test")
+        urllib.request.urlopen = _no_downloads
+        log(f"Pokemon Binder test start on port {PORT}")
+        ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
     threading.Thread(target=warm_up, daemon=True).start()
     threading.Thread(target=scheduler, daemon=True).start()
-    log("Pokemon Binder running on port 8080")
-    ThreadingHTTPServer(("0.0.0.0", 8080), Handler).serve_forever()
+    log(f"Pokemon Binder running on port {PORT}")
+    ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()

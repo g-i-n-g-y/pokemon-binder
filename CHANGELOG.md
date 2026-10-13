@@ -12,6 +12,12 @@ The binder shows these in **Settings → About → Check for updates**.
 
 ## Unreleased
 
+- **Safer updates:** before installing, the binder now test-starts the new version on its own (with a copy of your data) and checks that its pages answer. If it doesn't start, nothing is installed and you stay on your current version, with the reason shown.
+- Updates and roll backs wait while a price refresh is running, so the restart can't stop the refresh halfway.
+- A price refresh no longer undoes changes made while it runs. New price options, a restored backup, or card show towns changed during a scan are all kept.
+- Card photos must be JPG, PNG, WebP, GIF or HEIC. If a photo is turned down, the reason is shown.
+- Stats opens much faster once months of price history build up.
+- If something unexpected goes wrong on BEN, the page now gets an error message instead of waiting, and the details go to the container log.
 - What's new on phones: each version's tags, change count and date fit without squeezing or cutting off the date. Dates leave out the year when it's this year.
 
 ## v2.19.3 (October 12, 2026)
