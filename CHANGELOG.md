@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v2.20 (October 12, 2026)
 
 - **Safer updates:** before installing, the binder now test-starts the new version on its own (with a copy of your data) and checks that its pages answer. If it doesn't start, nothing is installed and you stay on your current version, with the reason shown.
 - Updates and roll backs wait while a price refresh is running, so the restart can't stop the refresh halfway.
