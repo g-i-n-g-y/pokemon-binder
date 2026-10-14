@@ -12,6 +12,8 @@ The binder shows these in **Settings → About → Check for updates**.
 
 ## Unreleased
 
+- **New Settings layout:** a short list of sections (Appearance, Prices, Daily refresh, Backup and import, Server, About), each showing its current value. On a phone, tap one to open it full screen and use the back arrow (or your phone's back gesture) to return. On a computer the list stays on the left. On/off switches replace checkboxes, themes are small color chips, and the help text is shorter.
+- On phones, card details, Settings, card shows, What's new and Add a card now fill the whole screen.
 - **Name your server:** Settings → Server name. Type what you call the computer the binder runs on (like "BEN") and messages use it: "Saved on BEN", "Can't reach BEN". Left empty, they say "the server", so the binder makes sense for anyone running it.
 
 ## v3.0 (October 13, 2026)

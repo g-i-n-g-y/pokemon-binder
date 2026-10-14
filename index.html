@@ -468,6 +468,8 @@ dialog.float .sheet::-webkit-scrollbar-thumb:hover{background:var(--muted)}
 /* scrolling inside a window never spills over to the page behind it, and the page stays put while a window is open */
 dialog .sheet,dialog#drawer,dialog#fsheet{overscroll-behavior:contain}
 dialog.float .sheet>*{flex-shrink:0}   /* scroll instead of squashing things to fit */
+
+
 #dlg.float{width:min(560px,calc(100% - 24px))}
 #dlg.float .big-art{margin-top:4px}
 /* every dropdown: our own arrow, 14px in from the right edge, in the theme's colors */
@@ -556,6 +558,69 @@ dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
   table.shop .nm{font-size:14px}
   table.shop .sub{font-size:11px}
   .stats-sum .stat .v{font-size:20px}
+}
+/* ---------- shared building blocks ----------
+   ui-group: a rounded box of rows. ui-row: one setting or link (label on the left, value or control on the right).
+   ui-switch: an on/off switch (a styled checkbox). ui-split: a window with a list of sections:
+   on phones the list shows first and a section opens full screen with a back arrow; on wider screens
+   the list stays on the left. Every floating window fills the screen on phones. */
+.ui-h{margin:4px 2px -8px;font-family:var(--f-body);font-size:14px;font-weight:600;color:var(--ink)}
+.ui-h span{font-weight:400;color:var(--muted)}
+.ui-group{background:var(--bg);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.ui-row{display:flex;align-items:center;gap:12px;width:100%;min-height:54px;padding:10px 14px;margin:0;background:none;border:0;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.ui-row+.ui-row{border-top:1px solid var(--line)}
+button.ui-row:hover,label.ui-row:not(.ui-static):hover{background:var(--sleeve)}
+.ui-row.ui-static{cursor:default}
+.ui-row.ui-stack{flex-direction:column;align-items:stretch;gap:8px}
+.ui-ic{flex:none;width:32px;height:32px;border-radius:9px;display:grid;place-items:center;background:var(--dark-soft);color:var(--dark)}
+.ui-ic svg{width:18px;height:18px}
+.ui-l{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.ui-l b{font-weight:500;font-size:15px;line-height:1.3}
+.ui-l small{font-size:13px;line-height:1.35;color:var(--muted)}
+.ui-v{flex:none;max-width:48%;font-size:14px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ui-chev{flex:none;width:8px;height:8px;margin:0 4px 0 2px;border-top:2px solid var(--muted);border-right:2px solid var(--muted);transform:rotate(45deg)}
+.ui-ctl{flex:none;font:inherit;font-size:15px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;max-width:55%}
+.ui-switch{appearance:none;-webkit-appearance:none;flex:none;position:relative;width:48px;height:28px;margin:0;border-radius:999px;background:var(--line);cursor:pointer;transition:background .15s}
+.ui-switch::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--muted);transition:transform .15s,background .15s}
+.ui-switch:checked{background:var(--dark)}
+.ui-switch:checked::after{transform:translateX(20px);background:var(--bg)}
+.ui-row:has(.ui-switch:focus-visible){outline:2px solid var(--dark);outline-offset:-2px}
+.ui-switch:focus-visible{outline:none}
+@media (prefers-reduced-motion:reduce){.ui-switch,.ui-switch::after{transition:none}}
+/* themes as small chips: colors on top, name below */
+dialog.float .ui-chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
+.ui-chips .skin{flex-direction:column;align-items:stretch;gap:8px;padding:8px;border-radius:12px}
+.ui-chips .skin .sw{border-radius:7px}
+.ui-chips .skin .sw i{flex:1;width:auto;height:30px}
+.ui-chips .skin .sw i:first-child{display:none}   /* the background color is too dark to see on a chip */
+.ui-chips .skin b{font-family:var(--f-body);font-weight:500;font-size:14px;text-align:center}
+.ui-chips .skin span:not(.sw){display:none}
+.ui-chips .skin[aria-pressed="true"]{border-color:var(--dark);box-shadow:inset 0 0 0 1px var(--dark)}
+/* windows with a section list */
+.ui-split .ui-nav{display:flex;flex-direction:column;gap:14px}
+.ui-split .ui-page{display:none}
+.ui-split .ui-page.on{display:flex;flex-direction:column;gap:14px}
+.ui-back{margin-left:-6px}
+.ui-back svg{width:20px;height:20px}
+.ui-split .slotrow{flex-wrap:wrap}
+@media (min-width:760px){
+  dialog.float.ui-wide{width:min(960px,calc(100% - 48px));height:min(86vh,780px)}
+  dialog.float .sheet.ui-split{display:grid;grid-template-columns:260px minmax(0,1fr);gap:0;padding:0;overflow:hidden}
+  .ui-split .ui-nav{padding:16px;border-right:1px solid var(--line);overflow-y:auto;overscroll-behavior:contain}
+  .ui-split .ui-page.on{padding:20px 26px 32px;overflow-y:auto;overscroll-behavior:contain;min-height:0}
+  .ui-split .ui-nav .ui-row[aria-current="page"]{background:var(--dark-soft)}
+  .ui-split .ui-nav .ui-row[aria-current="page"] .ui-chev{border-color:var(--dark)}
+  .ui-split .ui-nav .ui-v,.ui-split .ui-nav .ui-l small{display:none}
+  dialog.float .sheet.ui-split{grid-template-columns:270px minmax(0,1fr)}
+}
+/* phones: floating windows become full screen */
+@media (max-width:640px){
+  dialog.float,#dlg.float{width:100%;max-width:100%;height:100dvh;max-height:100dvh;margin:0;border:0;border-radius:0}
+  dialog.float .fbar{padding-top:max(12px,env(safe-area-inset-top))}
+  dialog.float .sheet{padding:16px 16px max(28px,env(safe-area-inset-bottom))}
+  dialog.float .sheet>*{flex:0 0 auto}   /* the window has a fixed height now: nothing inside may stretch to fill it */
+  .ui-split .ui-nav[hidden]{display:none!important}
+  dialog.float .sheet-foot{margin:4px -16px -28px;border-radius:0}
 }
 </style>
 </head>
@@ -925,75 +990,104 @@ dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
   </div>
 </dialog>
 
-<dialog id="settings" class="float" aria-labelledby="stTitle">
-  <div class="sheet">
+<dialog id="settings" class="float ui-wide" aria-labelledby="stTitle">
+  <div class="sheet ui-split">
     <button class="close" type="button" id="sClose">Close ✕</button>
     <h2 id="stTitle">Settings</h2>
-    <div class="eyebrow">Theme</div>
-    <div class="skins" id="skins"></div>
-    <div class="eyebrow">Privacy</div>
-    <label class="toggle" for="stPriv"><input type="checkbox" id="stPriv"> Privacy mode</label>
-    <div class="note">Blurs cards owned, % complete, collection value and cost to finish, shows every card in color, and hides Owned/Need tags, the shopping list, stats, and your purchases. Only affects this device. The eye button at the top does the same thing.</div>
-    <div class="eyebrow">Cards</div>
-    <label class="toggle" for="stEd"><input type="checkbox" id="stEd" checked> Show "Unlimited" under each card</label>
-    <div class="note">Card images come from the public card database, which uses 1st Edition scans for older sets. The label is a reminder that you collect Unlimited.</div>
-    <label class="f">Price change period<select id="stPeriod"></select></label>
-    <div class="note" id="stPeriodNote">The ▲▼ percentage on each card, the biggest movers in Stats and the gain/drop sorts all use this period. Only affects this device.</div>
-    <div class="eyebrow">Server name</div>
-    <label class="f">What the binder calls the computer it runs on<input class="field" id="stSrv" maxlength="24" autocomplete="off" placeholder="the server"></label>
-    <div class="note" id="stSrvMsg">Used in messages like "Saved on BEN" or "Can't reach BEN". Leave it empty to say "the server".</div>
-    <div class="eyebrow">Tab icon</div>
-    <div class="iconrow">
-      <img id="icPrev" src="favicon" alt="Current tab icon" width="40" height="40">
-      <label class="btn" for="icUp">Choose image</label>
-      <input id="icUp" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/x-icon" hidden>
-      <button class="btn" type="button" id="icReset" hidden>Use default</button>
-    </div>
-    <div class="note" id="icMsg">The little picture on the browser tab. A square PNG works best. It's saved on <span class="srv">the server</span> only.</div>
-    <div class="eyebrow">Price average <span id="slotSet"></span></div>
-    <div class="note">Pick the two prices shown on each card. Each binder keeps its own choice, so switch sets from the menu to change another one. Raw conditions come from TCGplayer sales. Graded prices come from eBay sold listings collected by PriceCharting, sorted by the grading company and grade in each listing's title.</div>
-    <div id="slotRows"></div>
-    <div class="slotmsg" id="slotMsg" aria-live="polite"></div>
-    <label class="toggle" for="stBackup"><input type="checkbox" id="stBackup" checked> Use the market price when there are no recent sales</label>
-    <div class="note" id="stBackupMsg">Each refresh also gets TCGplayer's market price and Cardmarket's 30-day average from TCGdex, a free card database. They show on each card as a second opinion. When a card has no recent sales for your price options, this uses TCGplayer's market price instead of keeping an old price. Applies to every binder.</div>
-    <div class="eyebrow">Daily price refresh</div>
-    <label class="toggle" for="stAuto"><input type="checkbox" id="stAuto"> Refresh all sets automatically every day</label>
-    <label class="f">Refresh time
-      <input type="time" id="stTime" value="03:00" step="900">
-    </label>
-    <div class="box">
-      <span class="k">Next automatic refresh</span>
-      <span class="s" id="stNext" style="font-size:15px;color:var(--ink)">–</span>
-      <span class="s" id="stTz"></span>
-    </div>
-    <div class="saved" id="stSaved" aria-live="polite"></div>
-    <div class="eyebrow">Backup</div>
-    <div class="bk">
-      <a class="btn" href="api/backup" download id="bkDown">Download backup</a>
-      <label class="btn" for="bkUp">Restore from backup</label>
-      <input id="bkUp" type="file" accept=".zip,application/zip" hidden>
-    </div>
-    <div class="note" id="bkMsg">One file with your cards, purchases, sellers, notes, photos, prices and settings, for every binder. Keep a copy somewhere other than <span class="srv">the server</span>, like your computer or cloud storage.</div>
-    <div class="prev" id="bkAutoWrap" hidden>
-      <div class="k">Saved on <span class="srv">the server</span></div>
-      <div class="note">Made automatically before each update, spreadsheet import and restore. The newest 10 update backups are kept.</div>
-      <ul class="prevlist" id="bkAuto"></ul>
-    </div>
-    <div class="eyebrow">Spreadsheet <span id="imSet"></span></div>
-    <div class="bk">
-      <a class="btn" href="#" id="imTpl">Download template</a>
-      <label class="btn" for="imUp">Import spreadsheet</label>
-      <input id="imUp" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
-    </div>
-    <div class="note" id="imMsg">The template lists every card in this binder with what you own now. Fill in Qty (copies you own), and optionally Condition (NM, LP, MP, HP or DMG), Your Cost (total paid) and Notes, then import it. Excel files (.xlsx) and CSV both work. Importing only adds: it marks cards owned and fills in empty conditions and notes, and never removes anything. A backup is saved first.</div>
-    <div class="eyebrow">About</div>
-    <div class="ver" id="stVersion">Checking installed version…</div>
-    <div class="upd"><button class="btn" type="button" id="stUpdate">Check for updates</button><span class="note" id="stUpdMsg" aria-live="polite"></span></div>
-    <div class="prev" id="stPrevWrap" hidden>
-      <div class="k">Previous versions</div>
-      <ul class="prevlist" id="stPrev"></ul>
-    </div>
-    <div class="note" id="setPrices">Each price is the average of the newest matching Unlimited English sales (TCGplayer shares up to 5 per condition) (1st Edition, Shadowless, Japanese, and lots are skipped). A full refresh takes about 2 minutes per set. The Refresh prices button at the top updates only the set you're viewing.</div>
+    <nav class="ui-nav" aria-label="Settings sections">
+      <div class="ui-group">
+        <button class="ui-row" type="button" data-go="look"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-.9-.7-1.3-.7-2.2 0-.9.7-1.6 1.6-1.6H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3Z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10.5" cy="7.5" r="1"/><circle cx="15" cy="7.5" r="1"/></svg></span><span class="ui-l"><b>Appearance</b></span><span class="ui-v" id="sumLook"></span><span class="ui-chev" aria-hidden="true"></span></button>
+        <label class="ui-row" for="stPriv"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 6.2A9.6 9.6 0 0 1 12 6c5 0 8.5 4.5 9.5 6a17 17 0 0 1-2.7 3.4M6.6 6.7C4.4 8 3 10 2.5 12c1 1.5 4.5 6 9.5 6 1.6 0 3-.4 4.3-1"/><path d="M9.9 10a3 3 0 0 0 4.1 4.1"/></svg></span><span class="ui-l"><b>Privacy mode</b><small>Hides values and purchases on this device</small></span><input type="checkbox" class="ui-switch" id="stPriv"></label>
+      </div>
+      <div class="ui-group">
+        <button class="ui-row" type="button" data-go="prices"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg></span><span class="ui-l"><b>Prices</b></span><span class="ui-v" id="sumPrices"></span><span class="ui-chev" aria-hidden="true"></span></button>
+        <button class="ui-row" type="button" data-go="refresh"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="ui-l"><b>Daily refresh</b></span><span class="ui-v" id="sumRefresh"></span><span class="ui-chev" aria-hidden="true"></span></button>
+      </div>
+      <div class="ui-group">
+        <button class="ui-row" type="button" data-go="backup"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/></svg></span><span class="ui-l"><b>Backup and import</b></span><span class="ui-v" id="sumBackup"></span><span class="ui-chev" aria-hidden="true"></span></button>
+        <button class="ui-row" type="button" data-go="server"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg></span><span class="ui-l"><b>Server</b></span><span class="ui-v" id="sumSrv"></span><span class="ui-chev" aria-hidden="true"></span></button>
+        <button class="ui-row" type="button" data-go="about"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg></span><span class="ui-l"><b>About</b></span><span class="ui-v" id="sumAbout"></span><span class="ui-chev" aria-hidden="true"></span></button>
+      </div>
+    </nav>
+
+    <section class="ui-page" data-page="look" data-title="Appearance">
+      <h3 class="ui-h">Theme</h3>
+      <div class="skins ui-chips" id="skins"></div>
+      <div class="note" id="skinNote"></div>
+      <div class="ui-group">
+        <label class="ui-row" for="stEd"><span class="ui-l"><b>Show &ldquo;Unlimited&rdquo; under each card</b><small>Older sets use 1st Edition scans, so this reminds you which edition you collect</small></span><input type="checkbox" class="ui-switch" id="stEd" checked></label>
+      </div>
+      <h3 class="ui-h">Tab icon</h3>
+      <div class="ui-group"><div class="ui-row ui-static">
+        <img id="icPrev" src="favicon" alt="Current tab icon" width="36" height="36">
+        <span class="ui-l"><small id="icMsg">Square PNG works best. Saved on <span class="srv">the server</span>.</small></span>
+        <label class="btn" for="icUp">Choose</label>
+        <input id="icUp" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/x-icon" hidden>
+        <button class="btn" type="button" id="icReset" hidden>Default</button>
+      </div></div>
+    </section>
+
+    <section class="ui-page" data-page="prices" data-title="Prices">
+      <div class="ui-group">
+        <label class="ui-row ui-static" for="stPeriod"><span class="ui-l"><b>Price change period</b><small id="stPeriodNote">For the &#9650;&#9660; on cards, biggest movers and gain/drop sorts. This device only.</small></span><select id="stPeriod" class="ui-ctl"></select></label>
+      </div>
+      <h3 class="ui-h">Price average <span id="slotSet"></span></h3>
+      <div class="note">The two prices shown on each card. Each binder has its own choice. Raw conditions come from TCGplayer sales, graded ones from eBay sold listings via PriceCharting.</div>
+      <div id="slotRows"></div>
+      <div class="slotmsg" id="slotMsg" aria-live="polite"></div>
+      <div class="ui-group">
+        <label class="ui-row" for="stBackup"><span class="ui-l"><b>Use the market price when there are no recent sales</b><small id="stBackupMsg">TCGplayer's market price from TCGdex, for every binder</small></span><input type="checkbox" class="ui-switch" id="stBackup" checked></label>
+      </div>
+      <div class="note" id="setPrices">Each price is the average of the newest matching Unlimited English sales (up to 5 per condition). 1st Edition, Shadowless, Japanese and lots are skipped.</div>
+    </section>
+
+    <section class="ui-page" data-page="refresh" data-title="Daily refresh">
+      <div class="ui-group">
+        <label class="ui-row" for="stAuto"><span class="ui-l"><b>Refresh every set daily</b><small>A full refresh takes a few minutes per set</small></span><input type="checkbox" class="ui-switch" id="stAuto"></label>
+        <label class="ui-row ui-static" for="stTime"><span class="ui-l"><b>Time</b></span><input type="time" id="stTime" class="ui-ctl" value="03:00" step="900"></label>
+        <div class="ui-row ui-static"><span class="ui-l"><b>Next refresh</b><small id="stTz"></small></span><span class="ui-v" id="stNext">&ndash;</span></div>
+      </div>
+      <div class="saved" id="stSaved" aria-live="polite"></div>
+      <div class="note">The Refresh prices button at the top updates only the set you're viewing.</div>
+    </section>
+
+    <section class="ui-page" data-page="backup" data-title="Backup and import">
+      <h3 class="ui-h">Backup</h3>
+      <div class="bk">
+        <a class="btn" href="api/backup" download id="bkDown">Download backup</a>
+        <label class="btn" for="bkUp">Restore from backup</label>
+        <input id="bkUp" type="file" accept=".zip,application/zip" hidden>
+      </div>
+      <div class="note" id="bkMsg">One file with everything, for every binder. Keep a copy somewhere other than <span class="srv">the server</span>.</div>
+      <div class="prev" id="bkAutoWrap" hidden>
+        <h3 class="ui-h">Saved on <span class="srv">the server</span></h3>
+        <div class="note">Made automatically before each update, import and restore.</div>
+        <ul class="prevlist" id="bkAuto"></ul>
+      </div>
+      <h3 class="ui-h">Spreadsheet <span id="imSet"></span></h3>
+      <div class="bk">
+        <a class="btn" href="#" id="imTpl">Download template</a>
+        <label class="btn" for="imUp">Import spreadsheet</label>
+        <input id="imUp" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+      </div>
+      <div class="note" id="imMsg">Fill in Qty in the template (and optionally Condition, Your Cost and Notes), then import it. Excel or CSV. It only adds, never removes, and a backup is saved first.</div>
+    </section>
+
+    <section class="ui-page" data-page="server" data-title="Server">
+      <div class="ui-group">
+        <label class="ui-row ui-static ui-stack" for="stSrv"><span class="ui-l"><b>Server name</b><small>What the binder calls the computer it runs on</small></span><input class="field" id="stSrv" maxlength="24" autocomplete="off" placeholder="the server"></label>
+      </div>
+      <div class="note" id="stSrvMsg">Used in messages like &ldquo;Saved on BEN&rdquo;. Leave it empty to say &ldquo;the server&rdquo;.</div>
+    </section>
+
+    <section class="ui-page" data-page="about" data-title="About">
+      <div class="ver" id="stVersion">Checking installed version&hellip;</div>
+      <div class="upd"><button class="btn" type="button" id="stUpdate">Check for updates</button><span class="note" id="stUpdMsg" aria-live="polite"></span></div>
+      <div class="prev" id="stPrevWrap" hidden>
+        <h3 class="ui-h">Previous versions</h3>
+        <ul class="prevlist" id="stPrev"></ul>
+      </div>
+    </section>
   </div>
 </dialog>
 
@@ -1943,6 +2037,7 @@ function loadSettings(){
     $("stAuto").checked=!!s.auto; $("stTime").value=s.time||"03:00"; showNext(s.next, s.auto);
     $("stBackup").checked = s.backup!==false;
     if(s.tz!==TZ) saveSettings({tz:TZ, offset:-new Date().getTimezoneOffset()}, true);
+    settingsSummary();
   }).catch(()=>{ $("stNext").textContent="Can't reach "+srv()+"."; });
 }
 function saveSettings(patch, quiet){
@@ -1971,6 +2066,7 @@ function loadVersion(){
     const box=$("stVersion"); box.replaceChildren();
     const k=document.createElement("span"); k.className="k"; k.textContent="Installed version";
     const t=document.createElement("b"); t.textContent=verTitle(v);
+    if(v.version) $("sumAbout").textContent="v"+v.version;
     const s=document.createElement("span"); s.className="s";
     s.append(shaTag(v.commit, v.version), " Installed "+shortDate(v.installed||v["server.py"])+" · "+(v.github?"updates from GitHub":v.updatesFolder?"updates from the updates folder":"updates not set up"));
     box.append(k,t,s);
@@ -2039,7 +2135,7 @@ async function doRollback(p){
     afterInstall(j, msg, "Rolled back. Reloading…");
   }catch(e){ msg.textContent=e.message+"."; }
 }
-$("cog").onclick=()=>{ loadSettings(); loadVersion(); $("settings").showModal(); };
+$("cog").onclick=()=>{ loadSettings(); loadVersion(); settingsSummary(); $("settings").showModal(); };
 $("sClose").onclick=()=>$("settings").close();
 // While a window is open on top of the page (modal), scrolling outside its scrolling area does nothing,
 // so a fast scroll can't move the binder behind it. Inside the window, scrolling stops at its edges (CSS above).
@@ -2065,6 +2161,53 @@ document.querySelectorAll("dialog.float").forEach(dlg=>{
   sheet.addEventListener("scroll",()=>bar.classList.toggle("scrolled", sheet.scrollTop>4),{passive:true});
   dlg.addEventListener("close",()=>{ sheet.scrollTop=0; bar.classList.remove("scrolled"); });
 });
+
+// ---------- building block: a window with a list of sections ----------
+// Phones: the list shows first; tapping a row opens that section full screen with a back arrow
+// (the phone's back gesture also goes back to the list). Wider screens: the list stays on the left.
+const wideUI=matchMedia("(min-width:760px)");
+function uiPages(dlg){
+  const sheet=dlg.querySelector(".ui-split"), nav=sheet.querySelector(".ui-nav"), pages=[...sheet.querySelectorAll(".ui-page")];
+  const bar=dlg.querySelector(".fbar"), title=bar.querySelector("h2"), home=title.textContent;
+  const back=document.createElement("button"); back.type="button"; back.className="fclose ui-back"; back.setAttribute("aria-label","Back to "+home); back.title="Back";
+  back.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>';
+  back.hidden=true; bar.prepend(back);
+  let at="";
+  function go(id, focus){
+    if(!id && wideUI.matches) id=pages[0].dataset.page;
+    at=id||"";
+    const page=pages.find(p=>p.dataset.page===at);
+    pages.forEach(p=>p.classList.toggle("on", p===page));
+    nav.querySelectorAll("[data-go]").forEach(r=>{ if(r.dataset.go===at) r.setAttribute("aria-current","page"); else r.removeAttribute("aria-current"); });
+    const sub=!wideUI.matches && !!page;
+    nav.hidden=sub; back.hidden=!sub;
+    title.textContent=sub ? page.dataset.title : home;
+    sheet.scrollTop=0; if(page) page.scrollTop=0;
+    if(focus){ if(sub) back.focus(); else { const r=nav.querySelector('[data-go="'+focus+'"]'); if(r) r.focus(); } }
+  }
+  nav.addEventListener("click",e=>{ const r=e.target.closest("[data-go]"); if(r) go(r.dataset.go, wideUI.matches ? null : true); });
+  back.onclick=()=>go("", at);
+  dlg.addEventListener("cancel",e=>{ if(!wideUI.matches && at){ e.preventDefault(); go("", at); } });
+  dlg.addEventListener("close",()=>go(""));
+  wideUI.addEventListener("change",()=>go(wideUI.matches ? at : ""));
+  go("");
+  return {go, get at(){ return at; }};
+}
+const settingsPages=uiPages($("settings"));
+// The value shown on each row of the Settings list, like "Night" or "3:00 AM".
+const slotShort = sl => !sl||sl.t==="none" ? "" : sl.t==="raw" ? sl.c : (sl.co==="Any" ? "Graded" : sl.co)+" "+sl.g;
+function settingsSummary(){
+  const sk=SKINS.find(x=>x[0]===(document.documentElement.dataset.skin||"night"))||SKINS[0];
+  $("sumLook").textContent=sk[1]; $("skinNote").textContent=sk[1]+": "+sk[2]+".";
+  $("sumPrices").textContent=(state.slots||[]).map(slotShort).filter(Boolean).join(" + ");
+  const t=$("stTime").value||"03:00", [h,m]=t.split(":").map(Number);
+  $("sumRefresh").textContent=$("stAuto").checked ? new Date(2000,0,1,h,m).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"}) : "Off";
+  $("sumSrv").textContent=state.serverName||"Not named";
+  if(!$("sumAbout").textContent) $("sumAbout").textContent=($("verNum").textContent||"").split(" ")[0];
+  $("sumBackup").textContent="";
+}
+$("settings").addEventListener("change",()=>setTimeout(settingsSummary,50));
+$("settings").addEventListener("click",e=>{ if(e.target.closest(".skin,.slotrow")) setTimeout(settingsSummary,50); });
 
 // ---------- version, what's new, update notice ----------
 let news=null;
