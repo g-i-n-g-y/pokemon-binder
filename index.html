@@ -663,6 +663,18 @@ dialog.float .ui-chips{display:grid;grid-template-columns:repeat(auto-fill,minma
 @media (min-width:641px){
   #drawer:not(.pushed){width:min(420px,100%);max-width:100%;height:100dvh;max-height:100dvh}
 }
+
+/* ---------- shopping list drag ---------- */
+#shopBody tr.drag-shift{transition:transform .22s cubic-bezier(.2,.8,.2,1)}
+#shopBody tr.drag-slot td{opacity:0}
+table.drag-ghost{position:fixed;z-index:80;margin:0;border-collapse:collapse;table-layout:fixed;background:var(--surface);border-radius:10px;overflow:hidden;pointer-events:none;
+  box-shadow:0 0 0 1px var(--line);will-change:transform;transition:box-shadow .16s ease,scale .16s ease}
+table.drag-ghost.lifted{scale:1.025;box-shadow:0 18px 40px -8px rgba(0,0,0,.65),0 0 0 1.5px var(--dark)}
+table.drag-ghost.settle{transition:transform .22s cubic-bezier(.2,.8,.2,1),box-shadow .22s ease,scale .22s ease}
+table.drag-ghost td{border-bottom:0!important}
+table.drag-ghost .grip{color:var(--ink);background:var(--sleeve)}
+body.drag-shop,body.drag-shop *{cursor:grabbing!important}
+@media (prefers-reduced-motion:reduce){#shopBody tr.drag-shift,table.drag-ghost,table.drag-ghost.settle{transition:none!important}}
 </style>
 </head>
 <body>
@@ -2765,30 +2777,73 @@ function markShopMode(){
   const m=(state.shop||{}).mode||"lo";
   for(const b of $("shopSort").querySelectorAll("button")) b.setAttribute("aria-pressed", b.dataset.m===m ? "true" : "false");
 }
+// Drag to reorder: the grabbed row lifts and follows the pointer, the other rows slide out of its way,
+// and it settles into its new spot when let go. Escape (or the phone cancelling the touch) puts it back.
 function startDrag(e, tr){
   if(e.button!==undefined && e.button!==0) return;
   e.preventDefault();
-  // Listen on the window: moving the row in the page drops the handle's pointer capture.
-  const grip=window, id=e.pointerId;
-  tr.classList.add("dragging"); document.body.classList.add("drag-shop");
-  const body=$("shopBody"); let moved=false;
-  const move=ev=>{
-    if(ev.pointerId!==id) return;
-    if(ev.clientY<70) window.scrollBy(0,-14); else if(ev.clientY>window.innerHeight-70) window.scrollBy(0,14);
-    const over=document.elementFromPoint(ev.clientX, ev.clientY);
-    const row=over && over.closest && over.closest("#shopBody tr[data-n]");
-    if(!row || row===tr) return;
-    const r=row.getBoundingClientRect();
-    body.insertBefore(tr, ev.clientY < r.top + r.height/2 ? row : row.nextSibling);
-    moved=true; shopTotals();
+  const body=$("shopBody"), rows=[...body.querySelectorAll("tr[data-n]")], from=rows.indexOf(tr);
+  if(from<0 || rows.length<2) return;
+  const id=e.pointerId, y0=e.clientY, sy0=window.scrollY;
+  const r0=tr.getBoundingClientRect(), H=r0.height;
+  const mids=rows.map(r=>{ const b=r.getBoundingClientRect(); return b.top+window.scrollY+b.height/2; });
+  // the lifted copy that follows the pointer
+  const ghost=document.createElement("table"); ghost.className="shop drag-ghost"; ghost.setAttribute("aria-hidden","true");
+  const gb=document.createElement("tbody"), copy=tr.cloneNode(true); gb.append(copy); ghost.append(gb);
+  [...tr.children].forEach((td,i)=>{ copy.children[i].style.width=td.getBoundingClientRect().width+"px"; });
+  Object.assign(ghost.style,{left:r0.left+"px", top:r0.top+"px", width:r0.width+"px"});
+  document.body.append(ghost);
+  requestAnimationFrame(()=>ghost.classList.add("lifted"));
+  tr.classList.add("drag-slot"); document.body.classList.add("drag-shop");
+  rows.forEach(r=>{ if(r!==tr) r.classList.add("drag-shift"); });
+  try{ if(navigator.vibrate) navigator.vibrate(8); }catch(_){}
+  let to=from, py=y0, raf=0, done=false;
+  const place=()=>{
+    ghost.style.transform="translateY("+(py-y0)+"px)";
+    const center=mids[from]+(py-y0)+(window.scrollY-sy0);   // where the row's middle is on the page
+    let t=from;
+    while(t+1<rows.length && center>mids[t+1]) t++;
+    while(t>0 && center<mids[t-1]) t--;
+    if(t===to) return;
+    to=t;
+    rows.forEach((r,i)=>{
+      if(r===tr) return;
+      const shift = from<to && i>from && i<=to ? -H : from>to && i<from && i>=to ? H : 0;
+      r.style.transform = shift ? "translateY("+shift+"px)" : "";
+    });
   };
-  const up=ev=>{
-    if(ev.pointerId!==id) return;
-    grip.removeEventListener("pointermove",move); grip.removeEventListener("pointerup",up); grip.removeEventListener("pointercancel",up);
-    tr.classList.remove("dragging"); document.body.classList.remove("drag-shop");
-    if(moved) shopReordered();
+  const tick=()=>{   // scroll the page when the pointer is near the top or bottom edge
+    raf=0; const edge=80; let v=0;
+    if(py<edge) v=-Math.ceil((edge-py)/6); else if(py>innerHeight-edge) v=Math.ceil((py-(innerHeight-edge))/6);
+    if(v){ window.scrollBy(0,v); raf=requestAnimationFrame(tick); }
+    place();
   };
-  grip.addEventListener("pointermove",move); grip.addEventListener("pointerup",up); grip.addEventListener("pointercancel",up);
+  const move=ev=>{ if(ev.pointerId!==id) return; py=ev.clientY; if(!raf) raf=requestAnimationFrame(tick); };
+  const finish=cancel=>{
+    if(done) return; done=true;
+    window.removeEventListener("pointermove",move); window.removeEventListener("pointerup",up);
+    window.removeEventListener("pointercancel",onCancel); window.removeEventListener("keydown",key,true);
+    cancelAnimationFrame(raf);
+    if(cancel){ to=from; rows.forEach(r=>{ r.style.transform=""; }); }
+    else {
+      // put the real row in its new place; the rows that slid are already drawn where they end up
+      rows.forEach(r=>{ r.style.transition="none"; r.style.transform=""; });
+      if(to!==from) body.insertBefore(tr, to>from ? rows[to].nextSibling : rows[to]);
+      void body.offsetHeight; rows.forEach(r=>{ r.style.transition=""; });
+    }
+    const cleanup=()=>{ ghost.remove(); tr.classList.remove("drag-slot"); rows.forEach(r=>r.classList.remove("drag-shift")); document.body.classList.remove("drag-shop"); };
+    // let the lifted copy settle into its slot, then show the real row again
+    const end=tr.getBoundingClientRect();
+    ghost.classList.add("settle"); ghost.classList.remove("lifted"); ghost.style.transform="translateY("+(end.top-r0.top)+"px)";
+    if(matchMedia("(prefers-reduced-motion: reduce)").matches) cleanup();
+    else { ghost.addEventListener("transitionend",cleanup,{once:true}); setTimeout(cleanup,320); }
+    if(to!==from) shopReordered();
+  };
+  const up=ev=>{ if(ev.pointerId===id) finish(false); };
+  const onCancel=ev=>{ if(ev.pointerId===id) finish(true); };
+  const key=ev=>{ if(ev.key==="Escape"){ ev.preventDefault(); ev.stopPropagation(); finish(true); } };
+  window.addEventListener("pointermove",move); window.addEventListener("pointerup",up);
+  window.addEventListener("pointercancel",onCancel); window.addEventListener("keydown",key,true);
 }
 function gripKey(e, tr){
   const body=$("shopBody");

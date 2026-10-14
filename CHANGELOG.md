@@ -10,6 +10,12 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.3 (October 13, 2026)
+
+- **Smoother drag to reorder in the shopping list:** the row you grab lifts and follows your finger, the other rows slide out of its way, and it settles into place when you let go.
+  - Drag near the top or bottom of the screen and the page scrolls by itself. Press Escape to put the row back.
+  - Phones give a tiny buzz when the row lifts. The arrow keys still move rows too.
+
 ## v3.2.1 (October 13, 2026)
 
 - Sets menu: the progress rings use your theme's two colors, like the progress bar on the page, and the all-binders summary has the same bar. Master sets get the same ring as every other binder, with the Pokémon's picture next to its name.
