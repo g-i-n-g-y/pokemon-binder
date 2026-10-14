@@ -640,9 +640,13 @@ dialog.float .ui-chips{display:grid;grid-template-columns:repeat(auto-fill,minma
 .srow[aria-current="true"]{--ring-bg:var(--dark-soft);background:var(--dark-soft);box-shadow:inset 3px 0 0 var(--dark)}
 .srow .ui-l b{font-family:var(--f-display);font-weight:700;font-size:16px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .srow .ui-l small{font-variant-numeric:tabular-nums}
-.srow .sprite{flex:none;width:40px;height:40px;margin:0}
+.srow .ui-l b .sprite{flex:none;width:26px;height:26px;margin:-4px 0 -4px -2px}
+/* the ring is filled with the theme's two colors, like the progress bar on the page */
 .ring{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink);
-  background:radial-gradient(closest-side,var(--ring-bg) 77%,transparent 79% 100%),conic-gradient(var(--dark) calc(var(--p)*1%),var(--line) 0)}
+  background:radial-gradient(closest-side,var(--ring-bg) 76%,transparent 78% 100%),
+    conic-gradient(var(--light) 0,var(--dark) calc(var(--p)*1%),var(--line) calc(var(--p)*1%) 100%)}
+.allsum .as-bar{height:5px;margin:5px 0 3px;max-width:150px}
+:root[data-private] .allsum .as-bar{filter:blur(6px)}
 .srm{flex:none;margin:0 12px 0 4px;border:1px solid var(--bad);background:none;color:var(--bad);border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
 .srm.confirm{background:var(--bad);color:var(--bg)}
 :root[data-private] .srow small,:root[data-private] .srow .ring{filter:blur(8px);user-select:none}
@@ -2390,7 +2394,9 @@ function drawAllSum(){
   const g=document.createElement("div"); g.className="grid2";
   const cell=(k,v,sEl)=>{ const d=document.createElement("div"); const a=document.createElement("span"); a.className="k"; a.textContent=k; const b=document.createElement("span"); b.className="v"; b.textContent=v; d.append(a,b); if(sEl) d.append(sEl); g.append(d); };
   const sub=t=>{ const e=document.createElement("span"); e.className="s"; if(typeof t==="string") e.textContent=t; else e.append(...t); return e; };
-  cell("Cards owned", T.owned+" / "+T.count, sub(Math.round(T.owned/Math.max(1,T.count)*100)+"% complete"));
+  const allPct=Math.round(T.owned/Math.max(1,T.count)*100);
+  const bar=document.createElement("div"); bar.className="pbar as-bar"; const bi=document.createElement("i"); bi.style.width=allPct+"%"; bar.append(bi);
+  cell("Cards owned", T.owned+" / "+T.count, sub(allPct+"% complete")); g.lastChild.insertBefore(bar, g.lastChild.lastChild);
   let gain="Add what you paid to see gain";
   if(T.paid>0){ const d=T.value-T.paid, sp=document.createElement("span"); sp.className=d>=0?"pos":"neg"; sp.textContent=(d>=0?"+":"−")+money0(Math.abs(d)); gain=[sp," vs. "+money0(T.paid)+" paid"]; }
   cell("Collection value", money0(T.value), sub(gain));
@@ -2416,9 +2422,9 @@ function drawSets(){
     const b=document.createElement("b"); b.textContent=s.name; if(s.custom) b.append(" ", customBadge(s.custom));
     const sm=document.createElement("small"), base=own+" of "+total+(s.totals?" · "+money0(s.totals.value):"");
     sm.textContent=base;
-    let lead=ring(pct);
-    // master sets show the Pokémon instead of the ring (with the % in the text); the ring comes back if the picture is missing
-    if(isDex(s.id)){ const im=document.createElement("img"); im.className="sprite"; im.alt=""; im.src="set/"+enc(s.id)+"/sprite.png"; sm.textContent=base+" · "+pct+"%"; im.onerror=()=>{ im.replaceWith(ring(pct)); sm.textContent=base; }; lead=im; }
+    const lead=ring(pct);
+    // master sets: the Pokémon's picture sits next to its name, so every row lines up with the same ring
+    if(isDex(s.id)){ const im=document.createElement("img"); im.className="sprite"; im.alt=""; im.src="set/"+enc(s.id)+"/sprite.png"; im.onerror=()=>im.remove(); b.prepend(im); }
     l.append(b,sm); go.append(lead,l);
     go.setAttribute("aria-label", s.name+", "+own+" of "+total+" owned"+(s.id===state.sid?", open now":""));
     if(editing){ go.disabled=true; }
