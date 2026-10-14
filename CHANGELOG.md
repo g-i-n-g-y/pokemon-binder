@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v3.2.1 (October 13, 2026)
 
 - Sets menu: the progress rings use your theme's two colors, like the progress bar on the page, and the all-binders summary has the same bar. Master sets get the same ring as every other binder, with the Pokémon's picture next to its name.
 
