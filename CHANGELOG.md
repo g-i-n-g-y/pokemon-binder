@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v3.0 (October 13, 2026)
 
 - **Your data now lives in one database file** (`data/binder.db`, SQLite, built into Python, nothing to install).
   - Moves over by itself the first time v3.0 starts. Your old files are kept in `data/pre-sqlite-<date>/`, not deleted.
@@ -19,6 +19,10 @@ The binder shows these in **Settings → About → Check for updates**.
   - Backups are still the same zip of JSON files: backups from older versions restore here, and backups from here restore in older versions.
   - Rolling back to an older version from Settings → About writes your data back out as files for it first, so nothing is lost.
   - Settings → About shows the database file and its size.
+- **Opens faster, especially on your phone:** BEN now squeezes the page and your binder data before sending them (gzip). The page is about 4 times smaller to download, and opening it again sends nothing at all if it hasn't changed.
+- **BEN works out price changes now:** the ▲▼ changes, biggest movers and gain/drop sorts come from a small summary BEN sends, instead of your phone downloading every saved day of prices. That summary stays the same size however long your history gets. A card's price chart loads when you open that card.
+- The updater can install versions made of more than two files (needed for upcoming changes).
+- A built-in check (`tests/smoke_test.py`, 33 checks) runs before every release.
 
 ## v2.20 (October 12, 2026)
 

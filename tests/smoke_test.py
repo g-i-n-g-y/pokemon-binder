@@ -94,6 +94,24 @@ def main():
         check("prices came across", code == 200 and st["prices"]["p"]["1"] == [25.0])
         code, hist = call(base, "GET", "/api/set/neo4/history")
         check("price history came across", hist == {"2026-10-11": {"1": 24.0, "2": 9.0}, "2026-10-12": {"1": 25.0, "2": 10.0}})
+        code, tr = call(base, "GET", "/api/set/neo4/trends?today=2026-10-13")
+        c1 = (tr.get("cards") or {}).get("1", {}) if isinstance(tr, dict) else {}
+        check("price change summary", code == 200 and tr.get("first") == "2026-10-11" and c1.get("count") == 2
+              and c1.get("at", {}).get("1") == ["2026-10-12", 25.0] and c1.get("first") == ["2026-10-11", 24.0], tr)
+        code, one = call(base, "GET", "/api/set/neo4/history?card=2")
+        check("one card's price chart", code == 200 and one.get("points") == [["2026-10-11", 9.0], ["2026-10-12", 10.0]], one)
+        code, _ = call(base, "GET", "/api/set/neo4/history?card=../x")
+        check("bad card name is turned down", code == 400)
+        code, raw = call(base, "GET", "/")
+        req = urllib.request.Request(base + "/", headers={"Accept-Encoding": "gzip"})
+        with OPENER.open(req, timeout=10) as r:
+            squeezed, enc, etag = r.read(), r.headers.get("Content-Encoding"), r.headers.get("ETag")
+        check("page is sent compressed", enc == "gzip" and len(squeezed) < len(raw) / 2)
+        try:
+            OPENER.open(urllib.request.Request(base + "/", headers={"If-None-Match": etag}), timeout=10)
+            check("unchanged page isn't sent again", False)
+        except urllib.error.HTTPError as e:
+            check("unchanged page isn't sent again", e.code == 304)
 
         rec = {"qty": 2, "purchases": [{"d": "2026-10-13", "price": 7.5, "where": "Card show"}, {"d": "", "price": None, "where": ""}], "cond": "MP"}
         code, _ = call(base, "PUT", "/api/set/neo4/card/2", rec)

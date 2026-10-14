@@ -1004,7 +1004,7 @@ const SKINS = [
 ];
 const RSYM = {"Common":"●","Uncommon":"◆","Rare":"★","Rare Holo":"★ Holo","Rare Shining":"★ Shining","Rare Secret":"★ Secret"};
 const DEFAULT_SLOTS=[{t:"raw",c:"LP"},{t:"raw",c:"MP"}];
-const state = { slots:DEFAULT_SLOTS, slotOpts:null, hist:{}, histDates:[], view:"cards", spend:null, sid:null, set:{}, cards:[], own:{}, prices:{}, info:{}, updated:"", sets:[], catalog:null,
+const state = { slots:DEFAULT_SLOTS, slotOpts:null, trends:{}, histFirst:"", seriesCache:{}, view:"cards", spend:null, sid:null, set:{}, cards:[], own:{}, prices:{}, info:{}, updated:"", sets:[], catalog:null,
                 filter:"all", rar:"", sort:"num", q:"", ready:false, open:null };
 const $ = id => document.getElementById(id);
 const money = v => v==null ? "–" : "$"+v.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -1068,9 +1068,21 @@ function askConfirm(title, msg, okLabel, opts={}){
 const paidFor = n => buys(n).reduce((a,b)=>a+(Number(b.price)||0),0);
 const fmtDay = d => d ? new Date(d+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "Before tracking";
 // Price history for one card: [[date, price], ...] oldest first, ending with today's live price.
+// BEN sends one card's history when its details open (the rest of the page only needs the summary in state.trends).
+function loadSeries(n){
+  const sid=state.sid;
+  if(state.seriesCache[n]) return;
+  state.seriesCache[n]="loading";
+  fetch("api/set/"+enc(sid)+"/history?card="+enc(n)).then(r=>r.json()).then(j=>{
+    if(state.sid!==sid || !Array.isArray(j.points)) return;
+    state.seriesCache[n]=j.points;
+    if(state.open===n && $("dlg").open) drawSpark(n);
+  }).catch(()=>{ if(state.seriesCache[n]==="loading") delete state.seriesCache[n]; });
+}
 function series(n){
-  const out=[];
-  for(const d of state.histDates){ const v=state.hist[d][n]; if(typeof v==="number") out.push([d,v]); }
+  const got=state.seriesCache[n];
+  if(!Array.isArray(got)){ loadSeries(n); return []; }
+  const out=got.map(p=>[p[0],p[1]]);
   const cur=basePrice(n), t=todayStr();
   if(cur){ if(out.length && out[out.length-1][0]===t) out[out.length-1][1]=cur; else out.push([t,cur]); }
   return out;
@@ -1080,12 +1092,12 @@ const PERIODS=[[1,"1 day"],[7,"7 days"],[30,"30 days"],[90,"90 days"],[365,"1 ye
 state.period = (()=>{ const v=recall("nd-period"); return v!=null && PERIODS.some(p=>String(p[0])===v) ? +v : 7; })();
 const periodName = (d=state.period) => (PERIODS.find(p=>p[0]===d)||[0,d+" days"])[1];
 // How many days of saved prices this binder has, for the "still filling in" note.
-const historyDays = () => state.histDates.length ? Math.round((new Date(todayStr())-new Date(state.histDates[0]))/864e5) : 0;
+const historyDays = () => state.histFirst ? Math.round((new Date(todayStr())-new Date(state.histFirst))/864e5) : 0;
 function periodNote(){
   const have=historyDays(), want=state.period;
-  if(!state.histDates.length) return "Price changes appear once BEN has saved a few days of prices.";
-  if(want===0) return "All time = since "+fmtDay(state.histDates[0])+".";
-  if(have<want) return "BEN has "+have+" day"+(have===1?"":"s")+" of saved prices so far (since "+fmtDay(state.histDates[0])+"), so this shows the change over those days until "+periodName()+" builds up.";
+  if(!state.histFirst) return "Price changes appear once BEN has saved a few days of prices.";
+  if(want===0) return "All time = since "+fmtDay(state.histFirst)+".";
+  if(have<want) return "BEN has "+have+" day"+(have===1?"":"s")+" of saved prices so far (since "+fmtDay(state.histFirst)+"), so this shows the change over those days until "+periodName()+" builds up.";
   return "";
 }
 function setPeriod(d){
@@ -1095,11 +1107,16 @@ function setPeriod(d){
   render(); if(state.view==="stats") renderView();
 }
 // Change over the last `days` days (uses the oldest point if history is shorter; 0 = all time).
+// BEN's summary per card (state.trends[n]): first and last saved price, how many days, and the price as it
+// stood 1/7/30/90/365 days back. Gives the same answer as reading every saved day.
 function trend(n, days=state.period){
-  const sr=series(n); if(sr.length<2) return null;
-  const cut=days ? daysAgo(days) : sr[0][0]; let from=sr[0];
-  for(const pt of sr){ if(pt[0]<=cut) from=pt; else break; }
-  const to=sr[sr.length-1]; if(!from[1] || from===to) return null;
+  const h=state.trends[n]; if(!h) return null;
+  const cur=basePrice(n), t=todayStr();
+  const points=cur ? h.count+(h.last[0]===t?0:1) : h.count;   // saved days, plus today's live price
+  if(points<2) return null;
+  const from=days ? (h.at[days]||h.first) : h.first;
+  const to=cur ? [t,cur] : h.last;
+  if(!from[1] || (!cur && from[0]===h.last[0])) return null;
   const span=Math.round((new Date(to[0])-new Date(from[0]))/864e5);
   return {pct:(to[1]-from[1])/from[1]*100, diff:to[1]-from[1], from:from[1], to:to[1], span};
 }
@@ -2370,7 +2387,7 @@ let loadSeq=0;
 function openSet(sid){
   state.sid=sid; store("nd-set",sid||undefined);
   if(sid && location.hash!=="#"+sid) history.replaceState(null,"","#"+sid);
-  state.cards=[]; state.own={}; state.prices={}; state.info={}; state.updated=""; state.ready=false; state.hist={}; state.histDates=[];
+  state.cards=[]; state.own={}; state.prices={}; state.info={}; state.updated=""; state.ready=false; state.trends={}; state.histFirst=""; state.seriesCache={};
   if(!sid){ state.set={name:"Pokémon Binder"}; header(); rarityOptions(); render(); $("sync").textContent="Open the menu to add your first set."; return Promise.resolve(); }
   state.set=(state.sets.find(s=>s.id===sid))||{name:sid}; header(); render();
   return loadState();
@@ -2386,7 +2403,7 @@ function loadState(){
     state.slots=s.slots||DEFAULT_SLOTS;
     state.shop=s.shop||{};
     state.ready=true; header(); rarityOptions(); render(); renderView();
-    fetch("api/set/"+enc(sid)+"/history").then(r=>r.json()).then(h=>{ if(seq!==loadSeq) return; state.hist=h||{}; state.histDates=Object.keys(state.hist).sort(); render(); renderView(); }).catch(()=>{});
+    fetch("api/set/"+enc(sid)+"/trends?today="+todayStr()).then(r=>r.json()).then(h=>{ if(seq!==loadSeq) return; state.trends=h.cards||{}; state.histFirst=h.first||""; state.seriesCache={}; render(); renderView(); }).catch(()=>{});
     if(!wasRunning){ $("sync").textContent="Saved on BEN · prices auto-refresh daily"; hideBar($("syncBar")); watchImages(); }
   }).catch(err=>{ if(seq===loadSeq){ state.ready=false; render(); $("sync").textContent=(err&&err.message&&err.message!=="Failed to fetch" ? err.message : "Can't reach BEN")+". Try reloading."; } });
 }
@@ -2749,7 +2766,7 @@ function drawMovers(){
   $("moversTitle").textContent="Biggest movers · "+periodName().toLowerCase()+" · "+(state.set.name||"");
   const rows=state.cards.map(c=>({c,t:trend(c.n)})).filter(r=>r.t && r.t.from>=1 && Math.abs(r.t.pct)>=0.5);
   if(!rows.length){
-    const first=state.histDates[0];
+    const first=state.histFirst;
     box.append(note(first ? "No price changes yet. Prices have been saved daily since "+fmtDay(first)+"." : "Movers appear once BEN has saved prices for a few days."));
     return;
   }

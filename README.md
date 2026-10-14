@@ -91,8 +91,10 @@ Updates only install when you choose them: **Settings → About → Check for up
 Settings → About shows the installed version, any update problem, and up to 3 previous versions you can roll back to. Version history is in [CHANGELOG.md](CHANGELOG.md).
 
 Safety nets:
-- A new `server.py` with an error is skipped entirely, and the current version keeps running.
-- The last 3 versions are kept in `previous/` next to `server.py`.
+- Before installing, the new version is test-started on its own with a copy of your data. If it has an error or doesn't start, nothing is installed and the current version keeps running.
+- A backup of your data is saved first (Settings → Backup → Saved on BEN).
+- The last 3 versions are kept in `previous/` next to `server.py`. Rolling back to a version from before v3.0 writes your data back out as the files it uses.
+- The files a version needs are listed in its `server.py` (`APP_FILES`), so versions can have more than two files.
 
 Optional environment variables:
 

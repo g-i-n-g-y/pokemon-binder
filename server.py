@@ -16,7 +16,7 @@ GITHUB_REPO to an empty value to use a folder mounted at /updates instead (same 
 needed for a private copy of the repository. Replaced files are kept in previous/.
 """
 from html import unescape
-import contextlib, io, json, os, re, shutil, socket, sqlite3, subprocess, sys, tempfile, threading, time, traceback, urllib.error, urllib.parse, urllib.request, zipfile
+import ast, contextlib, gzip, io, json, os, re, shutil, socket, sqlite3, subprocess, sys, tempfile, threading, time, traceback, urllib.error, urllib.parse, urllib.request, zipfile
 from datetime import datetime, timedelta, timezone
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 try:
@@ -24,7 +24,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "2.20"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
+APP_VERSION = "3.0"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -1476,6 +1476,55 @@ def snapshot_history(sid, prices=None):
     history_put_day(sid, today_local(), {n: v[0] for n, v in p.items() if v and isinstance(v[0], (int, float))})
 
 
+TREND_DAYS = (1, 7, 30, 90, 365)   # the price change periods the page offers (plus "all time")
+
+
+def _is_num(v):
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+def set_trends(sid, today):
+    """Everything the page needs to show price changes, without sending every saved day:
+    for each card, its first and last saved price, how many days have one, and the price as it stood
+    1, 7, 30, 90 and 365 days before `today`. Stays the same size however long history grows."""
+    base = datetime.strptime(today, "%Y-%m-%d").date()
+    cuts = [(str(p), (base - timedelta(days=p)).isoformat()) for p in TREND_DAYS]
+    hist = read_json(sdir(sid, "history.json"), {})
+    hist = hist if isinstance(hist, dict) else {}
+    cards, first = {}, ""
+    for d in sorted(hist):
+        first = first or d
+        day = hist[d]
+        if not isinstance(day, dict):
+            continue
+        for n, v in day.items():
+            if not _is_num(v):
+                continue
+            c = cards.get(n)
+            if c is None:
+                c = cards[n] = {"first": [d, v], "count": 0, "at": {}}
+            c["count"] += 1
+            c["last"] = [d, v]
+            for p, cut in cuts:
+                if d <= cut:
+                    c["at"][p] = [d, v]
+    return {"first": first, "today": today, "cards": cards}
+
+
+def card_series(sid, n):
+    """[[date, price], ...] for one card, oldest first (for its price chart)."""
+    key = f"sets/{sid}/history.json"
+    with db_lock:
+        row = db().execute("SELECT body FROM docs WHERE key = ?", (key,)).fetchone()
+        if row is not None and "__raw" not in json.loads(row[0]):
+            return [[d, v] for d, v, t in db().execute(
+                "SELECT d, json_extract(snap, ?), json_type(snap, ?) FROM history WHERE sid = ? ORDER BY d",
+                (f'$."{n}"', f'$."{n}"', sid)) if t in ("integer", "real")]
+    hist = read_json(sdir(sid, "history.json"), {})
+    hist = hist if isinstance(hist, dict) else {}
+    return [[d, hist[d][n]] for d in sorted(hist) if isinstance(hist[d], dict) and _is_num(hist[d].get(n))]
+
+
 def migrate_purchases(sid):
     """Older records kept one 'cost' number; turn it into an undated purchase."""
     with lock:
@@ -2201,6 +2250,22 @@ def host_ok(host_header):
         return True
     return name.endswith(LOCAL_SUFFIXES)
 
+# Text replies are squeezed with gzip before sending (every browser unpacks it): the page and binder data
+# get about 4 times smaller, which matters most on a phone over Tailscale. Pictures are already compressed.
+COMPRESSIBLE = {"application/json", "text/html", "text/plain", "text/csv", "image/svg+xml", "application/javascript", "text/css"}
+_gz_cache = {}
+
+
+def gzipped(body, etag=None):
+    """gzip `body`; files with an ETag (like the page itself) are squeezed once and remembered."""
+    if etag and _gz_cache.get("etag") == etag:
+        return _gz_cache["body"]
+    out = gzip.compress(body, 6)
+    if etag:
+        _gz_cache.update(etag=etag, body=out)
+    return out
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass
@@ -2214,21 +2279,43 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         super().end_headers()
 
-    def send(self, code, body=b"", ctype="application/json", cache=None):
+    def send(self, code, body=b"", ctype="application/json", cache=None, etag=None):
         if isinstance(body, (dict, list)):
             body = json.dumps(body).encode()
+        if etag and code == 200 and self.headers.get("If-None-Match") == etag:
+            self.send_response(304)   # the browser already has this exact file
+            self.send_header("ETag", etag)
+            if cache:
+                self.send_header("Cache-Control", cache)
+            self.end_headers()
+            return
+        squeeze = ctype.split(";")[0].strip() in COMPRESSIBLE and len(body) > 1024
+        if squeeze and "gzip" in (self.headers.get("Accept-Encoding") or "").lower():
+            body = gzipped(body, etag)
+        else:
+            squeeze = False
         self.send_response(code)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
+        if squeeze:
+            self.send_header("Content-Encoding", "gzip")
+        if ctype.split(";")[0].strip() in COMPRESSIBLE:
+            self.send_header("Vary", "Accept-Encoding")
         if cache:
             self.send_header("Cache-Control", cache)
+        if etag:
+            self.send_header("ETag", etag)
         self.end_headers()
         self.wfile.write(body)
 
     def send_file(self, path, ctype, cache="max-age=604800"):
         try:
+            st = os.stat(path)
+            etag = f'"{st.st_mtime_ns:x}-{st.st_size:x}"'
+            if self.headers.get("If-None-Match") == etag:
+                return self.send(200, b"", ctype, cache, etag)
             with open(path, "rb") as f:
-                self.send(200, f.read(), ctype, cache)
+                self.send(200, f.read(), ctype, cache, etag)
         except OSError:
             self.send(404, b"not found", "text/plain")
 
@@ -2391,7 +2478,23 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(500, {"error": f"Couldn't work out spending: {e}"})
         m = re.fullmatch(rf"/api/set/({SID_RE})/history", path)
         if m:
+            q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            card = (q.get("card") or [""])[0]
+            if card:   # one card's chart
+                if not re.fullmatch(NUM_RE, card):
+                    return self.send(400, {"error": "bad card"})
+                return self.send(200, {"card": card, "points": card_series(m.group(1), card)}, cache="no-store")
             return self.send(200, read_json(sdir(m.group(1), "history.json"), {}), cache="no-store")
+        m = re.fullmatch(rf"/api/set/({SID_RE})/trends", path)
+        if m:
+            q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            today = (q.get("today") or [""])[0]
+            if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", today):
+                today = today_local()
+            try:
+                return self.send(200, set_trends(m.group(1), today), cache="no-store")
+            except ValueError:
+                return self.send(400, {"error": "bad date"})
         m = re.fullmatch(rf"/api/set/({SID_RE})/state", path)
         if m:
             sid = m.group(1)
@@ -2684,7 +2787,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send(400, {"error": "Updates aren't set up"})
             except Exception as e:
                 return self.send(502, {"error": gh_error(e)})
-            restarting = "server.py" in installed
+            restarting = any(n.endswith(".py") for n in installed)
             self.send(200, {"installed": installed, "restarting": restarting})
             if restarting:
                 threading.Thread(target=restart_self, args=(1,), daemon=True).start()
@@ -2698,7 +2801,7 @@ class Handler(BaseHTTPRequestHandler):
                 installed = rollback(vid)
             except Exception as e:
                 return self.send(400, {"error": str(e) or "Couldn't roll back"})
-            restarting = "server.py" in installed
+            restarting = any(n.endswith(".py") for n in installed)
             self.send(200, {"installed": installed, "restarting": restarting})
             if restarting:
                 threading.Thread(target=restart_self, args=(1,), daemon=True).start()
@@ -2815,7 +2918,11 @@ def test_tcgplayer(pid):
 
 
 UPDATES = os.environ.get("BINDER_UPDATES", "/updates")
-UPDATE_FILES = ("server.py", "index.html")
+# The program files of THIS version. The updater reads this line from a new server.py to know what to download,
+# so a later version can be split into more files. Versions before v3.0 only ever had these two.
+APP_FILES = ("server.py", "index.html")
+UPDATE_FILES = APP_FILES
+APP_FILE_RE = re.compile(r"[A-Za-z0-9_\-]+(?:/[A-Za-z0-9_\-]+)*\.(?:py|html|js|css)")
 GH_REPO = os.environ.get("GITHUB_REPO", "g-i-n-g-y/pokemon-binder")
 GH_BRANCH = os.environ.get("GITHUB_BRANCH", "main")
 GH_TOKEN = os.environ.get("GITHUB_TOKEN", "").strip()
@@ -2827,6 +2934,27 @@ update_status = {"source": "", "checked": "", "error": ""}
 
 def now_iso():
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def files_of(server_path):
+    """The program files the server.py at `server_path` needs (its APP_FILES line), safest names only.
+    Versions from before v3.0 have no such line and use server.py and index.html."""
+    try:
+        with open(server_path, encoding="utf-8", errors="ignore") as f:
+            m = re.search(r"^APP_FILES\s*=\s*(\([^)]*\))", f.read(), re.M)
+        names = tuple(ast.literal_eval(m.group(1))) if m else ("server.py", "index.html")
+    except (OSError, ValueError, SyntaxError):
+        names = ("server.py", "index.html")
+    if "server.py" not in names or not all(isinstance(n, str) and APP_FILE_RE.fullmatch(n) for n in names):
+        raise RuntimeError("The new version's file list looks wrong, so nothing was installed")
+    return names
+
+
+def copy_into(src_root, dst_root, names):
+    for name in names:
+        dst = os.path.join(dst_root, *name.split("/"))
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        shutil.copy2(os.path.join(src_root, *name.split("/")), dst)
 
 
 def current_version():
@@ -2877,9 +3005,7 @@ def trial_run(folder):
     tmp = tempfile.mkdtemp(prefix=".trial-", dir=APP)
     proc = logf = None
     try:
-        for name in UPDATE_FILES:
-            src = os.path.join(folder, name)
-            shutil.copyfile(src if os.path.isfile(src) else os.path.join(APP, name), os.path.join(tmp, name))
+        copy_into(folder, tmp, files_of(os.path.join(folder, "server.py")))
         # a copy of the small data files only (no card pictures or photos)
         for root, dirs, files in os.walk(DATA):
             dirs[:] = [d for d in dirs if d not in ("images", "photos") and not d.startswith("pre-sqlite")]
@@ -2960,9 +3086,7 @@ def save_current_version():
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S-%f")
     dest = os.path.join(PREVIOUS, stamp)
     os.makedirs(dest, exist_ok=False)
-    for name in UPDATE_FILES:
-        if os.path.exists(os.path.join(APP, name)):
-            shutil.copy2(os.path.join(APP, name), os.path.join(dest, name))
+    copy_into(APP, dest, [n for n in APP_FILES if os.path.isfile(os.path.join(APP, *n.split("/")))])
     cur = current_version()
     write_json(os.path.join(dest, "meta.json"), {"version": file_version(os.path.join(APP, "server.py")),
                                                   "commit": cur.get("commit", ""), "subject": cur.get("subject", ""),
@@ -2985,27 +3109,36 @@ def list_versions():
 
 def install_files(folder, label):
     """Install changed program files from `folder`. Saves the running version first. Returns files installed."""
-    changed = [n for n in UPDATE_FILES
-               if os.path.isfile(os.path.join(folder, n)) and not same_file(os.path.join(folder, n), os.path.join(APP, n))]
+    if not os.path.isfile(os.path.join(folder, "server.py")):
+        return []
+    names = files_of(os.path.join(folder, "server.py"))
+    missing = [n for n in names if not os.path.isfile(os.path.join(folder, *n.split("/")))]
+    if missing:
+        raise RuntimeError(f"The new version is missing {', '.join(missing)}, so nothing was installed")
+    changed = [n for n in names if not same_file(os.path.join(folder, *n.split("/")), os.path.join(APP, *n.split("/")))]
     if not changed:
         return []
     # skip the whole update if the new version is broken, so you keep a working binder
-    if "server.py" in changed and not server_ok(os.path.join(folder, "server.py")):
+    broken = [n for n in names if n.endswith(".py") and not server_ok(os.path.join(folder, *n.split("/")))]
+    if broken:
         raise RuntimeError("The new version has a mistake in its code, so nothing was installed. You're still on the current version")
-    if "server.py" in changed or "index.html" in changed:
-        problem = trial_run(folder)
-        if problem:
-            raise RuntimeError(f"The new version failed a test start ({problem}), so nothing was installed. "
-                               "You're still on the current version")
+    problem = trial_run(folder)
+    if problem:
+        raise RuntimeError(f"The new version failed a test start ({problem}), so nothing was installed. "
+                           "You're still on the current version")
     try:
         auto_backup("before-update")
     except Exception as e:
         log(f"Update skipped: couldn't save a backup first ({e})")
         raise RuntimeError(f"Update skipped because a backup couldn't be saved first: {e}")
     save_current_version()
+    # copy everything next to its place first, then swap them in, server.py last
     for name in changed:
-        dst = os.path.join(APP, name)
-        shutil.copyfile(os.path.join(folder, name), dst + ".tmp")
+        dst = os.path.join(APP, *name.split("/"))
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        shutil.copyfile(os.path.join(folder, *name.split("/")), dst + ".tmp")
+    for name in sorted(changed, key=lambda n: n == "server.py"):
+        dst = os.path.join(APP, *name.split("/"))
         os.replace(dst + ".tmp", dst)
     log(f"Installed {label}: " + ", ".join(changed))
     return changed
@@ -3129,14 +3262,23 @@ def changelog():
 
 
 def install_from_github(sha=None):
-    """Download server.py and index.html at `sha` (default: latest) and install them. Returns files installed."""
+    """Download this version's program files at `sha` (default: latest) and install them. Returns files installed."""
     update_status.update(source="github", checked=now_iso(), error="")
     info = commit_info(gh_json(f"commits/{sha or GH_BRANCH}"))
     stage = os.path.join(APP, ".incoming")
+    shutil.rmtree(stage, ignore_errors=True)
     os.makedirs(stage, exist_ok=True)
-    for name in UPDATE_FILES:
-        with open(os.path.join(stage, name), "wb") as f:
+
+    def fetch(name):
+        dst = os.path.join(stage, *name.split("/"))
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        with open(dst, "wb") as f:
             f.write(gh_get(f"contents/{name}?ref={info['sha']}", "application/vnd.github.raw"))
+
+    fetch("server.py")   # first: it says which other files this version needs
+    for name in files_of(os.path.join(stage, "server.py")):
+        if name != "server.py":
+            fetch(name)
     installed = install_files(stage, f"update {info['sha'][:7]} ({info['subject']})")
     # record the version only if its server.py is what's now running
     if same_file(os.path.join(stage, "server.py"), os.path.join(APP, "server.py")):
@@ -3163,7 +3305,7 @@ def rollback(version_id):
             except OSError:
                 pass
         raise
-    if exported and "server.py" in installed:
+    if exported and installed:
         retire_db()
         log("Rolled back to a version without the database. Your data was written out as JSON files for it; "
             "binder.db was renamed, not deleted.")
@@ -3187,7 +3329,7 @@ def restart_self(delay=0):
 
 def version_info():
     out = {}
-    for name in UPDATE_FILES:
+    for name in APP_FILES:
         try:
             out[name] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(os.path.getmtime(os.path.join(APP, name))))
         except OSError:
