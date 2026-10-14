@@ -10,6 +10,12 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.2 (October 13, 2026)
+
+- **Tidier sets menu:** each binder is one slim row with a progress ring, cards owned and value, and the binder you're viewing is highlighted. The all-binders summary is smaller.
+  - Remove buttons are hidden until you tap **Edit**, so a binder can't be removed by accident (it still asks twice).
+  - On phones the menu covers the whole screen, with no strip of the page showing on the right.
+
 ## v3.1 (October 13, 2026)
 
 - **New Settings layout:** a short list of sections (Appearance, Prices, Daily refresh, Backup and import, Server, About), each showing its current value. On a phone, tap one to open it full screen and use the back arrow (or your phone's back gesture) to return. On a computer the list stays on the left. On/off switches replace checkboxes, themes are small color chips, and the help text is shorter.

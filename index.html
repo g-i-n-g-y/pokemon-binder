@@ -622,6 +622,43 @@ dialog.float .ui-chips{display:grid;grid-template-columns:repeat(auto-fill,minma
   .ui-split .ui-nav[hidden]{display:none!important}
   dialog.float .sheet-foot{margin:4px -16px -28px;border-radius:0}
 }
+
+/* ---------- sets menu (built from the shared blocks) ---------- */
+.dr-bar{display:flex;align-items:center;gap:8px;min-height:40px}
+.dr-bar h2{flex:1;min-width:0;margin:0}
+.dr-bar .fclose{margin-left:auto}
+.dr-edit{flex:none;border:1px solid var(--line);background:none;color:var(--ink);font:inherit;font-size:14px;border-radius:999px;padding:5px 14px;cursor:pointer}
+.dr-edit:hover{border-color:var(--muted)}
+.dr-edit[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+#drSets{gap:14px}
+.setlist{margin:0;display:block}
+.srow{display:flex;align-items:center;--ring-bg:var(--bg)}
+.srow+.srow{border-top:1px solid var(--line)}
+.srow .go{flex:1;min-width:0;min-height:62px}
+.srow .go:disabled{cursor:default;opacity:1}
+.srow .go:not(:disabled):hover{--ring-bg:var(--sleeve)}
+.srow[aria-current="true"]{--ring-bg:var(--dark-soft);background:var(--dark-soft);box-shadow:inset 3px 0 0 var(--dark)}
+.srow .ui-l b{font-family:var(--f-display);font-weight:700;font-size:16px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.srow .ui-l small{font-variant-numeric:tabular-nums}
+.srow .sprite{flex:none;width:40px;height:40px;margin:0}
+.ring{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink);
+  background:radial-gradient(closest-side,var(--ring-bg) 77%,transparent 79% 100%),conic-gradient(var(--dark) calc(var(--p)*1%),var(--line) 0)}
+.srm{flex:none;margin:0 12px 0 4px;border:1px solid var(--bad);background:none;color:var(--bad);border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
+.srm.confirm{background:var(--bad);color:var(--bg)}
+:root[data-private] .srow small,:root[data-private] .srow .ring{filter:blur(8px);user-select:none}
+.allsum{padding:12px 14px;margin:0}
+.allsum h3{margin:0 0 8px;font-size:14px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--ink)}
+.allsum .grid2{gap:10px 16px}
+.allsum .v{font-size:18px}
+#drSets .verline{margin-top:0}
+/* the menu covers the whole phone screen (the browser otherwise keeps popups a little narrower than the screen) */
+@media (max-width:640px){
+  #drawer:not(.pushed){width:100%;max-width:100%;height:100dvh;max-height:100dvh;margin:0;border:0}
+  #drawer .sheet{padding:max(12px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom))}
+}
+@media (min-width:641px){
+  #drawer:not(.pushed){width:min(420px,100%);max-width:100%;height:100dvh;max-height:100dvh}
+}
 </style>
 </head>
 <body>
@@ -913,12 +950,15 @@ dialog.float .ui-chips{display:grid;grid-template-columns:repeat(auto-fill,minma
 
 <dialog id="drawer" class="left" aria-labelledby="drTitle">
   <div class="sheet">
-    <button class="close" type="button" id="drClose">Close ✕</button>
-    <div id="drSets">
+    <div class="dr-bar">
       <h2 id="drTitle">Your sets</h2>
+      <button class="dr-edit" type="button" id="drEdit" aria-pressed="false">Edit</button>
+      <button class="fclose" type="button" id="drClose" aria-label="Close" title="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div id="drSets">
       <div class="allsum" id="allSum" hidden></div>
-      <div class="setlist" id="setList"></div>
-      <button class="btn primary" type="button" id="addOpen">+ Add a set or Pokémon</button>
+      <div class="ui-group setlist" id="setList"></div>
+      <div class="ui-group"><button class="ui-row" type="button" id="addOpen"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span class="ui-l"><b>Add a set or Pokémon</b></span><span class="ui-chev" aria-hidden="true"></span></button></div>
       <button class="verline" type="button" id="verLine" title="What's new">Pokémon Binder <span id="verNum"></span></button>
     </div>
     <div id="drAdd" hidden>
@@ -2346,7 +2386,7 @@ function drawAllSum(){
   const box=$("allSum"), withT=state.sets.filter(s=>s.totals);
   box.hidden = withT.length<2; box.replaceChildren(); if(box.hidden) return;
   const T=withT.reduce((a,s)=>{ for(const k in s.totals) a[k]=(a[k]||0)+s.totals[k]; return a; },{});
-  const h=document.createElement("h3"); h.textContent="All binders"; box.append(h);
+  const h=document.createElement("h3"); h.textContent="All "+withT.length+" binders"; box.append(h);
   const g=document.createElement("div"); g.className="grid2";
   const cell=(k,v,sEl)=>{ const d=document.createElement("div"); const a=document.createElement("span"); a.className="k"; a.textContent=k; const b=document.createElement("span"); b.className="v"; b.textContent=v; d.append(a,b); if(sEl) d.append(sEl); g.append(d); };
   const sub=t=>{ const e=document.createElement("span"); e.className="s"; if(typeof t==="string") e.textContent=t; else e.append(...t); return e; };
@@ -2354,31 +2394,47 @@ function drawAllSum(){
   let gain="Add what you paid to see gain";
   if(T.paid>0){ const d=T.value-T.paid, sp=document.createElement("span"); sp.className=d>=0?"pos":"neg"; sp.textContent=(d>=0?"+":"−")+money0(Math.abs(d)); gain=[sp," vs. "+money0(T.paid)+" paid"]; }
   cell("Collection value", money0(T.value), sub(gain));
-  cell("Cost to finish", money0(T.need), sub((T.count-T.owned)+" cards needed"));
-  cell("Full sets value", money0(T.full), sub(withT.length+" binders"));
+  cell("Cost to finish", money0(T.need), sub((T.count-T.owned)+" cards to go"));
+  cell("Full sets value", money0(T.full));
   box.append(g);
 }
+// One row per binder: progress ring (or the Pokémon's picture), name, cards owned and value.
+// "Edit" at the top shows a Remove button on each row, so it can't be tapped by accident.
+const setEditing = () => $("drEdit").getAttribute("aria-pressed")==="true";
+function setEdit(on){ $("drEdit").setAttribute("aria-pressed", on); $("drEdit").textContent=on ? "Done" : "Edit"; drawSets(); }
+function ring(pct){ const r=document.createElement("span"); r.className="ring"; r.style.setProperty("--p", pct); r.textContent=pct+"%"; r.setAttribute("aria-hidden","true"); return r; }
 function drawSets(){
   drawAllSum();
-  const L=$("setList"); L.replaceChildren();
-  if(!state.sets.length){ const p=document.createElement("p"); p.className="note"; p.textContent="No sets yet. Add one to start."; L.append(p); }
+  const L=$("setList"), editing=setEditing(); L.replaceChildren();
+  $("drEdit").hidden=!state.sets.length;
+  if(!state.sets.length){ const p=document.createElement("p"); p.className="note"; p.style.padding="12px 14px"; p.textContent="No sets yet. Add one to start."; L.append(p); }
   for(const s of state.sets){
-    const row=document.createElement("div"); row.className="setrow"; row.setAttribute("aria-current", s.id===state.sid);
-    const go=document.createElement("button"); go.type="button"; go.className="go";
-    const b=document.createElement("b"); b.textContent=s.name;
-    if(isDex(s.id)){ const im=document.createElement("img"); im.className="sprite"; im.alt=""; im.src="set/"+enc(s.id)+"/sprite.png"; im.onerror=()=>im.remove(); b.prepend(im); }
-    if(s.custom) b.append(customBadge(s.custom));
-    const sp=document.createElement("span"); sp.textContent=(s.owned||0)+" of "+(s.count||s.total||0)+" owned"+(s.totals?" · "+money0(s.totals.value):"")+" · "+[s.series,year(s.releaseDate)].filter(Boolean).join(" · ");
-    const bar=document.createElement("div"); bar.className="mini"; const i=document.createElement("i"); i.style.width=((s.owned||0)/Math.max(1,s.count||s.total||1)*100).toFixed(1)+"%"; bar.append(i);
-    go.append(b,sp,bar); go.onclick=()=>{ $("drawer").close(); openSet(s.id); };
-    const rm=document.createElement("button"); rm.type="button"; rm.className="rm"; rm.textContent="Remove";
-    rm.onclick=async()=>{
-      if(!rm.classList.contains("confirm")){ rm.classList.add("confirm"); rm.textContent="Tap to confirm"; setTimeout(()=>{ rm.classList.remove("confirm"); rm.textContent="Remove"; },4000); return; }
-      rm.disabled=true;
-      try{ const r=await fetch("api/sets/"+enc(s.id),{method:"DELETE"}); if(!r.ok) throw 0; }catch(_){ rm.disabled=false; rm.textContent="Couldn't remove"; return; }
-      await loadSets(); if(state.sid===s.id) openSet(state.sets[0] ? state.sets[0].id : null); drawSets();
-    };
-    row.append(go,rm); L.append(row);
+    const total=s.count||s.total||0, own=s.owned||0, pct=Math.round(own/Math.max(1,total)*100);
+    const row=document.createElement("div"); row.className="srow"; if(s.id===state.sid) row.setAttribute("aria-current","true");
+    const go=document.createElement("button"); go.type="button"; go.className="ui-row go";
+    const l=document.createElement("span"); l.className="ui-l";
+    const b=document.createElement("b"); b.textContent=s.name; if(s.custom) b.append(" ", customBadge(s.custom));
+    const sm=document.createElement("small"), base=own+" of "+total+(s.totals?" · "+money0(s.totals.value):"");
+    sm.textContent=base;
+    let lead=ring(pct);
+    // master sets show the Pokémon instead of the ring (with the % in the text); the ring comes back if the picture is missing
+    if(isDex(s.id)){ const im=document.createElement("img"); im.className="sprite"; im.alt=""; im.src="set/"+enc(s.id)+"/sprite.png"; sm.textContent=base+" · "+pct+"%"; im.onerror=()=>{ im.replaceWith(ring(pct)); sm.textContent=base; }; lead=im; }
+    l.append(b,sm); go.append(lead,l);
+    go.setAttribute("aria-label", s.name+", "+own+" of "+total+" owned"+(s.id===state.sid?", open now":""));
+    if(editing){ go.disabled=true; }
+    else { const c=document.createElement("span"); c.className="ui-chev"; c.setAttribute("aria-hidden","true"); go.append(c); go.onclick=()=>{ $("drawer").close(); openSet(s.id); }; }
+    row.append(go);
+    if(editing){
+      const rm=document.createElement("button"); rm.type="button"; rm.className="srm"; rm.textContent="Remove"; rm.setAttribute("aria-label","Remove "+s.name);
+      rm.onclick=async()=>{
+        if(!rm.classList.contains("confirm")){ rm.classList.add("confirm"); rm.textContent="Tap again"; setTimeout(()=>{ if(rm.isConnected){ rm.classList.remove("confirm"); rm.textContent="Remove"; } },4000); return; }
+        rm.disabled=true;
+        try{ const r=await fetch("api/sets/"+enc(s.id),{method:"DELETE"}); if(!r.ok) throw 0; }catch(_){ rm.disabled=false; rm.textContent="Couldn't remove"; return; }
+        await loadSets(); if(state.sid===s.id) openSet(state.sets[0] ? state.sets[0].id : null); drawSets();
+      };
+      row.append(rm);
+    }
+    L.append(row);
   }
 }
 // ---------- add a Pokémon (master set binder) ----------
@@ -2489,6 +2545,7 @@ function drawCatalog(){
 }
 function showAdd(on){
   $("drSets").hidden=on; $("drAdd").hidden=!on;
+  $("drTitle").hidden=on; $("drEdit").hidden=on || !state.sets.length;
   if(!on) clearTimeout(dexTimer);
   if(on){
     $("addQ").value=""; setAddKind("set"); setTimeout(()=>$("addQ").focus(),50);
@@ -2535,6 +2592,8 @@ drawerEl.addEventListener("cancel",e=>{ e.preventDefault(); drawerEl.close(); })
 document.addEventListener("keydown",e=>{ if(e.key==="Escape" && drawerEl.open && drawerEl.classList.contains("pushed") && !document.querySelector("dialog[open]:modal")) drawerEl.close(); });
 $("menuBtn").onclick=()=>{ if(drawerEl.open && drawerEl.classList.contains("pushed")){ drawerEl.close(); return; } showAdd(false); drawSets(); openDrawer(); loadSets().then(drawSets); };
 $("drClose").onclick=()=>$("drawer").close();
+$("drEdit").onclick=()=>setEdit(!setEditing());
+$("drawer").addEventListener("close",()=>{ if(setEditing()) setEdit(false); });
 $("drawer").addEventListener("click",e=>{ if(e.target===$("drawer")) $("drawer").close(); });
 $("addOpen").onclick=()=>showAdd(true);
 $("addBack").onclick=()=>{ showAdd(false); drawSets(); };
