@@ -933,11 +933,22 @@ def download_images(sid):
         img_jobs.pop(sid, None)
 
 
-def start_images(sid):
-    if sid in img_jobs or binder_age(sid) < FILL_AFTER:
+def start_images(sid, now=False):
+    """Fill in a binder's small pictures in the background. Waits until a new binder has been kept an hour,
+    unless you ask for it now (sets menu > Edit > Get pictures)."""
+    if sid in img_jobs or (not now and binder_age(sid) < FILL_AFTER):
         return
     img_jobs[sid] = {"done": 0, "total": 0}
     threading.Thread(target=download_images, args=(sid,), daemon=True).start()
+
+
+def pictures_saved(sid, cards=None):
+    """How many of a binder's small pictures are saved on the server: (saved, total)."""
+    cards = set_cards(sid) if cards is None else cards
+    want = [c["n"] for c in cards if (c.get("img") or "").startswith("http")]
+    d = sdir(sid, "images", "s")
+    have = set(os.listdir(d)) if os.path.isdir(d) else set()
+    return sum(1 for n in want if f"{n}.png" in have), len(want)
 
 
 # ---------- prices ----------
@@ -2718,6 +2729,8 @@ class Handler(BaseHTTPRequestHandler):
                 m["count"] = (len(cards) if cards is not None else m.get("total", 0)) + m["custom"]
                 m["images"] = sid in img_jobs
                 if cards is not None:
+                    have, want = pictures_saved(sid, cards)
+                    m["pics"] = {"saved": have, "total": want}
                     m["totals"] = set_totals(sid)
                 out.append(m)
             return self.send(200, {"sets": out, "removed": removed_sets(), "keepDays": KEEP_REMOVED_DAYS}, cache="no-store")
@@ -3062,6 +3075,12 @@ class Handler(BaseHTTPRequestHandler):
                     f.write(raw)
                 write_json(ICON_FILE + ".json", {"type": ctype})
             return self.send(200, {"ok": True, "v": int(time.time())})
+        m_pic = re.fullmatch(rf"/api/sets/({SID_RE})/pictures", path)
+        if m_pic:
+            if m_pic.group(1) not in sets_list()["order"]:
+                return self.send(404, {"error": "No such binder"})
+            start_images(m_pic.group(1), now=True)
+            return self.send(200, {"started": True})
         m_rs = re.fullmatch(rf"/api/sets/({SID_RE})/restore", path)
         if m_rs:
             try:

@@ -149,6 +149,12 @@ def main():
         code, _ = call(base, "PUT", "/api/settings", {"refreshAll": True})
         _, sett = call(base, "GET", "/api/settings")
         check("save 'check every card every night'", code == 200 and sett.get("refreshAll") is True, sett.get("refreshAll"))
+        code, _ = call(base, "POST", "/api/sets/neo4/pictures", {})
+        check("get pictures now starts", code == 200, f"got {code}")
+        code, _ = call(base, "POST", "/api/sets/nope/pictures", {})
+        check("get pictures for a missing binder is turned down", code == 404, f"got {code}")
+        _, sl = call(base, "GET", "/api/sets")
+        check("sets list says how many pictures are saved", "pics" in sl["sets"][0], sl["sets"][0].keys())
         unit = subprocess.run([sys.executable, "-c", UNIT], cwd=tmp, capture_output=True, text=True, timeout=60)
         check("nightly check picks owned cards plus a third of the rest", unit.stdout.strip() == "ok", (unit.stdout + unit.stderr)[-600:])
 

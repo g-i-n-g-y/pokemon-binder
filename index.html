@@ -682,6 +682,7 @@ dialog.float .ui-chips{display:grid;grid-template-columns:repeat(auto-fill,minma
 .allsum .as-bar{height:5px;margin:5px 0 3px;max-width:150px}
 :root[data-private] .allsum .as-bar{filter:blur(6px)}
 .srm{flex:none;margin:0 12px 0 4px;border:1px solid var(--bad);background:none;color:var(--bad);border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
+.srm.sget{margin-right:0;border-color:var(--line);color:var(--ink)}
 .srm.confirm{background:var(--bad);color:var(--bg)}
 :root[data-private] .srow small,:root[data-private] .srow .ring,:root[data-private] .allsum .stat .bar{filter:blur(8px);user-select:none}
 .allsum{padding:12px 14px;margin:0}
@@ -2658,7 +2659,7 @@ function drawAllSum(){
 // One row per binder: progress ring (or the Pokémon's picture), name, cards owned and value.
 // "Edit" at the top shows a Remove button on each row, so it can't be tapped by accident.
 const setEditing = () => $("drEdit").getAttribute("aria-pressed")==="true";
-function setEdit(on){ $("drEdit").setAttribute("aria-pressed", on); $("drEdit").textContent=on ? "Done" : "Edit"; drawSets(); }
+function setEdit(on){ $("drEdit").setAttribute("aria-pressed", on); $("drEdit").textContent=on ? "Done" : "Edit"; drawSets(); if(on && state.sets.some(x=>x.images)) watchPictures(); }
 function ring(pct){ const r=document.createElement("span"); r.className="ring"; r.style.setProperty("--p", pct); r.textContent=pct+"%"; r.setAttribute("aria-hidden","true"); return r; }
 function drawSets(){
   drawAllSum();
@@ -2678,7 +2679,8 @@ function drawSets(){
     if(isDex(s.id)){ const im=document.createElement("img"); im.className="sprite"; im.alt=""; im.src="set/"+enc(s.id)+"/sprite.png"; im.onerror=()=>im.remove(); b.prepend(im); }
     l.append(b,sm); go.append(lead,l);
     go.setAttribute("aria-label", s.name+", "+own+" of "+total+" owned"+(s.id===state.sid?", open now":""));
-    if(editing){ go.disabled=true; }
+    if(editing){ go.disabled=true;
+      const pc=s.pics; if(pc && pc.total) sm.textContent=s.images ? "Getting pictures…" : pc.saved>=pc.total ? "All pictures saved" : "Pictures "+pc.saved+"/"+pc.total; }
     else { const c=document.createElement("span"); c.className="ui-chev"; c.setAttribute("aria-hidden","true"); go.append(c); go.onclick=()=>{ $("drawer").close(); openSet(s.id); }; }
     row.append(go);
     if(editing){
@@ -2691,11 +2693,30 @@ function drawSets(){
         await loadSets(); if(wasOpen) openSet(state.sets[0] ? state.sets[0].id : null); drawSets();
         toast("Removed "+s.name+".", "Undo", ()=>restoreSet(s.id, wasOpen));
       };
+      const pc=s.pics;
+      if(pc && pc.total && pc.saved<pc.total && !s.images){
+        const gp=document.createElement("button"); gp.type="button"; gp.className="srm sget"; gp.textContent="Get pictures";
+        gp.setAttribute("aria-label","Download all pictures for "+s.name+" now");
+        gp.onclick=async()=>{ gp.disabled=true;
+          try{ const r=await fetch("api/sets/"+enc(s.id)+"/pictures",{method:"POST"}); if(!r.ok) throw 0; }catch(_){ gp.disabled=false; gp.textContent="Couldn't start"; return; }
+          s.images=true; sm.textContent="Getting pictures…"; gp.remove(); watchPictures(); if(s.id===state.sid) watchImages(); };
+        row.append(gp);
+      }
       row.append(rm);
     }
     L.append(row);
   }
   drawRemoved(editing);
+}
+// While the sets menu is in Edit mode, keep the "pictures saved" counts up to date during a download.
+let picTimer=null;
+function watchPictures(){
+  clearTimeout(picTimer);
+  picTimer=setTimeout(async()=>{
+    if(!$("drawer").open || !setEditing()) return;
+    await loadSets(); drawSets();
+    if(state.sets.some(x=>x.images)) watchPictures();
+  },3000);
 }
 // Binders removed in the last 30 days, shown while editing, each with a Restore button.
 function drawRemoved(editing){
