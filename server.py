@@ -33,7 +33,7 @@ SETS_FILE = os.path.join(DATA, "sets.json")
 SETTINGS = os.path.join(DATA, "settings.json")
 DEFAULT_SLOTS = [{"t": "raw", "c": "LP"}, {"t": "raw", "c": "MP"}]
 DEFAULT_SETTINGS = {"auto": True, "time": "03:00", "tz": "America/New_York", "offset": -240, "lastAuto": "",
-                    "slots": DEFAULT_SLOTS, "backup": True}
+                    "slots": DEFAULT_SLOTS, "backup": True, "serverName": ""}
 RAW_CONDS = ("NM", "LP", "MP", "HP", "DMG")
 GRADERS = ("PSA", "BGS", "CGC", "SGC", "TAG", "ACE", "Any")
 GRADES = ("10", "9.5", "9", "8.5", "8", "7.5", "7", "6", "5", "4", "3", "2", "1")
@@ -1435,6 +1435,11 @@ def get_settings():
     return st
 
 
+def srv_name():
+    """What messages call the computer the binder runs on: your name for it from Settings, or "the server"."""
+    return (get_settings().get("serverName") or "").strip() or "the server"
+
+
 def local_now(st):
     """Current time in the time zone chosen in Settings (falls back to the saved UTC offset)."""
     if ZoneInfo:
@@ -2384,7 +2389,7 @@ class Handler(BaseHTTPRequestHandler):
             name = m_bk.group(1)
             fp = os.path.join(BACKUPS, name)
             if not AUTO_NAME_RE.fullmatch(name) or not os.path.isfile(fp):
-                return self.send(404, {"error": "That backup isn't on the server any more"})
+                return self.send(404, {"error": f"That backup isn't on {srv_name()} any more"})
             with open(fp, "rb") as f:
                 body = f.read()
             self.send_response(200)
@@ -2467,6 +2472,7 @@ class Handler(BaseHTTPRequestHandler):
             st = get_settings()
             out = {k: st[k] for k in ("auto", "time", "tz", "slots")}
             out["backup"] = bool(st.get("backup", True))
+            out["serverName"] = (st.get("serverName") or "").strip()
             out["options"] = {"raw": RAW_CONDS, "graders": GRADERS, "grades": GRADES}
             out["next"] = next_run(st).isoformat() if st["auto"] else ""
             out["lastAuto"] = st.get("lastAuto", "")
@@ -2640,6 +2646,11 @@ class Handler(BaseHTTPRequestHandler):
                     st["slots"] = clean_slots(new["slots"])
                 if "backup" in new:
                     st["backup"] = bool(new["backup"])
+                if "serverName" in new:
+                    name = re.sub(r"\s+", " ", str(new["serverName"] or "")).strip()
+                    if len(name) > 24 or not re.fullmatch(r"[\w .'\-]*", name):
+                        raise ValueError("Use letters, numbers, spaces, dots or dashes for the server name (24 at most)")
+                    st["serverName"] = name
                 # a new time today shouldn't be skipped just because today's run already happened earlier
                 if "time" in new:
                     merged = dict(DEFAULT_SETTINGS); merged.update(st)
@@ -2714,7 +2725,7 @@ class Handler(BaseHTTPRequestHandler):
                 name = json.loads(raw or b"{}").get("name", "")
                 assert AUTO_NAME_RE.fullmatch(name) and os.path.isfile(os.path.join(BACKUPS, name))
             except Exception:
-                return self.send(400, {"error": "That backup isn't on the server any more"})
+                return self.send(400, {"error": f"That backup isn't on {srv_name()} any more"})
             try:
                 count, safety = restore_backup(os.path.join(BACKUPS, name))
             except ValueError as e:
@@ -2852,7 +2863,7 @@ def _safe(fn):
             log(f"{self.command} {self.path} failed:\n{traceback.format_exc().rstrip()}")
             if not self.replied:
                 try:
-                    self.send(500, {"error": f"Something went wrong on the server ({e.__class__.__name__}). The container log has details"})
+                    self.send(500, {"error": f"Something went wrong on {srv_name()} ({e.__class__.__name__}). The container log has details"})
                 except OSError:
                     pass
     return run

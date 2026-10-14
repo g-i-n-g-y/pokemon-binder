@@ -121,6 +121,11 @@ def main():
         code, _ = call(base, "PUT", "/api/settings", {"time": "04:15"})
         _, sett = call(base, "GET", "/api/settings")
         check("save settings", code == 200 and sett.get("time") == "04:15")
+        code, _ = call(base, "PUT", "/api/settings", {"serverName": "  My  NAS "})
+        _, sett = call(base, "GET", "/api/settings")
+        check("save a server name", code == 200 and sett.get("serverName") == "My NAS", sett.get("serverName"))
+        code, _ = call(base, "PUT", "/api/settings", {"serverName": "<script>"})
+        check("odd server names are turned down", code == 400)
         code, sp = call(base, "GET", "/api/spending")
         check("Stats adds up", code == 200 and sp["totals"]["spent"] == 27.5, sp.get("totals") if isinstance(sp, dict) else code)
 

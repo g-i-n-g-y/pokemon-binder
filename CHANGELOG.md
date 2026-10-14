@@ -12,7 +12,7 @@ The binder shows these in **Settings → About → Check for updates**.
 
 ## Unreleased
 
-- Messages and labels say "the server" instead of a server name, so they make sense for anyone running the binder.
+- **Name your server:** Settings → Server name. Type what you call the computer the binder runs on (like "BEN") and messages use it: "Saved on BEN", "Can't reach BEN". Left empty, they say "the server", so the binder makes sense for anyone running it.
 
 ## v3.0 (October 13, 2026)
 

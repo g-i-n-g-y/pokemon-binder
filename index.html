@@ -720,7 +720,7 @@ dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
     </div>
   </section>
 
-  <footer id="foot">Prices are averages of recent Unlimited sales (pick which ones per binder in Settings) and refresh automatically once a day. Tap Need on a card to mark it owned, or tap the card to log what you paid, set its condition, or add a photo of your copy. Open the menu at the top left to switch sets or add a new one. Everything saves on the server.</footer>
+  <footer id="foot">Prices are averages of recent Unlimited sales (pick which ones per binder in Settings) and refresh automatically once a day. Tap Need on a card to mark it owned, or tap the card to log what you paid, set its condition, or add a photo of your copy. Open the menu at the top left to switch sets or add a new one. Everything saves on <span class="srv">the server</span>.</footer>
 </div>
 
 <dialog id="dlg" class="float" aria-labelledby="dName">
@@ -939,6 +939,9 @@ dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
     <div class="note">Card images come from the public card database, which uses 1st Edition scans for older sets. The label is a reminder that you collect Unlimited.</div>
     <label class="f">Price change period<select id="stPeriod"></select></label>
     <div class="note" id="stPeriodNote">The ▲▼ percentage on each card, the biggest movers in Stats and the gain/drop sorts all use this period. Only affects this device.</div>
+    <div class="eyebrow">Server name</div>
+    <label class="f">What the binder calls the computer it runs on<input class="field" id="stSrv" maxlength="24" autocomplete="off" placeholder="the server"></label>
+    <div class="note" id="stSrvMsg">Used in messages like "Saved on BEN" or "Can't reach BEN". Leave it empty to say "the server".</div>
     <div class="eyebrow">Tab icon</div>
     <div class="iconrow">
       <img id="icPrev" src="favicon" alt="Current tab icon" width="40" height="40">
@@ -946,7 +949,7 @@ dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
       <input id="icUp" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/x-icon" hidden>
       <button class="btn" type="button" id="icReset" hidden>Use default</button>
     </div>
-    <div class="note" id="icMsg">The little picture on the browser tab. A square PNG works best. It's saved on the server only.</div>
+    <div class="note" id="icMsg">The little picture on the browser tab. A square PNG works best. It's saved on <span class="srv">the server</span> only.</div>
     <div class="eyebrow">Price average <span id="slotSet"></span></div>
     <div class="note">Pick the two prices shown on each card. Each binder keeps its own choice, so switch sets from the menu to change another one. Raw conditions come from TCGplayer sales. Graded prices come from eBay sold listings collected by PriceCharting, sorted by the grading company and grade in each listing's title.</div>
     <div id="slotRows"></div>
@@ -970,9 +973,9 @@ dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
       <label class="btn" for="bkUp">Restore from backup</label>
       <input id="bkUp" type="file" accept=".zip,application/zip" hidden>
     </div>
-    <div class="note" id="bkMsg">One file with your cards, purchases, sellers, notes, photos, prices and settings, for every binder. Keep a copy somewhere other than the server, like your computer or cloud storage.</div>
+    <div class="note" id="bkMsg">One file with your cards, purchases, sellers, notes, photos, prices and settings, for every binder. Keep a copy somewhere other than <span class="srv">the server</span>, like your computer or cloud storage.</div>
     <div class="prev" id="bkAutoWrap" hidden>
-      <div class="k">Saved on the server</div>
+      <div class="k">Saved on <span class="srv">the server</span></div>
       <div class="note">Made automatically before each update, spreadsheet import and restore. The newest 10 update backups are kept.</div>
       <ul class="prevlist" id="bkAuto"></ul>
     </div>
@@ -1004,7 +1007,7 @@ const SKINS = [
 ];
 const RSYM = {"Common":"●","Uncommon":"◆","Rare":"★","Rare Holo":"★ Holo","Rare Shining":"★ Shining","Rare Secret":"★ Secret"};
 const DEFAULT_SLOTS=[{t:"raw",c:"LP"},{t:"raw",c:"MP"}];
-const state = { slots:DEFAULT_SLOTS, slotOpts:null, trends:{}, histFirst:"", seriesCache:{}, view:"cards", spend:null, sid:null, set:{}, cards:[], own:{}, prices:{}, info:{}, updated:"", sets:[], catalog:null,
+const state = { serverName:"", slots:DEFAULT_SLOTS, slotOpts:null, trends:{}, histFirst:"", seriesCache:{}, view:"cards", spend:null, sid:null, set:{}, cards:[], own:{}, prices:{}, info:{}, updated:"", sets:[], catalog:null,
                 filter:"all", rar:"", sort:"num", q:"", ready:false, open:null };
 const $ = id => document.getElementById(id);
 const money = v => v==null ? "–" : "$"+v.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -1095,9 +1098,9 @@ const periodName = (d=state.period) => (PERIODS.find(p=>p[0]===d)||[0,d+" days"]
 const historyDays = () => state.histFirst ? Math.round((new Date(todayStr())-new Date(state.histFirst))/864e5) : 0;
 function periodNote(){
   const have=historyDays(), want=state.period;
-  if(!state.histFirst) return "Price changes appear once the server has saved a few days of prices.";
+  if(!state.histFirst) return "Price changes appear once "+srv()+" has saved a few days of prices.";
   if(want===0) return "All time = since "+fmtDay(state.histFirst)+".";
-  if(have<want) return "The server has "+have+" day"+(have===1?"":"s")+" of saved prices so far (since "+fmtDay(state.histFirst)+"), so this shows the change over those days until "+periodName()+" builds up.";
+  if(have<want) return Srv()+" has "+have+" day"+(have===1?"":"s")+" of saved prices so far (since "+fmtDay(state.histFirst)+"), so this shows the change over those days until "+periodName()+" builds up.";
   return "";
 }
 function setPeriod(d){
@@ -1529,7 +1532,7 @@ function openCard(n){
   resetBuyForm();
   drawBuys(n); drawSpark(n);
   photoSide="front"; drawPhoto(n);
-  $("dSaved").textContent=state.ready ? "" : "Can't reach the server right now, so changes won't save.";
+  $("dSaved").textContent=state.ready ? "" : "Can't reach "+srv()+" right now, so changes won't save.";
   $("dUpMsg").textContent="";
   $("dlg").showModal();
 }
@@ -1815,14 +1818,29 @@ async function saveSlots(slots){
     .catch(e=>{ drawSlots(); msg.textContent=(e&&e.message&&e.message!=="Failed to fetch") ? e.message : "Couldn't save. Check that the container is running."; });
 }
 function getSlots(){
-  return fetch("api/settings").then(r=>r.json()).then(s=>{ if(s.options) state.slotOpts=s.options; return s; }).catch(()=>null);
+  return fetch("api/settings").then(r=>r.json()).then(s=>{ if(s.options) state.slotOpts=s.options; setServerName(s.serverName); return s; }).catch(()=>null);
 }
+// The server's name from Settings (like "BEN"), or "the server" when none is set.
+const srv = () => state.serverName || "the server";
+const Srv = () => state.serverName || "The server";
+function setServerName(name){
+  state.serverName=(name||"").trim();
+  document.querySelectorAll(".srv").forEach(el=>{ el.textContent=srv(); });
+  if($("stSrv") && document.activeElement!==$("stSrv")) $("stSrv").value=state.serverName;
+}
+$("stSrv").addEventListener("change",()=>{
+  const v=$("stSrv").value.replace(/\s+/g," ").trim();
+  fetch("api/settings",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({serverName:v})})
+    .then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error||"Couldn't save"); return j; }))
+    .then(()=>{ setServerName(v); $("stSrvMsg").textContent = v ? "Saved. Messages now say \u201c"+v+"\u201d." : "Saved. Messages say \u201cthe server\u201d."; })
+    .catch(e=>{ $("stSrvMsg").textContent=e.message+"."; });
+});
 // ---------- backup and restore ----------
 $("bkUp").onchange=async e=>{
   const f=e.target.files[0]; e.target.value=""; if(!f) return;
   const ul=document.createElement("ul"); ul.className="changes";
   ["Everything in the binder is replaced with what's in the backup: cards, purchases, notes, photos, prices, price options and settings.",
-   "A safety copy of your current data is saved on the server first, in the backups folder, in case you change your mind.",
+   "A safety copy of your current data is saved on "+srv()+" first, in the backups folder, in case you change your mind.",
    "Card pictures download again by themselves after the restore."].forEach(t=>{ const li=document.createElement("li"); li.textContent=t; ul.append(li); });
   const ok=await askConfirm("Restore this backup?", f.name+" · "+(f.size/1048576).toFixed(1)+" MB", "Restore", {body:ul});
   if(!ok) return;
@@ -1899,7 +1917,7 @@ $("imUp").onchange=async e=>{
   $("imMsg").textContent="Importing…";
   try {
     const done=await post("?apply=1");
-    $("imMsg").textContent="Imported. "+done.changes.length+" card"+(done.changes.length===1?"":"s")+" updated. A backup from just before is saved on the server.";
+    $("imMsg").textContent="Imported. "+done.changes.length+" card"+(done.changes.length===1?"":"s")+" updated. A backup from just before is saved on "+srv()+".";
     loadAutoBackups(); if(state.sid) loadState();
   } catch(err){ $("imMsg").textContent=(err&&err.message&&err.message!=="Failed to fetch") ? err.message : "Couldn't import. Check that the container is running."; }
 };
@@ -1925,7 +1943,7 @@ function loadSettings(){
     $("stAuto").checked=!!s.auto; $("stTime").value=s.time||"03:00"; showNext(s.next, s.auto);
     $("stBackup").checked = s.backup!==false;
     if(s.tz!==TZ) saveSettings({tz:TZ, offset:-new Date().getTimezoneOffset()}, true);
-  }).catch(()=>{ $("stNext").textContent="Can't reach the server."; });
+  }).catch(()=>{ $("stNext").textContent="Can't reach "+srv()+"."; });
 }
 function saveSettings(patch, quiet){
   if(!quiet) $("stSaved").textContent="Saving…";
@@ -1957,7 +1975,7 @@ function loadVersion(){
     s.append(shaTag(v.commit, v.version), " Installed "+shortDate(v.installed||v["server.py"])+" · "+(v.github?"updates from GitHub":v.updatesFolder?"updates from the updates folder":"updates not set up"));
     box.append(k,t,s);
     if(v.storage){ const d=document.createElement("span"); d.className="s"; const mb=v.storage.size/1048576;
-      d.textContent="Your data: one database file on the server ("+v.storage.file+", "+(mb<1 ? Math.max(1,Math.round(v.storage.size/1024))+" KB" : mb.toFixed(1)+" MB")+")"; box.append(d); }
+      d.textContent="Your data: one database file on "+srv()+" ("+v.storage.file+", "+(mb<1 ? Math.max(1,Math.round(v.storage.size/1024))+" KB" : mb.toFixed(1)+" MB")+")"; box.append(d); }
     if(v.error){ const e=document.createElement("span"); e.className="s"; e.style.color="var(--bad)"; e.textContent="Last check failed: "+v.error+"."; box.append(e); }
     $("stUpdate").hidden = !(v.github || v.updatesFolder);
     const prev=v.previous||[], ul=$("stPrev"); ul.replaceChildren(); $("stPrevWrap").hidden=!prev.length;
@@ -2125,7 +2143,7 @@ function loadShows(){
   return fetch("api/shows").then(r=>r.json()).then(j=>{
     showsData=j; drawShows();
     if(j.running && $("shows").open) showsPoll=setTimeout(loadShows,1500);
-  }).catch(()=>{ $("shInfo").textContent="Couldn't reach the server."; });
+  }).catch(()=>{ $("shInfo").textContent="Couldn't reach "+srv()+"."; });
 }
 function drawShows(){
   const j=showsData; if(!j) return;
@@ -2227,7 +2245,7 @@ function loadDex(){
   return fetch("api/pokedex").then(r=>r.json()).then(j=>{
     state.dex=j;
     if(!j.ready && addKind==="dex" && !$("drAdd").hidden) dexTimer=setTimeout(()=>loadDex().then(drawCatalog),2000);
-  }).catch(()=>{ state.dex={ready:false, error:"Couldn't reach the server"}; });
+  }).catch(()=>{ state.dex={ready:false, error:"Couldn't reach "+srv()+""}; });
 }
 function drawDex(){
   const C=$("catalog"); C.replaceChildren();
@@ -2235,7 +2253,7 @@ function drawDex(){
   if(!d){ $("addMsg").textContent="Loading the Pokémon list…"; return; }
   if(d.building) setBar($("addBar"), d.done, d.total); else hideBar($("addBar"));
   if(!d.ready){
-    $("addMsg").textContent = d.error && !d.building ? "Couldn't make the Pokémon list ("+d.error+"). Check that the server is online and reopen this menu."
+    $("addMsg").textContent = d.error && !d.building ? "Couldn't make the Pokémon list ("+d.error+"). Check that "+srv()+" is online and reopen this menu."
       : "Making the Pokémon list from every set (first time only, about 2 minutes)… "+(d.total ? d.done+" of "+d.total+" sets" : "");
     return;
   }
@@ -2318,7 +2336,7 @@ function drawCatalog(){
             const j=await r.json(); if(!r.ok) throw new Error(j.error||"Couldn't add that set");
             await loadSets(); $("drawer").close(); showAdd(false); openSet(s.id);
             $("sync").textContent=s.name+" added. Downloading card images and checking prices in the background."; setTimeout(poll,1500);
-          }catch(err){ add.disabled=false; add.textContent="Add"; $("addMsg").textContent=err.message+". Check that the server is online and try again."; }
+          }catch(err){ add.disabled=false; add.textContent="Add"; $("addMsg").textContent=err.message+". Check that "+srv()+" is online and try again."; }
         };
         row.append(add);
       }
@@ -2331,7 +2349,7 @@ function showAdd(on){
   if(!on) clearTimeout(dexTimer);
   if(on){
     $("addQ").value=""; setAddKind("set"); setTimeout(()=>$("addQ").focus(),50);
-    if(!state.catalog) fetch("api/catalog").then(r=>r.json()).then(j=>{ state.catalog=j.sets||[]; drawCatalog(); if(!state.catalog.length) $("addMsg").textContent="Couldn't load the set list. Check that the server is online."; }).catch(()=>{ $("addMsg").textContent="Couldn't load the set list. Check that the server is online."; });
+    if(!state.catalog) fetch("api/catalog").then(r=>r.json()).then(j=>{ state.catalog=j.sets||[]; drawCatalog(); if(!state.catalog.length) $("addMsg").textContent="Couldn't load the set list. Check that "+srv()+" is online."; }).catch(()=>{ $("addMsg").textContent="Couldn't load the set list. Check that "+srv()+" is online."; });
   }
 }
 // Sets menu open/close with the grow-out animation. Wide screens: beside the binder, pushing it over.
@@ -2404,8 +2422,8 @@ function loadState(){
     state.shop=s.shop||{};
     state.ready=true; header(); rarityOptions(); render(); renderView();
     fetch("api/set/"+enc(sid)+"/trends?today="+todayStr()).then(r=>r.json()).then(h=>{ if(seq!==loadSeq) return; state.trends=h.cards||{}; state.histFirst=h.first||""; state.seriesCache={}; render(); renderView(); }).catch(()=>{});
-    if(!wasRunning){ $("sync").textContent="Saved on the server · prices auto-refresh daily"; hideBar($("syncBar")); watchImages(); }
-  }).catch(err=>{ if(seq===loadSeq){ state.ready=false; render(); $("sync").textContent=(err&&err.message&&err.message!=="Failed to fetch" ? err.message : "Can't reach the server")+". Try reloading."; } });
+    if(!wasRunning){ $("sync").textContent="Saved on "+srv()+" · prices auto-refresh daily"; hideBar($("syncBar")); watchImages(); }
+  }).catch(err=>{ if(seq===loadSeq){ state.ready=false; render(); $("sync").textContent=(err&&err.message&&err.message!=="Failed to fetch" ? err.message : "Can't reach "+srv()+"")+". Try reloading."; } });
 }
 
 // ---------- loading bars ----------
@@ -2658,7 +2676,7 @@ $("shopBudget").value=recall("nd-budget")||"";
 // ---------- stats ----------
 function loadStats(){
   return fetch("api/spending").then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error); return j; })).then(sp=>{ state.spend=sp; state.spendStale=false; drawStats(); })
-    .catch(()=>{ $("chLine").replaceChildren(note("Couldn't load spending. Check that the server is running.")); });
+    .catch(()=>{ $("chLine").replaceChildren(note("Couldn't load spending. Check that "+srv()+" is running.")); });
 }
 function note(t){ const d=document.createElement("div"); d.className="empty-note"; d.textContent=t; return d; }
 function drawStats(){
@@ -2687,7 +2705,7 @@ function drawLine(tl){
   const legend=document.createElement("div"); legend.className="legend";
   legend.innerHTML='<span><i></i>Collection value</span><span><i class="dash"></i>Total spent</span>';
   if(tl.length<2){
-    box.append(legend, note("Today: value "+money(tl[0].value)+", spent "+money(tl[0].spent)+". The chart fills in as the server saves prices each day."));
+    box.append(legend, note("Today: value "+money(tl[0].value)+", spent "+money(tl[0].spent)+". The chart fills in as "+srv()+" saves prices each day."));
     return;
   }
   const W=820,H=260,L=56,R=110,Tp=14,B=30;
@@ -2767,7 +2785,7 @@ function drawMovers(){
   const rows=state.cards.map(c=>({c,t:trend(c.n)})).filter(r=>r.t && r.t.from>=1 && Math.abs(r.t.pct)>=0.5);
   if(!rows.length){
     const first=state.histFirst;
-    box.append(note(first ? "No price changes yet. Prices have been saved daily since "+fmtDay(first)+"." : "Movers appear once the server has saved prices for a few days."));
+    box.append(note(first ? "No price changes yet. Prices have been saved daily since "+fmtDay(first)+"." : "Movers appear once "+srv()+" has saved prices for a few days."));
     return;
   }
   const up=rows.filter(r=>r.t.pct>0).sort((a,b)=>b.t.pct-a.t.pct).slice(0,5);
@@ -2804,7 +2822,7 @@ getSlots().then(loadSets).then(()=>{
   const want=location.hash.slice(1)||recall("nd-set");
   const sid=state.sets.some(s=>s.id===want) ? want : (state.sets[0] ? state.sets[0].id : null);
   return openSet(sid);
-}).then(()=>fetch("api/refresh")).then(r=>r&&r.json()).then(j=>{ if(j&&j.running) showJob(j); }).catch(()=>{ $("sync").textContent="Can't reach the server. Try reloading."; });
+}).then(()=>fetch("api/refresh")).then(r=>r&&r.json()).then(j=>{ if(j&&j.running) showJob(j); }).catch(()=>{ $("sync").textContent="Can't reach "+srv()+". Try reloading."; });
 window.addEventListener("hashchange",()=>{ const sid=location.hash.slice(1); if(sid && sid!==state.sid && state.sets.some(s=>s.id===sid)) openSet(sid); });
 
 </script>
