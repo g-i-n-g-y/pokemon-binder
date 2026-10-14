@@ -24,7 +24,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "3.4"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
+APP_VERSION = "3.5"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -33,7 +33,7 @@ SETS_FILE = os.path.join(DATA, "sets.json")
 SETTINGS = os.path.join(DATA, "settings.json")
 DEFAULT_SLOTS = [{"t": "raw", "c": "LP"}, {"t": "raw", "c": "MP"}]
 DEFAULT_SETTINGS = {"auto": True, "time": "03:00", "tz": "America/New_York", "offset": -240, "lastAuto": "",
-                    "slots": DEFAULT_SLOTS, "backup": True, "serverName": ""}
+                    "slots": DEFAULT_SLOTS, "backup": True, "serverName": "", "refreshAll": False}
 RAW_CONDS = ("NM", "LP", "MP", "HP", "DMG")
 GRADERS = ("PSA", "BGS", "CGC", "SGC", "TAG", "ACE", "Any")
 GRADES = ("10", "9.5", "9", "8.5", "8", "7.5", "7", "6", "5", "4", "3", "2", "1")
@@ -74,8 +74,13 @@ shows_job = {"running": False, "error": "", "done": 0, "total": 0}
 
 # ---------- small helpers ----------
 
+LOG_TAIL = []   # the latest log lines, for Settings > About > Status
+
+
 def log(msg):
     print(msg, flush=True)
+    LOG_TAIL.append((time.time(), str(msg)))
+    del LOG_TAIL[:-300]
 
 
 def read_file_json(path, default):
@@ -698,11 +703,11 @@ def add_dex(sid):
         if sid not in sl["order"]:
             sl["order"].append(sid)
         (sl.get("removed") or {}).pop(sid, None)
+        meta["added"] = int(time.time())
         sl["meta"][sid] = meta
         write_json(SETS_FILE, sl)
     fetch_sprite(sid)
-    start_images(sid)
-    threading.Thread(target=refresh_prices, args=(sid, "new binder"), daemon=True).start()
+    first_refresh_later(sid)
     log(f"Added master set {name} ({len(cards)} cards)")
     return meta
 
@@ -723,12 +728,28 @@ def add_set(sid):
         if sid not in sl["order"]:
             sl["order"].append(sid)
         (sl.get("removed") or {}).pop(sid, None)
+        meta = dict(meta, added=int(time.time()))
         sl["meta"][sid] = meta
         write_json(SETS_FILE, sl)
-    start_images(sid)
-    threading.Thread(target=refresh_prices, args=(sid, "new set"), daemon=True).start()
+    first_refresh_later(sid)
     log(f"Added set {meta['name']} ({len(cards)} cards)")
     return meta
+
+
+FIRST_REFRESH_WAIT = 120   # a new binder's first price check waits this long, in case it's a quick test that gets removed
+
+
+def first_refresh_later(sid, wait=FIRST_REFRESH_WAIT):
+    def go():
+        time.sleep(wait)
+        for _ in range(120):   # wait for another refresh to finish (up to an hour)
+            if sid not in sets_list()["order"]:
+                log(f"{sid}: removed before its first price check, skipped")
+                return
+            if refresh_prices(sid, "new binder") is not False:
+                return
+            time.sleep(30)
+    threading.Thread(target=go, daemon=True).start()
 
 
 KEEP_REMOVED_DAYS = 30   # a removed binder can be brought back (with everything in it) for this long
@@ -803,48 +824,99 @@ def purge_removed():
 
 # ---------- images ----------
 
-def image_path(sid, n):
-    return sdir(sid, "images", f"{n}.png")
+# Card pictures come in two sizes from the card database: a small one (about 245x342) for the grid and lists,
+# and the full scan (about 734x1024) for card details. Each is downloaded the first time it's looked at,
+# so a binder you add and remove again to try something out only fetches the few pictures you saw.
+# Binders kept for an hour or more get their small pictures filled in quietly in the background.
+FILL_AFTER = 3600
+_img_fail = {}   # (sid, n, full) -> when a download last failed, so a missing picture isn't retried on every view
 
 
-def fetch_image(sid, card):
-    dest = image_path(sid, card["n"])
+def image_path(sid, n, full=True):
+    return sdir(sid, "images", f"{n}.png") if full else sdir(sid, "images", "s", f"{n}.png")
+
+
+def small_url(url):
+    """The card database names the full scan 1_hires.png and the small picture 1.png."""
+    return url[:-len("_hires.png")] + ".png" if url.endswith("_hires.png") else url
+
+
+def _download(url, dest):
+    body = http_get(url, timeout=20)
+    if not body:
+        raise ValueError("empty picture")
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
+    tmp = f"{dest}.{threading.get_ident()}.tmp"
+    with open(tmp, "wb") as f:
+        f.write(body)
+    os.replace(tmp, dest)
+
+
+def fetch_image(sid, card, full=False):
+    """Make sure one card picture is on the server. Returns its path, or None."""
+    n = card["n"]
+    dest = image_path(sid, n, full)
     if os.path.exists(dest) and os.path.getsize(dest) > 0:
-        return True
-    if not card.get("img"):
-        return False
+        return dest
+    url = card.get("img") or ""
+    if not url.startswith("http"):
+        return None
+    key = (sid, n, full)
+    if time.time() - _img_fail.get(key, 0) < 600:
+        return None
     try:
-        body = http_get(card["img"])
-        os.makedirs(os.path.dirname(dest), exist_ok=True)
-        with open(dest + ".tmp", "wb") as f:
-            f.write(body)
-        os.replace(dest + ".tmp", dest)
-        return True
+        _download(url if full else small_url(url), dest)
+        _img_fail.pop(key, None)
+        return dest
     except Exception as e:
-        log(f"image {sid}-{card['n']}: {e}")
-        return False
+        _img_fail[key] = time.time()
+        log(f"image {sid}-{n}{' (full)' if full else ''}: {e}")
+        return None
+
+
+def card_image(sid, n, full=False):
+    """The picture to show for one card, downloading it now if needed. The small picture falls back to the full scan."""
+    path = image_path(sid, n, full)
+    if os.path.isfile(path):
+        return path
+    card = next((c for c in set_cards(sid) if c["n"] == n), None)
+    got = fetch_image(sid, card, full) if card else None
+    if got:
+        return got
+    if not full and os.path.isfile(image_path(sid, n, True)):
+        return image_path(sid, n, True)   # older binders already have the full scans
+    return None
+
+
+def binder_age(sid):
+    added = (sets_list()["meta"].get(sid) or {}).get("added")
+    return time.time() - added if isinstance(added, (int, float)) else FILL_AFTER   # older binders: kept long enough
 
 
 def download_images(sid):
+    """Background fill of the small pictures for a binder that's been kept a while."""
     try:
-        cards = set_cards(sid)
-        missing = [c for c in cards if not os.path.exists(image_path(sid, c["n"]))]
+        cards = [c for c in set_cards(sid) if (c.get("img") or "").startswith("http")]
+        missing = [c for c in cards if not os.path.exists(image_path(sid, c["n"], False))]
         if not missing:
             return
-        log(f"{sid}: downloading {len(missing)} card images...")
+        log(f"{sid}: downloading {len(missing)} card pictures...")
         img_jobs[sid] = {"done": 0, "total": len(missing)}
         ok = 0
         for i, c in enumerate(missing):
+            if sid not in sets_list()["order"]:
+                log(f"{sid}: binder removed, stopped downloading pictures")
+                return
             img_jobs[sid]["done"] = i
-            ok += fetch_image(sid, c)
+            ok += bool(fetch_image(sid, c, False))
             time.sleep(0.2)
-        log(f"{sid}: card images {ok} of {len(missing)} downloaded.")
+        log(f"{sid}: card pictures {ok} of {len(missing)} downloaded.")
     finally:
         img_jobs.pop(sid, None)
 
 
 def start_images(sid):
-    if sid in img_jobs:
+    if sid in img_jobs or binder_age(sid) < FILL_AFTER:
         return
     img_jobs[sid] = {"done": 0, "total": 0}
     threading.Thread(target=download_images, args=(sid,), daemon=True).start()
@@ -1381,7 +1453,26 @@ def tcgdex_market(tc, rarity="", usd=None):
     return out
 
 
-def refresh_prices(sid, reason="daily"):
+def daily_cards(sid, cards, day=None):
+    """Which cards the nightly refresh checks: every card you own, plus a third of the rest, taking turns,
+    so each card you still need is checked every 3 days. Roughly halves the nightly time.
+    (Settings > Daily refresh can check every card every night instead.)"""
+    coll = read_json(sdir(sid, "collection.json"), {})
+    coll = coll if isinstance(coll, dict) else {}
+    turn = (day if day is not None else datetime.now().toordinal()) % 3
+    out, i = [], 0
+    for c in cards:
+        rec = coll.get(c["n"]) if isinstance(coll.get(c["n"]), dict) else {}
+        if (rec.get("qty") or 0) > 0 or c.get("custom"):
+            out.append(c)
+        else:
+            if i % 3 == turn:
+                out.append(c)
+            i += 1
+    return out
+
+
+def refresh_prices(sid, reason="daily", only_daily=False):
     with job_lock:
         if job["running"]:
             return False
@@ -1389,8 +1480,10 @@ def refresh_prices(sid, reason="daily"):
         job.update(running=True, set=sid, name=name, done=0, total=0, priced=0, message="")
     try:
         cards = set_cards(sid)
+        if only_daily:
+            cards = daily_cards(sid, cards)
         job["total"] = len(cards)
-        log(f"{sid}: price refresh started ({reason}).")
+        log(f"{sid}: price refresh started ({reason}, {len(cards)} cards).")
         ids = read_json(sdir(sid, "tcg_ids.json"), {})
         slots = set_slots(sid)
         apply_slots(slots)
@@ -1407,6 +1500,8 @@ def refresh_prices(sid, reason="daily"):
         priced = 0
         for i, c in enumerate(cards):
             job["done"] = i
+            if i % 5 == 0 and sid not in sets_list()["order"]:
+                break   # the binder was removed: stop asking the price sites about it
             n = c["n"]
             inf = dict(info.get(n) or {})
             try:
@@ -1524,10 +1619,11 @@ def next_run(st):
 
 
 def refresh_all(reason):
+    every = bool(get_settings().get("refreshAll"))
     for sid in list(sets_list()["order"]):
         while job["running"]:
             time.sleep(15)
-        refresh_prices(sid, reason)
+        refresh_prices(sid, reason, only_daily=not every)
 
 
 # ---------- price history, purchases, spending ----------
@@ -1699,6 +1795,73 @@ def spending():
             "timeline": timeline, "log": log_rows, "today": today}
 
 
+STARTED = time.time()
+PROBLEM_RE = re.compile(r"failed|error|couldn't|can't|refused|timed out|unreachable", re.I)
+
+
+def health():
+    """Quick self-check: the web server answers and the database can be read."""
+    try:
+        with db_lock:
+            db().execute("SELECT 1").fetchone()
+        return {"ok": True, "version": APP_VERSION, "uptime": int(time.time() - STARTED)}
+    except Exception as e:
+        return {"ok": False, "version": APP_VERSION, "error": str(e)}
+
+
+def status():
+    """What Settings > About > Status shows."""
+    sl = sets_list()
+    last = 0
+    for sid in sl["order"]:
+        pr = read_json(sdir(sid, "prices.json"), {})
+        if not isinstance(pr, dict):
+            continue
+        if isinstance(pr.get("lastRun"), (int, float)):
+            last = max(last, pr["lastRun"])
+        elif isinstance(pr.get("updated"), str):  # binders priced before v3.5 only have the date
+            try:
+                last = max(last, datetime.strptime(pr["updated"][:19], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc).timestamp())
+            except ValueError:
+                pass
+    backups = list_auto_backups()
+    size = sum(os.path.getsize(DB_FILE + ext) for ext in ("", "-wal") if os.path.exists(DB_FILE + ext))
+    pics = 0
+    for sid in sl["order"]:
+        for sub in ("", "s"):
+            d = sdir(sid, "images", sub) if sub else sdir(sid, "images")
+            if os.path.isdir(d):
+                pics += sum(os.path.getsize(os.path.join(d, f)) for f in os.listdir(d) if f.endswith(".png"))
+    try:
+        du = shutil.disk_usage(DATA)
+        free = du.free
+    except OSError:
+        free = None
+    day_ago = time.time() - DAY
+    problems = [{"at": int(t), "msg": m[:200]} for t, m in LOG_TAIL if t > day_ago and PROBLEM_RE.search(m) and not m.startswith("image ")][-5:]
+    return {"version": APP_VERSION, "uptime": int(time.time() - STARTED), "lastRefresh": int(last),
+            "refreshing": bool(job["running"]), "lastBackup": backups[0] if backups else None,
+            "dbSize": size, "pictures": pics, "freeSpace": free, "problems": problems,
+            "settings": {k: get_settings().get(k) for k in ("auto", "time", "refreshAll")}}
+
+
+def watchdog():
+    """If the binder stops answering its own pages for about 6 minutes, restart it (your data is safe on disk)."""
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    misses = 0
+    time.sleep(120)
+    while True:
+        try:
+            with opener.open(f"http://127.0.0.1:{PORT}/api/health", timeout=20) as r:
+                misses = 0 if r.status == 200 else misses + 1
+        except Exception:
+            misses += 1
+        if misses >= 3:
+            log("The binder stopped answering for several minutes. Restarting it.")
+            restart_self()
+        time.sleep(120)
+
+
 def scheduler():
     time.sleep(15)
     ticks = 0
@@ -1708,6 +1871,11 @@ def scheduler():
                 purge_removed()
             except Exception as e:
                 log(f"cleanup of removed binders: {e}")
+            try:
+                if daily_backup_due():
+                    auto_backup("daily")
+            except Exception as e:
+                log(f"daily backup failed: {e}")
             for sid in list(sets_list()["order"]):
                 start_images(sid)  # retries any images that failed earlier
             if os.path.exists(DEX_INDEX):
@@ -2172,8 +2340,12 @@ def apply_import(sid, plan):
 # ---------- backup and restore ----------
 
 BACKUPS = os.path.join(APP, "backups")          # safety copies made before a restore, update or import (on your server only)
-AUTO_KEEP = {"before-update": 10, "before-import": 5, "before-restore": 5}
-AUTO_NAME_RE = re.compile(r"(before-(?:update|import|restore))-\d{8}-\d{6}(?:-\d{3})?\.zip")
+AUTO_KEEP = {"before-update": 10, "before-import": 5, "before-restore": 5, "daily": 7}
+AUTO_NAME_RE = re.compile(r"(before-(?:update|import|restore)|daily)-\d{8}-\d{6}(?:-\d{3})?\.zip")
+
+
+def backup_kind(k):
+    return k[7:] if k.startswith("before-") else k
 MAX_RESTORE = 500 * 1024 * 1024
 BACKUP_RE = re.compile(rf"(settings\.json|sets\.json|shows\.json|favicon|favicon\.json|sets/{SID_RE}/(?:{'|'.join(SET_FILES)})\.json"
                        rf"|sets/{SID_RE}/photos/{NUM_RE}(?:_back)?(?:\.json)?)")
@@ -2219,8 +2391,15 @@ def auto_backup(kind):
     old = sorted(f for f in os.listdir(BACKUPS) if f.startswith(kind + "-") and f.endswith(".zip"))
     for f in old[:-AUTO_KEEP.get(kind, 5)]:
         os.remove(os.path.join(BACKUPS, f))
-    log(f"Saved a backup before {kind[7:]}: backups/{name}")
+    log(f"Saved a {'daily backup' if kind == 'daily' else 'backup before ' + backup_kind(kind)}: backups/{name}")
     return name
+
+
+def daily_backup_due():
+    """True if today's daily backup hasn't been made yet (the newest 7 are kept)."""
+    today = time.strftime("%Y%m%d")
+    have = os.listdir(BACKUPS) if os.path.isdir(BACKUPS) else []
+    return not any(f.startswith("daily-" + today) for f in have)
 
 
 def list_auto_backups():
@@ -2230,7 +2409,7 @@ def list_auto_backups():
         m = AUTO_NAME_RE.fullmatch(f)
         if m:
             path = os.path.join(BACKUPS, f)
-            out.append({"name": f, "kind": m.group(1)[7:], "size": os.path.getsize(path),
+            out.append({"name": f, "kind": backup_kind(m.group(1)), "size": os.path.getsize(path),
                         "created": datetime.fromtimestamp(os.path.getmtime(path), timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")})
     return sorted(out, key=lambda x: x["created"] + x["name"], reverse=True)
 
@@ -2330,12 +2509,14 @@ _gz_cache = {}
 
 
 def gzipped(body, etag=None):
-    """gzip `body`; files with an ETag (like the page itself) are squeezed once and remembered."""
-    if etag and _gz_cache.get("etag") == etag:
-        return _gz_cache["body"]
+    """gzip `body`; files with an ETag (the page, the fonts) are squeezed once and remembered."""
+    if etag and etag in _gz_cache:
+        return _gz_cache[etag]
     out = gzip.compress(body, 6)
     if etag:
-        _gz_cache.update(etag=etag, body=out)
+        if len(_gz_cache) >= 8:
+            _gz_cache.clear()
+        _gz_cache[etag] = out
     return out
 
 
@@ -2429,6 +2610,8 @@ class Handler(BaseHTTPRequestHandler):
         path = self.path.split("?")[0]
         if path in ("/", "/index.html"):
             return self.send_file(os.path.join(APP, "index.html"), "text/html; charset=utf-8", "no-cache")
+        if path == "/fonts.css":   # fonts kept on the server; the page asks for fonts.css?v=<n>, so a new version means a new address
+            return self.send_file(os.path.join(APP, "fonts.css"), "text/css; charset=utf-8", "max-age=31536000, immutable")
         if path in ("/favicon", "/favicon.ico"):
             if os.path.exists(ICON_FILE):
                 return self.send_file(ICON_FILE, read_json(ICON_FILE + ".json", {}).get("type", "image/png"), "no-cache")
@@ -2485,6 +2668,11 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/api/version":
             return self.send(200, version_info(), cache="no-store")
+        if path == "/api/health":
+            h = health()
+            return self.send(200 if h["ok"] else 503, h, cache="no-store")
+        if path == "/api/status":
+            return self.send(200, status(), cache="no-store")
         if path == "/api/update/check":
             if not GH_REPO:
                 return self.send(400, {"error": "Changelog needs GitHub updates"})
@@ -2541,6 +2729,7 @@ class Handler(BaseHTTPRequestHandler):
             out = {k: st[k] for k in ("auto", "time", "tz", "slots")}
             out["backup"] = bool(st.get("backup", True))
             out["serverName"] = (st.get("serverName") or "").strip()
+            out["refreshAll"] = bool(st.get("refreshAll"))
             out["options"] = {"raw": RAW_CONDS, "graders": GRADERS, "grades": GRADES}
             out["next"] = next_run(st).isoformat() if st["auto"] else ""
             out["lastAuto"] = st.get("lastAuto", "")
@@ -2589,7 +2778,11 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_file(sdir(m.group(1), "sprite.png"), "image/png")
         m = re.fullmatch(rf"/set/({SID_RE})/img/({NUM_RE})\.png", path)
         if m:
-            return self.send_file(image_path(m.group(1), m.group(2)), "image/png")
+            full = "full=1" in (self.path.split("?") + [""])[1]
+            got = card_image(m.group(1), m.group(2), full) if (self.in_binder(m.group(1)) or os.path.isdir(sdir(m.group(1)))) else None
+            if not got:
+                return self.send(404, b"not found", "text/plain")
+            return self.send_file(got, "image/png")
         m = re.fullmatch(rf"/set/({SID_RE})/photo/({NUM_RE})(?:/(back))?", path)
         if m:
             name = m.group(2) + ("_back" if m.group(3) else "")
@@ -2714,6 +2907,8 @@ class Handler(BaseHTTPRequestHandler):
                     st["slots"] = clean_slots(new["slots"])
                 if "backup" in new:
                     st["backup"] = bool(new["backup"])
+                if "refreshAll" in new:
+                    st["refreshAll"] = bool(new["refreshAll"])
                 if "serverName" in new:
                     name = re.sub(r"\s+", " ", str(new["serverName"] or "")).strip()
                     if len(name) > 24 or not re.fullmatch(r"[\w .'\-]*", name):
@@ -3005,9 +3200,9 @@ def test_tcgplayer(pid):
 UPDATES = os.environ.get("BINDER_UPDATES", "/updates")
 # The program files of THIS version. The updater reads this line from a new server.py to know what to download,
 # so a later version can be split into more files. Versions before v3.0 only ever had these two.
-APP_FILES = ("server.py", "index.html")
+APP_FILES = ("server.py", "index.html", "fonts.css")
 UPDATE_FILES = APP_FILES
-APP_FILE_RE = re.compile(r"[A-Za-z0-9_\-]+(?:/[A-Za-z0-9_\-]+)*\.(?:py|html|js|css)")
+APP_FILE_RE = re.compile(r"[A-Za-z0-9_\-]+(?:/[A-Za-z0-9_\-]+)*\.(?:py|html|js|css|woff2|png|svg|json|txt)")
 GH_REPO = os.environ.get("GITHUB_REPO", "g-i-n-g-y/pokemon-binder")
 GH_BRANCH = os.environ.get("GITHUB_BRANCH", "main")
 GH_TOKEN = os.environ.get("GITHUB_TOKEN", "").strip()
@@ -3443,5 +3638,6 @@ if __name__ == "__main__":
         ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
     threading.Thread(target=warm_up, daemon=True).start()
     threading.Thread(target=scheduler, daemon=True).start()
+    threading.Thread(target=watchdog, daemon=True).start()
     log(f"Pokemon Binder running on port {PORT}")
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()

@@ -10,6 +10,16 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.5 (October 14, 2026)
+
+- **Card pictures load faster and use less space:** the grid uses small pictures, and the full-size scan only loads when you open a card. Pictures download as you look at them instead of all at once.
+- **Quick test binders stay light:** a new binder waits an hour before filling in the rest of its pictures, and its first price check waits 2 minutes. If you remove it before then, nothing more is downloaded. A price check also stops if its binder is removed partway through.
+- **Faster nightly price check:** it checks every card you own each night, and the cards you still need every 3 days, taking turns. Turn on **Check every card every night** in Settings → Daily refresh to check all of them nightly. The Refresh prices button still checks the whole set you're viewing.
+- **Fonts are built in:** the page no longer asks Google for its fonts, so it loads faster and works the same with no internet.
+- **Daily backup:** a backup is saved on the server every day, and the last 7 are kept (Settings → Backup → Saved on the server).
+- **Status in Settings → About:** last price check, last backup, database size, picture storage, free space, and any problems in the last day.
+- **Self-check:** the binder checks itself every 2 minutes and restarts if it stops answering for about 6 minutes.
+
 ## v3.4 (October 13, 2026)
 
 - **Undo for removing a binder:** an Undo button shows for 10 seconds after you remove one. Removed binders stay under **Recently removed** (tap Edit in the sets menu) for 30 days, with all their cards, purchases, photos and prices, and can be restored to the same spot. After 30 days they're deleted for good.

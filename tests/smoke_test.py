@@ -2,7 +2,7 @@
 
     python3 tests/smoke_test.py
 
-It copies server.py and index.html into a temporary folder, writes a small binder in the old JSON layout,
+It copies server.py, index.html and fonts.css into a temporary folder, writes a small binder in the old JSON layout,
 starts the binder on a spare port (nothing outside the temporary folder is touched, no downloads are needed),
 and checks that the main pages answer, data moves into the database, saves stick, and backups restore.
 Prints PASS or FAIL for each check and exits with 1 if anything failed. Python standard library only.
@@ -53,11 +53,31 @@ def sample_binder(root):
     write(root, "sets/neo4/history.json", {"2026-10-11": {"1": 24.0, "2": 9.0}, "2026-10-12": {"1": 25.0, "2": 10.0}})
 
 
+# Checks of small helpers, run inside the test folder (imports server.py without starting it).
+UNIT = r"""
+import server
+cards = [{"n": str(i)} for i in range(1, 10)] + [{"n": "c1", "custom": True}]
+server.write_json(server.sdir("unittest", "collection.json"), {"1": {"qty": 1}, "5": {"qty": 0}})
+picks = [set(c["n"] for c in server.daily_cards("unittest", cards, day=d)) for d in (0, 1, 2)]
+rest = set(str(i) for i in range(2, 10))
+assert all({"1", "c1"} <= p for p in picks), picks
+assert set().union(*picks) >= rest and all(len(p - {"1", "c1"}) <= 3 for p in picks), picks
+assert server.AUTO_NAME_RE.fullmatch("daily-20261014-030000.zip")
+assert server.backup_kind("daily") == "daily" and server.backup_kind("before-update") == "update"
+assert server.small_url("https://images.pokemontcg.io/neo4/1_hires.png") == "https://images.pokemontcg.io/neo4/1.png"
+import time
+sl = server.sets_list(); sl["meta"]["neo4"]["added"] = int(time.time()); server.write_json(server.SETS_FILE, sl)
+server.start_images("neo4")
+assert "neo4" not in server.img_jobs, "a brand new binder started the big picture download"
+print("ok")
+"""
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="binder-smoke-")
     proc = None
     try:
-        for name in ("server.py", "index.html"):
+        for name in ("server.py", "index.html", "fonts.css"):
             shutil.copyfile(os.path.join(REPO, name), os.path.join(tmp, name))
         sample_binder(tmp)
         with socket.socket() as s:
@@ -112,6 +132,25 @@ def main():
             check("unchanged page isn't sent again", False)
         except urllib.error.HTTPError as e:
             check("unchanged page isn't sent again", e.code == 304)
+
+        req = urllib.request.Request(base + "/fonts.css")
+        with OPENER.open(req, timeout=10) as r:
+            css, ctype, cache = r.read(), r.headers.get("Content-Type", ""), r.headers.get("Cache-Control", "")
+        check("fonts come from the binder itself", b"@font-face" in css and "text/css" in ctype and "immutable" in cache, (ctype, cache))
+        check("page doesn't ask Google for fonts", b"fonts.googleapis" not in raw and b"fonts.css" in raw)
+        code, h = call(base, "GET", "/api/health")
+        check("health check answers", code == 200 and h.get("ok") is True, h)
+        code, stt = call(base, "GET", "/api/status")
+        check("status answers", code == 200 and all(k in stt for k in ("lastRefresh", "lastBackup", "dbSize", "pictures", "freeSpace", "problems"))
+              and stt["dbSize"] > 0 and stt["lastRefresh"] > 0, stt)
+        for q in ("", "?full=1"):
+            code, _ = call(base, "GET", "/set/neo4/img/1.png" + q)
+            check("missing card picture is a clean 404" + (" (full size)" if q else ""), code == 404, f"got {code}")
+        code, _ = call(base, "PUT", "/api/settings", {"refreshAll": True})
+        _, sett = call(base, "GET", "/api/settings")
+        check("save 'check every card every night'", code == 200 and sett.get("refreshAll") is True, sett.get("refreshAll"))
+        unit = subprocess.run([sys.executable, "-c", UNIT], cwd=tmp, capture_output=True, text=True, timeout=60)
+        check("nightly check picks owned cards plus a third of the rest", unit.stdout.strip() == "ok", (unit.stdout + unit.stderr)[-600:])
 
         rec = {"qty": 2, "purchases": [{"d": "2026-10-13", "price": 7.5, "where": "Card show"}, {"d": "", "price": None, "where": ""}], "cond": "MP"}
         code, _ = call(base, "PUT", "/api/set/neo4/card/2", rec)

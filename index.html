@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Pokémon Binder</title>
 <link rel="icon" id="favicon" href="favicon">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="fonts.css?v=1">
 <script>try{var s=localStorage.getItem("nd-skin");if(s)document.documentElement.dataset.skin=s;if(localStorage.getItem("nd-private")==="on")document.documentElement.dataset.private="";}catch(e){}</script>
 <style>
 /* Layout: a binder page. Summary strip, filter bar, then a grid of card sleeves; side sheets for one card and for settings. Dark themes only. */
@@ -1134,7 +1133,8 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
 
     <section class="ui-page" data-page="refresh" data-title="Daily refresh">
       <div class="ui-group">
-        <label class="ui-row" for="stAuto"><span class="ui-l"><b>Refresh every set daily</b><small>A full refresh takes a few minutes per set</small></span><input type="checkbox" class="ui-switch" id="stAuto"></label>
+        <label class="ui-row" for="stAuto"><span class="ui-l"><b>Refresh every set daily</b><small>Checks every card you own each night, and the rest every 3 days</small></span><input type="checkbox" class="ui-switch" id="stAuto"></label>
+        <label class="ui-row" for="stAll"><span class="ui-l"><b>Check every card every night</b><small>Takes about twice as long. The Refresh prices button always checks every card in the set you're viewing</small></span><input type="checkbox" class="ui-switch" id="stAll"></label>
         <label class="ui-row ui-static" for="stTime"><span class="ui-l"><b>Time</b></span><input type="time" id="stTime" class="ui-ctl" value="03:00" step="900"></label>
         <div class="ui-row ui-static"><span class="ui-l"><b>Next refresh</b><small id="stTz"></small></span><span class="ui-v" id="stNext">&ndash;</span></div>
       </div>
@@ -1174,6 +1174,8 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
     <section class="ui-page" data-page="about" data-title="About">
       <div class="ver" id="stVersion">Checking installed version&hellip;</div>
       <div class="upd"><button class="btn" type="button" id="stUpdate">Check for updates</button><span class="note" id="stUpdMsg" aria-live="polite"></span></div>
+      <h3 class="ui-h">Status</h3>
+      <div class="ui-group" id="stStatus"><div class="ui-row ui-static"><span class="ui-l"><small>Checking&hellip;</small></span></div></div>
       <div class="prev" id="stPrevWrap" hidden>
         <h3 class="ui-h">Previous versions</h3>
         <ul class="prevlist" id="stPrev"></ul>
@@ -1319,9 +1321,11 @@ function trendEl(t, small){
 }
 let showEd = recall("nd-ed")!=="off";
 
+// The card database's small picture (the grid needs no more); the full scan is only for card details.
+const smallImg = u => /_hires\.png$/.test(u||"") ? u.replace(/_hires\.png$/,".png") : u;
 function cardImg(c){
   const im=document.createElement("img"); im.alt=c.name; im.loading="lazy"; im.src=base()+"/img/"+enc(c.n)+".png";
-  im.onerror=()=>{ if(!im.dataset.r && c.img){ im.dataset.r=1; im.src=c.img; } else im.remove(); };
+  im.onerror=()=>{ if(!im.dataset.r && c.img){ im.dataset.r=1; im.src=smallImg(c.img); } else im.remove(); };
   return im;
 }
 
@@ -1692,7 +1696,7 @@ function condOptions(n){
 function openCard(n){
   const c=state.cards.find(x=>x.n===n); if(!c) return; state.open=n;
   const r=rec(n);
-  const art=$("dArt"); art.hidden=false; art.dataset.r=""; art.alt=c.name; art.src=base()+"/img/"+enc(n)+".png";
+  const art=$("dArt"); art.hidden=false; art.dataset.r=""; art.alt=c.name; art.src=base()+"/img/"+enc(n)+".png?full=1";
   art.onerror=()=>{ if(!art.dataset.r && c.img){ art.dataset.r=1; art.src=c.img; } else art.hidden=true; };
   art.classList.toggle("need",qty(n)===0);
   $("dNo").textContent="No. "+label(c);
@@ -2037,7 +2041,7 @@ $("bkUp").onchange=async e=>{
 };
 
 // ---------- backups saved on the server ----------
-const bkKind = {update:"Before update", "import":"Before import", restore:"Before restore"};
+const bkKind = {update:"Before update", "import":"Before import", restore:"Before restore", daily:"Daily"};
 function loadAutoBackups(){
   fetch("api/backups").then(r=>r.json()).then(j=>{
     const list=(j.backups||[]).slice(0,6), ul=$("bkAuto"); ul.replaceChildren();
@@ -2127,6 +2131,7 @@ function loadSettings(){
   getSlots().then(s=>{ if(!s) throw 0; drawSlots(); return s; }).then(s=>{
     $("stAuto").checked=!!s.auto; $("stTime").value=s.time||"03:00"; showNext(s.next, s.auto);
     $("stBackup").checked = s.backup!==false;
+    $("stAll").checked = !!s.refreshAll;
     if(s.tz!==TZ) saveSettings({tz:TZ, offset:-new Date().getTimezoneOffset()}, true);
     settingsSummary();
   }).catch(()=>{ $("stNext").textContent="Can't reach "+srv()+"."; });
@@ -2141,6 +2146,7 @@ function saveSettings(patch, quiet){
 $("stAuto").onchange=e=>saveSettings({auto:e.target.checked, tz:TZ, offset:-new Date().getTimezoneOffset()});
 $("stTime").onchange=e=>{ if(/^\d\d:\d\d$/.test(e.target.value)) saveSettings({time:e.target.value, tz:TZ, offset:-new Date().getTimezoneOffset()}); };
 $("stBackup").onchange=e=>saveSettings({backup:e.target.checked}).then(()=>state.sid && loadState());
+$("stAll").onchange=e=>saveSettings({refreshAll:e.target.checked});
 $("stEd").checked=showEd;
 $("stEd").onchange=e=>{ showEd=e.target.checked; store("nd-ed", showEd?"on":"off"); render(); };
 $("stPeriod").replaceChildren(...PERIODS.map(([d,l])=>{ const o=document.createElement("option"); o.value=String(d); o.textContent=l; return o; }));
@@ -2152,7 +2158,41 @@ const shortDate = d => d ? new Date(d).toLocaleDateString("en-US",{month:"short"
 const verTitle = v => v.subject || (v.version ? "Version "+v.version : v.commit ? "Version "+v.commit.slice(0,7) : "Older version");
 // Version pill: "v1.2" when the version is numbered, otherwise the short code.
 function shaTag(sha, ver){ const s=document.createElement("span"); s.className="sha"+(ver?" vtag":""); s.textContent=ver?"v"+ver:(sha?sha.slice(0,7):"local"); if(ver&&sha) s.title="Code "+sha.slice(0,7); return s; }
+const fmtSize = b => b==null ? "unknown" : b<1048576 ? Math.max(1,Math.round(b/1024))+" KB" : b<1073741824 ? (b/1048576).toFixed(1)+" MB" : (b/1073741824).toFixed(1)+" GB";
+function agoText(t){
+  if(!t) return "never";
+  const ms=Date.now()-(typeof t==="number" ? t*1000 : Date.parse(t)); if(!(ms>=0)) return shortDate(t);
+  const m=Math.round(ms/60000); if(m<2) return "just now"; if(m<60) return m+" minutes ago";
+  const h=Math.round(m/60); if(h<36) return h+(h===1?" hour ago":" hours ago");
+  const d=Math.round(h/24); return d+(d===1?" day ago":" days ago");
+}
+// Settings > About > Status: is everything healthy, in plain words.
+function loadStatus(){
+  const box=$("stStatus");
+  const row=(label, value, note, bad)=>{ const r=document.createElement("div"); r.className="ui-row ui-static";
+    const l=document.createElement("span"); l.className="ui-l"; const b=document.createElement("b"); b.textContent=label; l.append(b);
+    if(note){ const n=document.createElement("small"); n.textContent=note; l.append(n); }
+    const v=document.createElement("span"); v.className="ui-v"; v.textContent=value; if(bad) v.style.color="var(--bad)";
+    r.append(l,v); return r; };
+  fetch("api/status").then(r=>r.json()).then(s=>{
+    const rows=[];
+    rows.push(row("Last price check", s.refreshing ? "Running now" : agoText(s.lastRefresh),
+      s.settings&&s.settings.auto ? "Runs each night at "+(s.settings.time||"03:00") : "Nightly check is off"));
+    const bk=s.lastBackup; rows.push(row("Last automatic backup", bk ? agoText(bk.created) : "none yet", "A daily copy is kept for 7 days"));
+    rows.push(row("Database size", fmtSize(s.dbSize)));
+    rows.push(row("Card pictures", fmtSize(s.pictures), "Saved on "+srv()+" as you view cards"));
+    const low=s.freeSpace!=null && s.freeSpace<1073741824;
+    rows.push(row("Free space", fmtSize(s.freeSpace), low ? "Running low" : "", low));
+    const pr=s.problems||[];
+    if(pr.length){ const r=row("Recent problems", pr.length+" in the last day", "", true);
+      r.classList.add("ui-stack"); const ul=document.createElement("small"); ul.style.whiteSpace="pre-wrap"; ul.textContent=pr.map(p=>new Date(p.at*1000).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})+"  "+p.msg).join("\n");
+      r.querySelector(".ui-l").append(ul); rows.push(r); }
+    else rows.push(row("Recent problems", "None"));
+    box.replaceChildren(...rows);
+  }).catch(()=>{ box.replaceChildren(row("Status", "Couldn't reach "+srv(), "", true)); });
+}
 function loadVersion(){
+  loadStatus();
   fetch("api/version").then(r=>r.json()).then(v=>{
     const box=$("stVersion"); box.replaceChildren();
     const k=document.createElement("span"); k.className="k"; k.textContent="Installed version";
@@ -2583,7 +2623,7 @@ function drawDex(){
           const r=await fetch("api/sets",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id})});
           const j=await r.json(); if(!r.ok) throw new Error(j.error||"Couldn't add that Pokémon");
           await loadSets(); $("drawer").close(); showAdd(false); openSet(id);
-          $("sync").textContent=p.name+" master set added. Downloading card images and checking prices in the background."; setTimeout(poll,1500);
+          $("sync").textContent=p.name+" master set added. Prices start filling in within a few minutes."; setTimeout(poll,1500);
         }catch(err){ add.disabled=false; add.textContent="Add"; $("addMsg").textContent=err.message+"."; }
       };
       row.append(add);
@@ -2636,7 +2676,7 @@ function drawCatalog(){
             const r=await fetch("api/sets",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:s.id})});
             const j=await r.json(); if(!r.ok) throw new Error(j.error||"Couldn't add that set");
             await loadSets(); $("drawer").close(); showAdd(false); openSet(s.id);
-            $("sync").textContent=s.name+" added. Downloading card images and checking prices in the background."; setTimeout(poll,1500);
+            $("sync").textContent=s.name+" added. Prices start filling in within a few minutes."; setTimeout(poll,1500);
           }catch(err){ add.disabled=false; add.textContent="Add"; $("addMsg").textContent=err.message+". Check that "+srv()+" is online and try again."; }
         };
         row.append(add);
@@ -2960,7 +3000,7 @@ function drawShop(){
     tdG.append(g);
     const tdI=document.createElement("td"); tdI.className="c-img";
     const im=document.createElement("img"); im.className="thumb"; im.alt=""; im.loading="lazy"; im.src=base()+"/img/"+enc(c.n)+".png";
-    im.onerror=()=>{ if(!im.dataset.r && c.img){ im.dataset.r=1; im.src=c.img; } else im.style.visibility="hidden"; };
+    im.onerror=()=>{ if(!im.dataset.r && c.img){ im.dataset.r=1; im.src=smallImg(c.img); } else im.style.visibility="hidden"; };
     tdI.append(im);
     const tdN=document.createElement("td");
     const nb=document.createElement("button"); nb.type="button"; nb.className="nm"; nb.textContent=c.name; nb.onclick=()=>openCard(c.n);
@@ -3006,7 +3046,7 @@ function drawUpg(){
     const c=r.c, tr=document.createElement("tr");
     const tdI=document.createElement("td"); tdI.className="c-img";
     const im=document.createElement("img"); im.className="thumb"; im.alt=""; im.loading="lazy"; im.src=base()+"/img/"+enc(c.n)+".png";
-    im.onerror=()=>{ if(!im.dataset.r && c.img){ im.dataset.r=1; im.src=c.img; } else im.style.visibility="hidden"; };
+    im.onerror=()=>{ if(!im.dataset.r && c.img){ im.dataset.r=1; im.src=smallImg(c.img); } else im.style.visibility="hidden"; };
     tdI.append(im);
     const tdN=document.createElement("td");
     const nb=document.createElement("button"); nb.type="button"; nb.className="nm"; nb.textContent=c.name; nb.onclick=()=>openCard(c.n);

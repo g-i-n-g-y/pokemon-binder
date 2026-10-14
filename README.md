@@ -53,6 +53,8 @@ Your collection, purchases, photos, and prices are stored only on the machine ru
 |---|---|
 | `server.py` | The web server |
 | `index.html` | The binder page |
+| `fonts.css` | The page's fonts, built in so the binder doesn't ask Google for them (since v3.5) |
+| `fonts-OFL.txt` | The fonts' free license (not installed on your server) |
 | `seed_prices.json` | Starting Neo Destiny prices, only used on a brand-new install |
 | `tests/smoke_test.py` | Checks the binder before a release: `python3 tests/smoke_test.py` (not installed on your server) |
 
@@ -65,7 +67,7 @@ Stored in `data/` next to `server.py`:
 | `binder.db` | Everything you enter and every price: binders, settings, copies owned, condition, purchases, sellers, notes, latest prices, one saved price per card per day, price options, shopping lists, card shows. One SQLite database file (since v3.0) |
 | `favicon` | Your tab icon, if you picked one |
 | `catalog.json`, `dex_index.json`, `fx.json` | Downloaded lists (all English sets, the Pokédex index, the euro rate). They download again by themselves |
-| `sets/<set id>/images/` | Card images |
+| `sets/<set id>/images/` | Card pictures: `s/` holds the small ones for the grid, full-size scans are saved when you open a card. Pictures download as you look at them; a binder kept for an hour fills in the rest in the background |
 | `sets/<set id>/photos/` | Your photos (front = `<number>`, back = `<number>_back`) |
 | `pre-sqlite-<date>/` | Your old JSON files from before v3.0, set aside (not used any more) |
 
@@ -77,12 +79,12 @@ Backups (Settings → Backup) are still a zip of plain JSON files, so they open 
 |---|---|
 | Image | `python:3.12-alpine` |
 | Port | any free port on the host → `8080` in the container |
-| App data | a folder on the host → `/app` (put `server.py` and `index.html` in it) |
+| App data | a folder on the host → `/app` (put `server.py`, `index.html` and `fonts.css` in it) |
 | Extra parameters | `-w /app` |
 | Post arguments | `python -u server.py` |
 | Variable (optional) | `BINDER_HOSTS`: extra names the binder answers to, like a reverse proxy name (IP addresses, one-word names and Tailscale names already work) |
 
-Without Docker: put `server.py` and `index.html` in a folder and run `python server.py` (Python 3.9 or newer), then open `http://localhost:8080`.
+Without Docker: put `server.py`, `index.html` and `fonts.css` in a folder and run `python server.py` (Python 3.9 or newer), then open `http://localhost:8080`.
 
 ## Updating
 
@@ -92,7 +94,8 @@ Settings → About shows the installed version, any update problem, and up to 3 
 
 Safety nets:
 - Before installing, the new version is test-started on its own with a copy of your data. If it has an error or doesn't start, nothing is installed and the current version keeps running.
-- A backup of your data is saved first (Settings → Backup → Saved on the server).
+- A backup of your data is saved first (Settings → Backup → Saved on the server). A daily backup is also saved every day and the last 7 are kept.
+- The binder checks itself every 2 minutes and restarts if it stops answering for about 6 minutes. **Settings → About → Status** shows the last price check, last backup, storage used, free space and any problems in the last day. `/api/health` answers for outside uptime monitors.
 - The last 3 versions are kept in `previous/` next to `server.py`. Rolling back to a version from before v3.0 writes your data back out as the files it uses.
 - The files a version needs are listed in its `server.py` (`APP_FILES`), so versions can have more than two files.
 
