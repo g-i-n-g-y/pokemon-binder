@@ -24,7 +24,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "3.3"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
+APP_VERSION = "3.4"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -697,6 +697,7 @@ def add_dex(sid):
         sl = sets_list()
         if sid not in sl["order"]:
             sl["order"].append(sid)
+        (sl.get("removed") or {}).pop(sid, None)
         sl["meta"][sid] = meta
         write_json(SETS_FILE, sl)
     fetch_sprite(sid)
@@ -721,6 +722,7 @@ def add_set(sid):
         sl = sets_list()
         if sid not in sl["order"]:
             sl["order"].append(sid)
+        (sl.get("removed") or {}).pop(sid, None)
         sl["meta"][sid] = meta
         write_json(SETS_FILE, sl)
     start_images(sid)
@@ -729,12 +731,74 @@ def add_set(sid):
     return meta
 
 
+KEEP_REMOVED_DAYS = 30   # a removed binder can be brought back (with everything in it) for this long
+
+
 def remove_set(sid):
+    """Take a binder off the list. Its data stays for KEEP_REMOVED_DAYS so it can be restored."""
     with lock:
         sl = sets_list()
         if sid in sl["order"]:
+            pos = sl["order"].index(sid)
             sl["order"].remove(sid)
+            sl.setdefault("removed", {})[sid] = {"at": int(time.time()), "pos": pos}
         write_json(SETS_FILE, sl)
+
+
+def restore_set(sid):
+    """Put a removed binder back where it was."""
+    with lock:
+        sl = sets_list()
+        info = (sl.get("removed") or {}).pop(sid, None)
+        if info is None and sid not in sl["order"]:
+            raise ValueError("That binder can't be restored any more")
+        if sid not in sl["order"]:
+            pos = info.get("pos", len(sl["order"])) if isinstance(info, dict) else len(sl["order"])
+            sl["order"].insert(max(0, min(int(pos), len(sl["order"]))), sid)
+        write_json(SETS_FILE, sl)
+    start_images(sid)
+    return sl["meta"].get(sid, {"id": sid, "name": sid})
+
+
+def removed_sets():
+    """Binders removed in the last KEEP_REMOVED_DAYS: [{id, name, at, daysLeft}], newest first."""
+    sl = sets_list()
+    now = time.time()
+    out = []
+    for sid, info in (sl.get("removed") or {}).items():
+        at = info.get("at", 0) if isinstance(info, dict) else 0
+        left = KEEP_REMOVED_DAYS - int((now - at) // DAY)
+        if sid not in sl["order"] and left > 0:
+            out.append({"id": sid, "name": sl["meta"].get(sid, {}).get("name", sid), "at": at, "daysLeft": left})
+    return sorted(out, key=lambda x: -x["at"])
+
+
+def purge_removed():
+    """Delete binders that were removed more than KEEP_REMOVED_DAYS ago (data, pictures and photos)."""
+    with lock:
+        sl = sets_list()
+        removed = sl.get("removed") or {}
+        now = time.time()
+        gone = [sid for sid, info in removed.items()
+                if sid in sl["order"] or now - (info.get("at", 0) if isinstance(info, dict) else 0) > KEEP_REMOVED_DAYS * DAY]
+        if not gone:
+            return []
+        with tx() as c:
+            for sid in gone:
+                removed.pop(sid, None)
+                if sid in sl["order"]:
+                    continue   # it was added again, keep it
+                for table in ("collection", "prices", "history"):
+                    c.execute(f"DELETE FROM {table} WHERE sid = ?", (sid,))
+                c.execute("DELETE FROM docs WHERE key LIKE ?", (f"sets/{sid}/%",))
+                sl["meta"].pop(sid, None)
+            sl["removed"] = removed
+            write_json(SETS_FILE, sl)
+        for sid in gone:
+            if sid not in sl["order"] and re.fullmatch(SID_RE, sid):
+                shutil.rmtree(sdir(sid), ignore_errors=True)
+                log(f"{sid}: removed {KEEP_REMOVED_DAYS}+ days ago, deleted for good")
+        return gone
 
 
 # ---------- images ----------
@@ -1640,6 +1704,10 @@ def scheduler():
     ticks = 0
     while True:
         if ticks % 30 == 0:
+            try:
+                purge_removed()
+            except Exception as e:
+                log(f"cleanup of removed binders: {e}")
             for sid in list(sets_list()["order"]):
                 start_images(sid)  # retries any images that failed earlier
             if os.path.exists(DEX_INDEX):
@@ -2439,7 +2507,7 @@ class Handler(BaseHTTPRequestHandler):
                 if cards is not None:
                     m["totals"] = set_totals(sid)
                 out.append(m)
-            return self.send(200, {"sets": out}, cache="no-store")
+            return self.send(200, {"sets": out, "removed": removed_sets(), "keepDays": KEEP_REMOVED_DAYS}, cache="no-store")
         if path == "/api/pokedex":
             idx = dex_index()
             if dex_stale(idx):
@@ -2774,6 +2842,12 @@ class Handler(BaseHTTPRequestHandler):
                     f.write(raw)
                 write_json(ICON_FILE + ".json", {"type": ctype})
             return self.send(200, {"ok": True, "v": int(time.time())})
+        m_rs = re.fullmatch(rf"/api/sets/({SID_RE})/restore", path)
+        if m_rs:
+            try:
+                return self.send(200, restore_set(m_rs.group(1)))
+            except ValueError as e:
+                return self.send(400, {"error": str(e)})
         if path == "/api/sets":
             raw = self.body(4096)
             try:

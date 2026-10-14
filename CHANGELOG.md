@@ -10,6 +10,12 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.4 (October 13, 2026)
+
+- **Undo for removing a binder:** an Undo button shows for 10 seconds after you remove one. Removed binders stay under **Recently removed** (tap Edit in the sets menu) for 30 days, with all their cards, purchases, photos and prices, and can be restored to the same spot. After 30 days they're deleted for good.
+- **Summaries line up:** the totals at the top of the page, in the sets menu and in Stats share one tidy box. Labels, numbers and notes sit on the same lines across each row, and the progress bar sits next to the %. On phones the summary takes less room, so cards show sooner.
+- On a computer, clicking anywhere outside the sets menu closes it. That click only closes the menu (buttons at the top still work right away).
+
 ## v3.3 (October 13, 2026)
 
 - **Smoother drag to reorder in the shopping list:** the row you grab lifts and follows your finger, the other rows slide out of its way, and it settles into place when you let go.
