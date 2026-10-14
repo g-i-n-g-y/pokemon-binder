@@ -130,10 +130,32 @@ dialog::backdrop{background:rgba(5,4,8,.6)}
 .upg-opts .grp{display:flex;flex-direction:column;gap:4px}
 .upg-opts .k{font-size:13px;color:var(--muted)}
 .bk{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.dtabs{align-self:flex-start}
 .dtabs button{white-space:nowrap}
 .tabpane{display:flex;flex-direction:column;gap:18px}
 .tabpane[hidden]{display:none}
+/* card details: picture and name on one side, tabs on the other (side by side on wider screens) */
+.cs-side,.cs-main{display:flex;flex-direction:column;gap:16px;min-width:0}
+.cs-side>*,.cs-main>*{flex-shrink:0}   /* scroll instead of squashing */
+.cs-side{align-items:center;text-align:center}
+.cs-side .links{justify-content:center}
+.cs-id{display:flex;flex-direction:column;gap:4px;align-items:center}
+.cs-own{margin-top:6px;font-size:13px;padding:3px 10px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+.cs-own.have{color:var(--ink);border-color:var(--ink)}
+.dtabs{align-self:stretch;display:flex;position:sticky;top:0;z-index:3;box-shadow:0 -14px 0 6px var(--surface)}  /* tabs stay in reach while the tab below scrolls */
+.dtabs button{flex:1}
+.tabn{margin-left:6px;font-size:12px;opacity:.75}
+.tabn:empty{display:none}
+.photo-row{display:grid;grid-template-columns:minmax(0,150px) 1fr;gap:14px;align-items:start}
+.photo-acts{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+@media (min-width:760px){
+  dialog#dlg.float{width:min(940px,calc(100% - 48px));height:min(86vh,800px)}
+  dialog#dlg.float .sheet.card-sheet{display:grid;grid-template-columns:300px minmax(0,1fr);gap:0;padding:0;overflow:hidden}
+  #dlg .cs-side{padding:22px;border-right:1px solid var(--line);overflow-y:auto;overscroll-behavior:contain;align-items:stretch;text-align:left}
+  #dlg .cs-side .big-art{width:100%;max-width:100%;margin:0}
+  #dlg .cs-id{align-items:flex-start}
+  #dlg .cs-side .links{justify-content:flex-start}
+  #dlg .cs-main{padding:18px 24px 28px;overflow-y:auto;overscroll-behavior:contain;min-height:0}
+}
 .rs{display:flex;flex-direction:column;gap:12px}
 .rs-cond{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--surface)}
 .rs-cond.mine{border-color:var(--accent,var(--ink))}
@@ -599,6 +621,7 @@ dialog.float .ui-chips{display:grid;grid-template-columns:repeat(auto-fill,minma
 .ui-split .ui-nav{display:flex;flex-direction:column;gap:14px}
 .ui-split .ui-page{display:none}
 .ui-split .ui-page.on{display:flex;flex-direction:column;gap:14px}
+.ui-split .ui-page.on>*{flex-shrink:0}   /* scroll instead of squashing a section to fit */
 .ui-back{margin-left:-6px}
 .ui-back svg{width:20px;height:20px}
 .ui-split .slotrow{flex-wrap:wrap}
@@ -639,7 +662,7 @@ dialog.float .ui-chips{display:grid;grid-template-columns:repeat(auto-fill,minma
 .srow[aria-current="true"]{--ring-bg:var(--dark-soft);background:var(--dark-soft);box-shadow:inset 3px 0 0 var(--dark)}
 .srow .ui-l b{font-family:var(--f-display);font-weight:700;font-size:16px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .srow .ui-l small{font-variant-numeric:tabular-nums}
-.srow .ui-l b .sprite{flex:none;width:26px;height:26px;margin:-4px 0 -4px -2px}
+.srow .ui-l b .sprite{flex:none;width:26px;height:26px;margin:-4px 0 -4px -2px;transform:translateY(-4px)}  /* Pokémon sprites sit low in their picture, so lift them to line up with the name */
 /* the ring is filled with the theme's two colors, like the progress bar on the page */
 .ring{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink);
   background:radial-gradient(closest-side,var(--ring-bg) 76%,transparent 78% 100%),
@@ -875,17 +898,23 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
 </div>
 
 <dialog id="dlg" class="float" aria-labelledby="dName">
-  <div class="sheet">
+  <div class="sheet card-sheet">
     <button class="close" type="button" id="dClose">Close ✕</button>
-    <img class="big-art" id="dArt" alt="">
-    <div>
-      <div class="eyebrow" id="dNo"></div>
-      <h2 id="dName"></h2>
-      <div class="note" id="dRar"></div>
-    </div>
+    <aside class="cs-side">
+      <img class="big-art" id="dArt" alt="">
+      <div class="cs-id">
+        <div class="eyebrow" id="dNo"></div>
+        <h2 id="dName"></h2>
+        <div class="note" id="dRar"></div>
+        <div class="cs-own own-only" id="dOwn"></div>
+      </div>
+      <div class="links" id="dLinks"></div>
+    </aside>
+    <div class="cs-main">
     <div class="seg dtabs" id="dTabs" role="group" aria-label="Card sections">
-      <button type="button" data-tab="info" aria-pressed="true">Details</button>
+      <button type="button" data-tab="info" aria-pressed="true">Prices</button>
       <button type="button" data-tab="sales" aria-pressed="false">Recent sales</button>
+      <button type="button" data-tab="mine" aria-pressed="false" class="own-only">My copy<span class="tabn" id="dTabN"></span></button>
     </div>
     <div class="tabpane" id="tabSales" hidden>
       <div class="note">The newest Unlimited English sales for each condition from the last price refresh, so you can see whether a different condition is worth it. Your price options are outlined.</div>
@@ -901,9 +930,10 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
       <span class="s yours" id="dYours" hidden></span>
       <span class="s mkt" id="dMkt" hidden></span>
       <div class="spark" id="dSpark"></div></div>
-    <div class="links" id="dLinks"></div>
     <div class="cedit" id="dCustom" hidden><button class="btn" type="button" id="dCEdit">Edit custom card</button><button class="btn" type="button" id="dCDel">Delete custom card</button></div>
-    <div class="row own-only">
+    </div>
+    <div class="tabpane own-only" id="tabMine" hidden>
+    <div class="row">
       <label class="f">Copies owned
         <div class="step"><button type="button" id="dMinus" aria-label="One fewer">−</button><output id="dQty">0</output><button type="button" id="dPlus" aria-label="One more">+</button></div>
       </label>
@@ -911,7 +941,7 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
         <select id="dCond"><option value="">Not set</option><option value="NM">NM</option><option value="LP">LP</option><option value="MP">MP</option><option value="HP">HP</option><option value="DMG">DMG</option></select>
       </label>
     </div>
-    <div class="buys own-only">
+    <div class="buys">
       <div class="buys-head"><span class="k">Purchases</span><span class="s" id="dPaid"></span></div>
       <ul class="buylist" id="dBuys"></ul>
       <form class="buyform" id="dBuyForm">
@@ -940,8 +970,8 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
       <datalist id="whereList"></datalist>
       <datalist id="handleList"></datalist>
     </div>
-    <label class="f own-only">Notes<input id="dNote" type="text" maxlength="200" placeholder="Anything to remember about this card"></label>
-    <div class="photos own-only">
+    <label class="f">Notes<input id="dNote" type="text" maxlength="200" placeholder="Anything to remember about this card"></label>
+    <div class="photos">
       <div class="photos-head">
         <span class="k">Your copy</span>
         <div class="fb" id="dSide" role="group" aria-label="Photo side">
@@ -949,9 +979,9 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
           <button type="button" data-side="back" aria-pressed="false" title="Back">B</button>
         </div>
       </div>
-      <div class="row" style="align-items:flex-end">
+      <div class="photo-row">
         <div class="photo" id="dPhoto">No front photo yet</div>
-        <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="photo-acts">
           <label class="btn" for="dUp" id="dUpLabel">Add front photo</label>
           <input id="dUp" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,image/avif" hidden>
           <span class="note" id="dUpMsg"></span>
@@ -960,6 +990,7 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
     </div>
     </div>
     <div class="saved" id="dSaved" aria-live="polite"></div>
+    </div>
   </div>
 </dialog>
 
@@ -1612,7 +1643,7 @@ function priceSource(n){
     const g=activeSlots().find(sl=>sl.t==="graded"&&slotVal(n,sl)) || state.slots[0];
     return "from "+i.count+" recent "+slotName(g)+" sale"+(i.count===1?"":"s")+" on eBay (via PriceCharting)"+late+". Used for set totals.";
   }
-  if(i && i.src==="tcgplayer" && !allRaw()) return "no recent "+slotName(state.slots[0])+" sales, so this uses "+slotName(activeSlots().find(sl=>sl.t==="raw")||state.slots[0])+": "+sales+late+". Used for set totals.";
+  if(i && i.src==="tcgplayer" && state.slots[0].t==="graded") return "no recent "+slotName(state.slots[0])+" sales, so this uses "+slotName(activeSlots().find(sl=>sl.t==="raw")||state.slots[0])+": "+sales+late+". Used for set totals.";
   if(i && i.src==="tcgplayer") return "from "+sales+late+". Used for set totals.";
   if(i && i.src==="manual") return "the price you typed for this custom card"+(customOf(n)&&customOf(n).tcg ? " (no recent TCGplayer sales yet)" : ". Add its TCGplayer link to use real sales instead")+". Used for set totals.";
   if(i && i.src==="tcgdex") return "no recent sales for your price options, so this uses TCGplayer's market price (via TCGdex)"+(i.last?", updated "+when(i.last):"")+". Used for set totals.";
@@ -1643,9 +1674,18 @@ function lpmpBox(n){
 // ---------- recent sales tab ----------
 let cardTab="info";
 function setCardTab(t){
+  if(t==="mine" && isPrivate()) t="info";
   cardTab=t;
   for(const b of $("dTabs").querySelectorAll("button")) b.setAttribute("aria-pressed", b.dataset.tab===t ? "true" : "false");
-  $("tabInfo").hidden = t!=="info"; $("tabSales").hidden = t!=="sales";
+  $("tabInfo").hidden = t!=="info"; $("tabSales").hidden = t!=="sales"; $("tabMine").hidden = t!=="mine";
+  const m=document.querySelector("#dlg .cs-main"); if(m) m.scrollTop=0;
+}
+// The short "You own 2 · LP" line under the card name, and the copy count on the My copy tab.
+function ownLine(n){
+  const q=qty(n), c=rec(n).cond, el=$("dOwn");
+  el.textContent = q>0 ? "You own "+(q>1?q+" copies":"this card")+(c?" · "+c:"") : "Still needed";
+  el.classList.toggle("have", q>0);
+  $("dTabN").textContent = q>0 ? String(q) : "";
 }
 $("dTabs").addEventListener("click",e=>{ const b=e.target.closest("button[data-tab]"); if(b) setCardTab(b.dataset.tab); });
 const shortDay = d => d ? new Date(d+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "";
@@ -1704,7 +1744,8 @@ function openCard(n){
   $("dRar").textContent=(c.custom?"Custom card · ":"")+(c.set ? c.set+(c.rarity?" · "+c.rarity:"") : cat(c))+(isSecret(c)?" · secret rare":"");
   $("dCustom").hidden=!c.custom;
   $("dP").textContent=basePrice(n) ? money(basePrice(n)) : "–";
-  lpmpBox(n); mktLine(n); drawSales(n); setCardTab(cardTab);
+  lpmpBox(n); mktLine(n); drawSales(n); ownLine(n); setCardTab(cardTab);
+  { const sd=document.querySelector("#dlg .cs-side"); if(sd) sd.scrollTop=0; }
   $("dPsrc").textContent=priceSource(n);
   condOptions(n);
   const L=$("dLinks"); L.replaceChildren();
@@ -1733,7 +1774,7 @@ function saveCard(n, patch, done){
   const sid=state.sid;
   const next={...rec(n),...patch}; delete next.ed; delete next.cost;
   if(Array.isArray(next.purchases)) next.qty=next.purchases.length;
-  state.own[n]=next; render(); if(state.view==="shop") drawShop(); if(state.view==="upg") drawUpg(); if(state.view==="stats") state.spendStale=true;
+  state.own[n]=next; render(); if(state.open===n && $("dlg").open) ownLine(n); if(state.view==="shop") drawShop(); if(state.view==="upg") drawUpg(); if(state.view==="stats") state.spendStale=true;
   saveChain=saveChain.then(()=>fetch("api/set/"+enc(sid)+"/card/"+enc(n),{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(next)}))
     .then(r=>{ if(!r.ok) throw 0; const s=state.sets.find(x=>x.id===sid); if(s){ s.owned=state.cards.filter(c=>qty(c.n)>0).length; } done&&done(true); })
     .catch(()=>{ done&&done(false); });

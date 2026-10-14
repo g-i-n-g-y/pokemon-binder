@@ -10,6 +10,16 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.6 (October 14, 2026)
+
+- **Card details, reworked:** on a computer the window is wider, with the card picture, name and links on the left and the details on the right, each side scrolling on its own. On phones the picture, name and links are centered at the top.
+  - Three tabs: **Prices**, **Recent sales**, and **My copy** (copies, condition, purchases, notes and photos), so there's much less scrolling. The tabs stay at the top while you scroll.
+  - Under the name: "You own this card · LP" or "Still needed". The My copy tab shows how many copies you have. Both hide in privacy mode.
+  - Your copy's photo sits next to its button instead of below it.
+- Settings: sections no longer get squashed, so About → Status shows every row instead of cutting off the bottom.
+- Sets menu: the Pokémon picture next to a master set's name lines up with the name instead of sitting low.
+- Fixed a price note that said "no recent sales" when there were sales.
+
 ## v3.5 (October 14, 2026)
 
 - **Card pictures load faster and use less space:** the grid uses small pictures, and the full-size scan only loads when you open a card. Pictures download as you look at them instead of all at once.
