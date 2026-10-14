@@ -10,6 +10,12 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.7 (October 14, 2026)
+
+- **Binder complete celebration:** when you own every card in a binder, Unown swirl around the screen like the vortex in Pokémon 3, then fly into place to spell **CONGRATS** and float gently. Tap anywhere (or press Escape) to close. It closes by itself after about 14 seconds.
+  - Settings → Appearance → **Binder complete**: turn it off for this device, or tap **Play** to see it any time.
+  - The Unown pictures (from Pokémon Crystal) download once and are kept on the server. If your device asks for less motion, the letters appear in place without the swirl.
+
 ## v3.6 (October 14, 2026)
 
 - **Card details, reworked:** on a computer the window is wider, with the card picture, name and links on the left and the details on the right, each side scrolling on its own. On phones the picture, name and links are centered at the top.

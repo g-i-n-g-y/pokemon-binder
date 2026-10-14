@@ -24,7 +24,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "3.6"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
+APP_VERSION = "3.7"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -684,6 +684,24 @@ def fetch_sprite(sid):
         os.replace(dest + ".tmp", dest)
     except Exception as e:
         log(f"{sid}: sprite: {e}")
+
+
+UNOWN_DIR = os.path.join(DATA, "unown")
+unown_lock = threading.Lock()
+
+
+def unown_sprite(letter):
+    """An Unown letter sprite for the binder-complete celebration, downloaded once and kept on the server."""
+    dest = os.path.join(UNOWN_DIR, letter + ".png")
+    with unown_lock:
+        if not (os.path.exists(dest) and os.path.getsize(dest) > 0):
+            name = "201" if letter == "a" else f"201-{letter}"
+            body = http_get(f"{SPRITES}/versions/generation-ii/crystal/transparent/{name}.png")
+            os.makedirs(UNOWN_DIR, exist_ok=True)
+            with open(dest + ".tmp", "wb") as f:
+                f.write(body)
+            os.replace(dest + ".tmp", dest)
+    return dest
 
 
 def add_dex(sid):
@@ -2612,6 +2630,13 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_file(os.path.join(APP, "index.html"), "text/html; charset=utf-8", "no-cache")
         if path == "/fonts.css":   # fonts kept on the server; the page asks for fonts.css?v=<n>, so a new version means a new address
             return self.send_file(os.path.join(APP, "fonts.css"), "text/css; charset=utf-8", "max-age=31536000, immutable")
+        m = re.fullmatch(r"/unown/([a-z])\.png", path)
+        if m:
+            try:
+                return self.send_file(unown_sprite(m.group(1)), "image/png")
+            except Exception as e:
+                log(f"Unown {m.group(1)}: {e}")
+                return self.send(404, b"not found", "text/plain")
         if path in ("/favicon", "/favicon.ico"):
             if os.path.exists(ICON_FILE):
                 return self.send_file(ICON_FILE, read_json(ICON_FILE + ".json", {}).get("type", "image/png"), "no-cache")

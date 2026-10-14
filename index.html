@@ -133,6 +133,18 @@ dialog::backdrop{background:rgba(5,4,8,.6)}
 .dtabs button{white-space:nowrap}
 .tabpane{display:flex;flex-direction:column;gap:18px}
 .tabpane[hidden]{display:none}
+/* binder complete: Unown swirl in, then spell CONGRATS */
+dialog.cele{max-width:none;max-height:none;width:100vw;height:100dvh;margin:0;padding:0;border:0;border-radius:0;color:#fff}
+dialog.cele::backdrop{background:transparent}
+.cele{position:fixed;inset:0;z-index:10000;background:radial-gradient(ellipse at 50% 45%,rgba(28,20,40,.86),rgba(4,2,8,.96));opacity:0;transition:opacity .35s;cursor:pointer;overflow:hidden}
+.cele.on{opacity:1}
+.cele .unown{position:absolute;left:0;top:0;image-rendering:pixelated;will-change:transform,filter;pointer-events:none}
+.cele .unown.txt{display:flex;align-items:center;justify-content:center;font-family:var(--f-display);font-weight:800;color:#fff}
+.cele-msg{position:absolute;left:0;right:0;text-align:center;padding:0 16px;color:#fff;opacity:0;transition:opacity .6s;display:flex;flex-direction:column;gap:6px;align-items:center}
+.cele-msg.on{opacity:1}
+.cele-msg b{font-family:var(--f-display);font-size:clamp(20px,4vw,30px)}
+.cele-msg span{font-size:14px;color:rgba(255,255,255,.75)}
+.cele-msg small{font-size:12px;color:rgba(255,255,255,.5);margin-top:8px}
 /* card details: picture and name on one side, tabs on the other (side by side on wider screens) */
 .cs-side,.cs-main{display:flex;flex-direction:column;gap:16px;min-width:0}
 .cs-side>*,.cs-main>*{flex-shrink:0}   /* scroll instead of squashing */
@@ -1138,6 +1150,11 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
       <div class="ui-group">
         <label class="ui-row" for="stEd"><span class="ui-l"><b>Show &ldquo;Unlimited&rdquo; under each card</b><small>Older sets use 1st Edition scans, so this reminds you which edition you collect</small></span><input type="checkbox" class="ui-switch" id="stEd" checked></label>
       </div>
+      <h3 class="ui-h">Binder complete</h3>
+      <div class="ui-group">
+        <label class="ui-row" for="stCele"><span class="ui-l"><b>Celebrate when a binder is finished</b><small>Unown swirl in and spell CONGRATS when you own every card. Only affects this device.</small></span><input type="checkbox" class="ui-switch" id="stCele" checked></label>
+        <div class="ui-row ui-static"><span class="ui-l"><b>Try it</b><small>Plays the celebration now</small></span><button class="btn" type="button" id="stCeleTry">Play</button></div>
+      </div>
       <h3 class="ui-h">Tab icon</h3>
       <div class="ui-group"><div class="ui-row ui-static">
         <img id="icPrev" src="favicon" alt="Current tab icon" width="36" height="36">
@@ -1671,6 +1688,103 @@ function lpmpBox(n){
   $("dBoxes").classList.toggle("one", state.slots[1].t==="none");
   $("dPk").textContent = mainLabel();
 }
+// ---------- binder complete celebration ----------
+// Unown sprites (Pokémon Crystal, from PokeAPI, cached on the server) swirl around the screen like the
+// vortex in Pokémon 3, then fly into place to spell CONGRATS and float gently until you tap.
+const CELE_WORD="CONGRATS";
+const celeOn = () => recall("nd-cele")!=="off";
+let celeRun=null;
+// Unown art sits in the lower part of its picture: trim to the drawing so the letters line up.
+function trimSprite(im){
+  const c=document.createElement("canvas"), w=im.naturalWidth, h=im.naturalHeight; c.width=w; c.height=h;
+  const x=c.getContext("2d"); x.drawImage(im,0,0);
+  let d; try{ d=x.getImageData(0,0,w,h).data; }catch(_){ return null; }
+  let x0=w,y0=h,x1=-1,y1=-1;
+  for(let y=0;y<h;y++) for(let i=0;i<w;i++) if(d[(y*w+i)*4+3]>20){ if(i<x0)x0=i; if(i>x1)x1=i; if(y<y0)y0=y; if(y>y1)y1=y; }
+  if(x1<0) return null;
+  const side=Math.max(x1-x0,y1-y0)+3, cx=(x0+x1)/2, cy=(y0+y1)/2;
+  const o=document.createElement("canvas"); o.width=o.height=side;
+  o.getContext("2d").drawImage(c, Math.round(cx-side/2), Math.round(cy-side/2), side, side, 0, 0, side, side);
+  return o;
+}
+function loadUnown(ch){
+  return new Promise(res=>{
+    const im=new Image(); const t=setTimeout(()=>res(null),4000);
+    im.onload=()=>{ clearTimeout(t); res(trimSprite(im)); }; im.onerror=()=>{ clearTimeout(t); res(null); };
+    im.src="unown/"+ch.toLowerCase()+".png";
+  });
+}
+async function celebrate(sub){
+  if(celeRun) return;
+  celeRun={};
+  // a dialog of its own so it shows above any open window (card details, Settings)
+  const ov=document.createElement("dialog"); ov.className="cele"; ov.setAttribute("role","alertdialog"); ov.setAttribute("aria-label","Binder complete. Congrats!");
+  const msg=document.createElement("div"); msg.className="cele-msg";
+  const m1=document.createElement("b"); m1.textContent="Binder complete!";
+  const m2=document.createElement("span"); m2.textContent=sub||"";
+  const m3=document.createElement("small"); m3.textContent="Tap anywhere to close";
+  msg.append(m1); if(sub) msg.append(m2); msg.append(m3);
+  ov.append(msg); document.body.append(ov); ov.showModal();
+  const sprites=await Promise.all([...CELE_WORD].map(loadUnown));
+  const els=[...CELE_WORD].map((ch,i)=>{
+    let el=sprites[i];
+    if(!el){ el=document.createElement("div"); el.classList.add("txt"); el.textContent=ch; }   // no picture: plain letter
+    el.classList.add("unown"); el.setAttribute("aria-hidden","true"); ov.append(el); return el;
+  });
+  requestAnimationFrame(()=>ov.classList.add("on"));
+  const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const n=els.length, rnd=()=>Math.random();
+  const P=els.map((_,i)=>({ ph:i/n*Math.PI*2+rnd()*.5, sp:2.4+rnd()*1.3, rx:.75+rnd()*.4, ry:.75+rnd()*.4, tw:rnd()*6, tb:.6+rnd()*.8 }));
+  const SWIRL=reduce?0:1.8, SETTLE=reduce?0:1.1, STAG=.07, CLOSE=14;
+  const ease=k=>{ const c=1.5; return 1+(c+1)*Math.pow(k-1,3)+c*Math.pow(k-1,2); };   // ease-out with a small overshoot
+  let t0=null, raf=0;
+  const frame=now=>{
+    if(t0===null) t0=now;
+    const t=(now-t0)/1000, W=innerWidth, H=innerHeight;
+    const u=Math.min(72, W/(n+2.2)), gap=u*1.12, fy=H*.42;
+    for(let i=0;i<n;i++){
+      const p=P[i], el=els[i];
+      // the vortex: an ellipse around the middle, closer letters bigger and blurrier
+      const th=p.ph+p.sp*t;
+      const d=(Math.sin(th)+1)/2;
+      const sx=W/2+Math.cos(th)*W*.38*p.rx*(1-.15*Math.sin(t*3+i));
+      const sy=H*.46+Math.sin(th)*H*.17*p.ry+Math.sin(th*2+p.tw)*H*.07;
+      const ss=.45+d*1.9, sr=Math.sin(th*1.7+p.tw)*35, sb=d>.78?(d-.78)*14:0;
+      // the word: each letter's spot, with a slow float
+      const fx=W/2+(i-(n-1)/2)*gap;
+      const bob=reduce?0:Math.sin(t*2*Math.PI/1.9+i*.7)*u*.09, tilt=reduce?0:Math.sin(t*1.4+i)*3;
+      const k=Math.min(1,Math.max(0,(t-SWIRL-i*STAG)/SETTLE)), e=k>=1?1:ease(k);
+      const x=sx+(fx-sx)*e, y=sy+(fy+bob-sy)*e, sc=ss+(1-ss)*e, r=sr+(tilt-sr)*e, bl=sb*(1-e);
+      const fade=Math.min(1,t/.35);
+      el.style.width=el.style.height=u+"px";
+      if(el.classList.contains("txt")) el.style.fontSize=(u*.8)+"px";
+      el.style.transform="translate3d("+(x-u/2)+"px,"+(y-u/2)+"px,0) scale("+sc+") rotate("+r+"deg)";
+      el.style.filter=(bl>.2?"blur("+bl.toFixed(1)+"px) ":"")+"drop-shadow(0 0 "+(4+3*e)+"px rgba(225,215,255,.75))";
+      el.style.opacity=fade;
+      el.style.zIndex=k<1 ? String(Math.round(d*100)) : "100";
+    }
+    msg.style.top=(fy+Math.min(72, W/(n+2.2))*.9+18)+"px";
+    if(t>SWIRL+SETTLE+(n-1)*STAG-.2) msg.classList.add("on");
+    if(t>CLOSE) return close();
+    raf=requestAnimationFrame(frame);
+  };
+  const close=()=>{
+    cancelAnimationFrame(raf); ov.classList.remove("on");
+    document.removeEventListener("keydown",key,true);
+    setTimeout(()=>{ if(ov.open) ov.close(); ov.remove(); celeRun=null; },380);
+  };
+  ov.addEventListener("cancel",e=>{ e.preventDefault(); close(); });
+  const key=e=>{ if(e.key==="Escape"||e.key==="Enter"||e.key===" "){ e.preventDefault(); e.stopPropagation(); close(); } };
+  ov.addEventListener("click",close);
+  document.addEventListener("keydown",key,true);
+  raf=requestAnimationFrame(frame);
+}
+// fetch the 8 letters quietly a little after the page opens, so the celebration starts instantly
+setTimeout(()=>{ if(celeOn()) for(const ch of new Set(CELE_WORD.toLowerCase())){ const im=new Image(); im.src="unown/"+ch+".png"; } }, 8000);
+$("stCele").checked=celeOn();
+$("stCele").onchange=e=>store("nd-cele", e.target.checked ? undefined : "off");
+$("stCeleTry").onclick=()=>celebrate((state.set.name||"Your binder")+" · "+state.cards.length+" of "+state.cards.length+" cards");
+
 // ---------- recent sales tab ----------
 let cardTab="info";
 function setCardTab(t){
@@ -1774,7 +1888,10 @@ function saveCard(n, patch, done){
   const sid=state.sid;
   const next={...rec(n),...patch}; delete next.ed; delete next.cost;
   if(Array.isArray(next.purchases)) next.qty=next.purchases.length;
-  state.own[n]=next; render(); if(state.open===n && $("dlg").open) ownLine(n); if(state.view==="shop") drawShop(); if(state.view==="upg") drawUpg(); if(state.view==="stats") state.spendStale=true;
+  const allOwned=()=>state.cards.length>0 && state.cards.every(c=>qty(c.n)>0);
+  const wasDone=allOwned();
+  state.own[n]=next;
+  if(!wasDone && allOwned() && celeOn() && !isPrivate()) setTimeout(()=>celebrate((state.set.name||"Your binder")+" · all "+state.cards.length+" cards"),350); render(); if(state.open===n && $("dlg").open) ownLine(n); if(state.view==="shop") drawShop(); if(state.view==="upg") drawUpg(); if(state.view==="stats") state.spendStale=true;
   saveChain=saveChain.then(()=>fetch("api/set/"+enc(sid)+"/card/"+enc(n),{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(next)}))
     .then(r=>{ if(!r.ok) throw 0; const s=state.sets.find(x=>x.id===sid); if(s){ s.owned=state.cards.filter(c=>qty(c.n)>0).length; } done&&done(true); })
     .catch(()=>{ done&&done(false); });
