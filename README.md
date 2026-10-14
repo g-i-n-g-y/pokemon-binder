@@ -54,6 +54,7 @@ Your collection, purchases, photos, and prices are stored only on the machine ru
 | `server.py` | The web server |
 | `index.html` | The binder page |
 | `seed_prices.json` | Starting Neo Destiny prices, only used on a brand-new install |
+| `tests/smoke_test.py` | Checks the binder before a release: `python3 tests/smoke_test.py` (not installed on your server) |
 
 ## Your data (never in this repository)
 
@@ -61,17 +62,14 @@ Stored in `data/` next to `server.py`:
 
 | Path | What it holds |
 |---|---|
-| `sets.json` | Which sets are in the binder |
-| `settings.json` | Refresh time and other settings |
+| `binder.db` | Everything you enter and every price: binders, settings, copies owned, condition, purchases, sellers, notes, latest prices, one saved price per card per day, price options, shopping lists, card shows. One SQLite database file (since v3.0) |
 | `favicon` | Your tab icon, if you picked one |
-| `catalog.json` | All English sets (refreshed weekly) |
-| `sets/<set id>/collection.json` | Copies owned, condition, purchases, sellers, notes |
-| `sets/<set id>/prices.json` | Latest prices, including per-condition averages |
-| `sets/<set id>/history.json` | One saved price per card per day |
-| `sets/<set id>/slots.json` | This binder's price options |
-| `sets/<set id>/shop.json` | Your shopping list order |
+| `catalog.json`, `dex_index.json`, `fx.json` | Downloaded lists (all English sets, the Pokédex index, the euro rate). They download again by themselves |
 | `sets/<set id>/images/` | Card images |
 | `sets/<set id>/photos/` | Your photos (front = `<number>`, back = `<number>_back`) |
+| `pre-sqlite-<date>/` | Your old JSON files from before v3.0, set aside (not used any more) |
+
+Backups (Settings → Backup) are still a zip of plain JSON files, so they open in any text editor and restore in both older and newer versions. To look inside `binder.db` itself, use a viewer like DB Browser for SQLite.
 
 ## Running it with Docker (Unraid example)
 

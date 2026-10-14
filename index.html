@@ -1939,6 +1939,8 @@ function loadVersion(){
     const s=document.createElement("span"); s.className="s";
     s.append(shaTag(v.commit, v.version), " Installed "+shortDate(v.installed||v["server.py"])+" · "+(v.github?"updates from GitHub":v.updatesFolder?"updates from the updates folder":"updates not set up"));
     box.append(k,t,s);
+    if(v.storage){ const d=document.createElement("span"); d.className="s"; const mb=v.storage.size/1048576;
+      d.textContent="Your data: one database file on BEN ("+v.storage.file+", "+(mb<1 ? Math.max(1,Math.round(v.storage.size/1024))+" KB" : mb.toFixed(1)+" MB")+")"; box.append(d); }
     if(v.error){ const e=document.createElement("span"); e.className="s"; e.style.color="var(--bad)"; e.textContent="Last check failed: "+v.error+"."; box.append(e); }
     $("stUpdate").hidden = !(v.github || v.updatesFolder);
     const prev=v.previous||[], ul=$("stPrev"); ul.replaceChildren(); $("stPrevWrap").hidden=!prev.length;

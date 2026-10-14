@@ -16,7 +16,7 @@ GITHUB_REPO to an empty value to use a folder mounted at /updates instead (same 
 needed for a private copy of the repository. Replaced files are kept in previous/.
 """
 from html import unescape
-import io, json, os, re, shutil, socket, subprocess, sys, tempfile, threading, time, traceback, urllib.error, urllib.parse, urllib.request, zipfile
+import contextlib, io, json, os, re, shutil, socket, sqlite3, subprocess, sys, tempfile, threading, time, traceback, urllib.error, urllib.parse, urllib.request, zipfile
 from datetime import datetime, timedelta, timezone
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 try:
@@ -78,7 +78,7 @@ def log(msg):
     print(msg, flush=True)
 
 
-def read_json(path, default):
+def read_file_json(path, default):
     try:
         with open(path) as f:
             return json.load(f)
@@ -86,12 +86,307 @@ def read_json(path, default):
         return default
 
 
-def write_json(path, obj):
+def write_file_json(path, obj):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     tmp = path + ".tmp"
     with open(tmp, "w") as f:
         json.dump(obj, f, indent=1)
     os.replace(tmp, path)
+
+
+# ---------- storage: your data lives in one SQLite database, data/binder.db ----------
+#
+# Everything a backup holds (settings, binders, collection, prices, price history, shopping lists...) is kept in
+# the database. Card pictures, your photos and downloaded lists (catalog, Pokédex index) stay as normal files.
+# The rest of the program still calls read_json / write_json with the old file names (like
+# data/sets/neo4/collection.json); those names are now just labels for what's in the database.
+# Collection and prices get a row per card, and price history a row per day, so saving one card or one day
+# only changes that row. One card's history can still be read on its own: json_extract(snap, '$."107"').
+# Backups are still zips of the same JSON files, so backups work in both directions between old and new versions.
+
+DB_FILE = os.path.join(DATA, "binder.db")
+DB_SCHEMA = 1
+SET_FILES = ("collection", "prices", "history", "tcg_ids", "slots", "shop", "pc_urls", "tcgdex_ids", "custom", "cards")
+DOC_RE = re.compile(rf"(?:settings|sets|shows)\.json|sets/{SID_RE}/(?:{'|'.join(SET_FILES)})\.json")
+SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
+CREATE TABLE IF NOT EXISTS docs (key TEXT PRIMARY KEY, body TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS collection (sid TEXT NOT NULL, n TEXT NOT NULL, rec TEXT NOT NULL, PRIMARY KEY (sid, n));
+CREATE TABLE IF NOT EXISTS prices (sid TEXT NOT NULL, n TEXT NOT NULL, p TEXT, info TEXT, PRIMARY KEY (sid, n));
+CREATE TABLE IF NOT EXISTS history (sid TEXT NOT NULL, d TEXT NOT NULL, snap TEXT NOT NULL, PRIMARY KEY (sid, d));
+"""
+_MISSING = object()
+db_lock = threading.RLock()   # one connection, shared; only one thread uses it at a time
+_db = {"conn": None, "depth": 0, "retired": False}
+
+
+def db():
+    """The database connection (opened the first time it's needed). Call with db_lock held."""
+    if _db["retired"]:
+        raise RuntimeError("The binder is restarting into an older version")
+    if _db["conn"] is None:
+        os.makedirs(DATA, exist_ok=True)
+        c = sqlite3.connect(DB_FILE, check_same_thread=False, isolation_level=None, timeout=30)
+        c.execute("PRAGMA journal_mode=WAL")      # readers and the writer don't block each other; safe if BEN loses power
+        c.execute("PRAGMA synchronous=NORMAL")
+        c.executescript(SCHEMA_SQL)
+        _db["conn"] = c
+    return _db["conn"]
+
+
+@contextlib.contextmanager
+def tx():
+    """All-or-nothing changes: everything inside is saved together, or (on an error) none of it is."""
+    with db_lock:
+        c = db()
+        if _db["depth"] == 0:
+            c.execute("BEGIN IMMEDIATE")
+        _db["depth"] += 1
+        try:
+            yield c
+        except BaseException:
+            _db["depth"] -= 1
+            if _db["depth"] == 0:
+                c.execute("ROLLBACK")
+            raise
+        _db["depth"] -= 1
+        if _db["depth"] == 0:
+            c.execute("COMMIT")
+
+
+def doc_key(path):
+    """'data/sets/neo4/collection.json' -> 'sets/neo4/collection.json' if it's kept in the database, else None."""
+    rel = os.path.relpath(os.path.abspath(path), DATA).replace(os.sep, "/")
+    return rel if DOC_RE.fullmatch(rel) else None
+
+
+def _kind(key):
+    """('neo4', 'collection') for 'sets/neo4/collection.json'; (None, None) for the top-level files."""
+    parts = key[:-5].split("/")
+    return (parts[1], parts[2]) if len(parts) == 3 else (None, None)
+
+
+def _tabled_shape(kind, obj):
+    """Collection, prices and history go in their own tables when they look normal; anything odd is kept whole."""
+    if kind in ("collection", "history"):
+        return isinstance(obj, dict) and (kind == "collection" or all(isinstance(v, dict) for v in obj.values()))
+    if kind == "prices":
+        return isinstance(obj, dict) and isinstance(obj.get("p", {}), dict) and isinstance(obj.get("info", {}), dict)
+    return False
+
+
+def _put_doc(c, key, body):
+    c.execute("INSERT INTO docs (key, body) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET body = excluded.body",
+              (key, json.dumps(body)))
+
+
+def db_read(key):
+    with db_lock:
+        c = db()
+        row = c.execute("SELECT body FROM docs WHERE key = ?", (key,)).fetchone()
+        if row is None:
+            return _MISSING
+        body = json.loads(row[0])
+        sid, kind = _kind(key)
+        if kind not in ("collection", "prices", "history"):
+            return body
+        if "__raw" in body:
+            return body["__raw"]
+        if kind == "collection":
+            return {n: json.loads(r) for n, r in c.execute("SELECT n, rec FROM collection WHERE sid = ? ORDER BY rowid", (sid,))}
+        if kind == "prices":
+            has = body.pop("__has", ["p", "info"])
+            p, info = {}, {}
+            for n, pv, iv in c.execute("SELECT n, p, info FROM prices WHERE sid = ? ORDER BY rowid", (sid,)):
+                if pv is not None:
+                    p[n] = json.loads(pv)
+                if iv is not None:
+                    info[n] = json.loads(iv)
+            out = {}
+            if "p" in has:
+                out["p"] = p
+            if "info" in has:
+                out["info"] = info
+            out.update(body)
+            return out
+        return {d: json.loads(snap) for d, snap in c.execute("SELECT d, snap FROM history WHERE sid = ? ORDER BY d", (sid,))}
+
+
+def _sync_rows(c, table, sid, cols, rows):
+    """Make `table` hold exactly `rows` for this set ({row key: values}), touching only rows that changed."""
+    keys = ("d",) if table == "history" else ("n",)
+    have = {r[:len(keys)]: r[len(keys):] for r in
+            c.execute(f"SELECT {', '.join(keys + cols)} FROM {table} WHERE sid = ?", (sid,))}
+    gone = [k for k in have if k not in rows]
+    where = " AND ".join(f"{k} = ?" for k in keys)
+    c.executemany(f"DELETE FROM {table} WHERE sid = ? AND {where}", [(sid,) + k for k in gone])
+    sets = ", ".join(f"{col} = excluded.{col}" for col in cols)
+    c.executemany(f"INSERT INTO {table} (sid, {', '.join(keys + cols)}) VALUES ({', '.join('?' * (1 + len(keys) + len(cols)))}) "
+                  f"ON CONFLICT (sid, {', '.join(keys)}) DO UPDATE SET {sets}",
+                  [(sid,) + k + v for k, v in rows.items() if have.get(k) != v])
+
+
+def db_write(key, obj):
+    sid, kind = _kind(key)
+    with tx() as c:
+        if kind in ("collection", "prices", "history"):
+            if not _tabled_shape(kind, obj):
+                for table in ("collection", "prices", "history"):
+                    if table == kind:
+                        c.execute(f"DELETE FROM {table} WHERE sid = ?", (sid,))
+                return _put_doc(c, key, {"__raw": obj})
+            if kind == "collection":
+                _sync_rows(c, "collection", sid, ("rec",), {(str(n),): (json.dumps(v),) for n, v in obj.items()})
+                return _put_doc(c, key, {})
+            if kind == "prices":
+                p, info = obj.get("p") or {}, obj.get("info") or {}
+                rows = {}
+                for n in list(p) + [n for n in info if n not in p]:
+                    rows[(str(n),)] = (json.dumps(p[n]) if n in p else None, json.dumps(info[n]) if n in info else None)
+                _sync_rows(c, "prices", sid, ("p", "info"), rows)
+                body = {k: v for k, v in obj.items() if k not in ("p", "info")}
+                body["__has"] = [k for k in ("p", "info") if k in obj]
+                return _put_doc(c, key, body)
+            _sync_rows(c, "history", sid, ("snap",), {(str(d),): (json.dumps(day),) for d, day in obj.items()})
+            return _put_doc(c, key, {})
+        _put_doc(c, key, obj)
+
+
+def _tabled_ready(c, key):
+    """True if this set's collection/history is stored as rows (so one row can be changed on its own)."""
+    row = c.execute("SELECT body FROM docs WHERE key = ?", (key,)).fetchone()
+    if row is None:
+        _put_doc(c, key, {})
+        return True
+    return "__raw" not in json.loads(row[0])
+
+
+def collection_put(sid, n, rec):
+    """Save one card's record (copies, purchases, condition...) without touching the rest of the binder."""
+    key = f"sets/{sid}/collection.json"
+    with tx() as c:
+        if not _tabled_ready(c, key):
+            coll = db_read(key)
+            coll = coll if isinstance(coll, dict) else {}
+            coll[n] = rec
+            return db_write(key, coll)
+        c.execute("INSERT INTO collection (sid, n, rec) VALUES (?, ?, ?) ON CONFLICT (sid, n) DO UPDATE SET rec = excluded.rec",
+                  (sid, n, json.dumps(rec)))
+
+
+def history_put_day(sid, d, snap):
+    """Save one day of prices ({card: price}), replacing that day only."""
+    key = f"sets/{sid}/history.json"
+    with tx() as c:
+        if not _tabled_ready(c, key):
+            hist = db_read(key)
+            hist = hist if isinstance(hist, dict) else {}
+            hist[d] = snap
+            return db_write(key, hist)
+        c.execute("INSERT INTO history (sid, d, snap) VALUES (?, ?, ?) ON CONFLICT (sid, d) DO UPDATE SET snap = excluded.snap",
+                  (sid, d, json.dumps(snap)))
+
+
+def card_history(sid, n, since=""):
+    """[(date, price)] for one card, read straight from the database (no need to load every card's history)."""
+    with db_lock:
+        return [(d, v) for d, v in db().execute(
+            "SELECT d, json_extract(snap, ?) FROM history WHERE sid = ? AND d >= ? ORDER BY d", (f'$."{n}"', sid, since))
+            if v is not None]
+
+
+def read_json(path, default):
+    key = doc_key(path)
+    if key is None:
+        return read_file_json(path, default)
+    try:
+        v = db_read(key)
+    except sqlite3.Error as e:
+        log(f"database: couldn't read {key}: {e}")
+        return default
+    return default if v is _MISSING else v
+
+
+def write_json(path, obj):
+    key = doc_key(path)
+    if key is None:
+        return write_file_json(path, obj)
+    db_write(key, obj)
+
+
+def data_exists(path):
+    key = doc_key(path)
+    if key is None:
+        return os.path.exists(path)
+    with db_lock:
+        return db().execute("SELECT 1 FROM docs WHERE key = ?", (key,)).fetchone() is not None
+
+
+def db_keys():
+    with db_lock:
+        return [k for (k,) in db().execute("SELECT key FROM docs ORDER BY key")]
+
+
+def migrate_to_db():
+    """First start on v3.0: copy your JSON files into the database, once. The old files are moved to
+    data/pre-sqlite-<date>/ (not deleted), and backups made before the update still restore."""
+    with db_lock:
+        if db().execute("SELECT 1 FROM meta WHERE key = 'schema'").fetchone():
+            return
+    found = []
+    for root, dirs, files in os.walk(DATA):
+        dirs[:] = [d for d in dirs if d not in ("images", "photos") and not d.startswith("pre-sqlite")]
+        for fn in files:
+            rel = os.path.relpath(os.path.join(root, fn), DATA).replace(os.sep, "/")
+            if DOC_RE.fullmatch(rel):
+                found.append(rel)
+    skipped = []
+    with tx() as c:
+        for rel in sorted(found):
+            try:
+                with open(os.path.join(DATA, rel)) as f:
+                    obj = json.load(f)
+            except (OSError, ValueError) as e:
+                skipped.append(rel)
+                log(f"database: skipped {rel}, it couldn't be read ({e})")
+                continue
+            db_write(rel, obj)
+        c.execute("INSERT INTO meta (key, value) VALUES ('schema', ?)", (str(DB_SCHEMA),))
+        c.execute("INSERT INTO meta (key, value) VALUES ('created', ?)", (time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),))
+    if found:
+        keep = os.path.join(DATA, "pre-sqlite-" + time.strftime("%Y%m%d-%H%M%S"))
+        for rel in found:
+            dest = os.path.join(keep, *rel.split("/"))
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
+            try:
+                shutil.move(os.path.join(DATA, rel), dest)
+            except OSError as e:
+                log(f"database: couldn't move {rel} out of the way: {e}")
+        log(f"Moved {len(found) - len(skipped)} data files into the database (data/binder.db). "
+            f"The old files are in data/{os.path.basename(keep)}/")
+
+
+def export_to_files():
+    """Write everything in the database back out as the JSON files older versions read (used before a roll back)."""
+    with db_lock:
+        docs = [(k, db_read(k)) for k in db_keys()]
+    for k, obj in docs:
+        write_file_json(os.path.join(DATA, *k.split("/")), obj)
+    return [k for k, _ in docs]
+
+
+def retire_db():
+    """After rolling back to a version without the database: set binder.db aside (renamed, not deleted)
+    so that updating again later starts fresh from the files the older version kept."""
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    with db_lock:
+        if _db["conn"] is not None:
+            _db["conn"].close()
+            _db["conn"] = None
+        _db["retired"] = True
+        for ext in ("", "-wal", "-shm"):
+            if os.path.exists(DB_FILE + ext):
+                os.replace(DB_FILE + ext, f"{DB_FILE}.rolled-back-{stamp}{ext}")
 
 
 def http_get(url, timeout=30):
@@ -1178,9 +1473,7 @@ def snapshot_history(sid, prices=None):
     p = prices.get("p") or {}
     if not p:
         return
-    hist = read_json(sdir(sid, "history.json"), {})
-    hist[today_local()] = {n: v[0] for n, v in p.items() if v and isinstance(v[0], (int, float))}
-    write_json(sdir(sid, "history.json"), hist)
+    history_put_day(sid, today_local(), {n: v[0] for n, v in p.items() if v and isinstance(v[0], (int, float))})
 
 
 def migrate_purchases(sid):
@@ -1332,15 +1625,15 @@ def setup():
                 shutil.move(os.path.join(DATA, src), sdir("neo4", dst))
         # photos were saved as data/photos/<n>; keep that layout under the set
         log("Moved Neo Destiny data into data/sets/neo4")
+    migrate_to_db()
     sl = sets_list()
     if not sl["order"]:
         # first run on a fresh install, or right after the move above
-        if not os.path.exists(sdir("neo4", "collection.json")):
+        if not data_exists(sdir("neo4", "collection.json")):
             for name, dest in (("seed_collection.json", "collection.json"), ("seed_prices.json", "prices.json")):
-                src = os.path.join(APP, name)
-                if os.path.exists(src):
-                    os.makedirs(sdir("neo4"), exist_ok=True)
-                    shutil.copy(src, sdir("neo4", dest))
+                seed = read_file_json(os.path.join(APP, name), None)
+                if seed is not None:
+                    write_json(sdir("neo4", dest), seed)
         sl = {"order": ["neo4"], "meta": {"neo4": {"id": "neo4", "name": "Neo Destiny", "series": "Neo",
               "printedTotal": 105, "total": 113, "releaseDate": "2002/02/28"}}}
         write_json(SETS_FILE, sl)
@@ -1760,23 +2053,16 @@ BACKUPS = os.path.join(APP, "backups")          # safety copies made before a re
 AUTO_KEEP = {"before-update": 10, "before-import": 5, "before-restore": 5}
 AUTO_NAME_RE = re.compile(r"(before-(?:update|import|restore))-\d{8}-\d{6}(?:-\d{3})?\.zip")
 MAX_RESTORE = 500 * 1024 * 1024
-SET_FILES = ("collection", "prices", "history", "tcg_ids", "slots", "shop", "pc_urls", "tcgdex_ids", "custom", "cards")
 BACKUP_RE = re.compile(rf"(settings\.json|sets\.json|shows\.json|favicon|favicon\.json|sets/{SID_RE}/(?:{'|'.join(SET_FILES)})\.json"
                        rf"|sets/{SID_RE}/photos/{NUM_RE}(?:_back)?(?:\.json)?)")
 
 
-def backup_names():
-    """Every file a backup holds: your collection, prices, history, settings and photos.
+def backup_files():
+    """Files a backup holds next to the database's data: your photos and tab icon.
     Card images and the set catalog are left out because they download again by themselves."""
-    out = []
-    for name in ("settings.json", "sets.json", "shows.json", "favicon", "favicon.json"):
-        if os.path.isfile(os.path.join(DATA, name)):
-            out.append(name)
+    out = [name for name in ("favicon", "favicon.json") if os.path.isfile(os.path.join(DATA, name))]
     sets_root = os.path.join(DATA, "sets")
     for sid in sorted(os.listdir(sets_root)) if os.path.isdir(sets_root) else []:
-        for f in SET_FILES:
-            if os.path.isfile(sdir(sid, f + ".json")):
-                out.append(f"sets/{sid}/{f}.json")
         pdir = sdir(sid, "photos")
         for f in sorted(os.listdir(pdir)) if os.path.isdir(pdir) else []:
             out.append(f"sets/{sid}/photos/{f}")
@@ -1784,10 +2070,15 @@ def backup_names():
 
 
 def make_backup(target):
+    """A zip of your data as JSON files (the same layout every version uses), plus photos and the tab icon."""
     with lock:
+        with db_lock:   # one consistent moment: nothing can save while this reads
+            docs = [(k, db_read(k)) for k in db_keys() if BACKUP_RE.fullmatch(k)]
         with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as z:
             z.writestr("backup.json", json.dumps({"app": "pokemon-binder", "version": APP_VERSION, "created": now_iso()}))
-            for name in backup_names():
+            for k, obj in docs:
+                z.writestr(k, json.dumps(obj, indent=1))
+            for name in backup_files():
                 z.write(os.path.join(DATA, name), name)
 
 
@@ -1846,6 +2137,10 @@ def restore_backup(path):
                     raise ValueError(f"The backup is damaged ({n} can't be read)")
         safety = auto_backup("before-restore")
         with lock:
+            with tx():   # all of the data goes in together, or none of it does
+                for n in names:
+                    if DOC_RE.fullmatch(n):
+                        db_write(n, json.loads(z.read(n)))
             for sid in {n.split("/")[1] for n in names if n.startswith("sets/")}:
                 shutil.rmtree(sdir(sid, "photos"), ignore_errors=True)
             if "favicon" not in names:
@@ -1853,6 +2148,8 @@ def restore_backup(path):
                     if os.path.exists(os.path.join(DATA, f)):
                         os.remove(os.path.join(DATA, f))
             for n in names:
+                if DOC_RE.fullmatch(n):
+                    continue
                 dest = os.path.join(DATA, *n.split("/"))
                 os.makedirs(os.path.dirname(dest), exist_ok=True)
                 with z.open(n) as src, open(dest + ".tmp", "wb") as out:
@@ -1868,7 +2165,7 @@ def warm_up():
     for sid in list(sets_list()["order"]):
         try:
             migrate_purchases(sid)
-            if not os.path.exists(sdir(sid, "history.json")):
+            if not data_exists(sdir(sid, "history.json")):
                 with lock:
                     snapshot_history(sid)
         except Exception as e:
@@ -2156,9 +2453,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(400, {"error": "bad json"})
         sid, n = m.groups()
         with lock:
-            coll = read_json(sdir(sid, "collection.json"), {})
-            coll[n] = rec
-            write_json(sdir(sid, "collection.json"), coll)
+            collection_put(sid, n, rec)
         self.send(200, {"ok": True})
 
     def do_PUT_shows(self):
@@ -2587,12 +2882,20 @@ def trial_run(folder):
             shutil.copyfile(src if os.path.isfile(src) else os.path.join(APP, name), os.path.join(tmp, name))
         # a copy of the small data files only (no card pictures or photos)
         for root, dirs, files in os.walk(DATA):
-            dirs[:] = [d for d in dirs if d not in ("images", "photos")]
+            dirs[:] = [d for d in dirs if d not in ("images", "photos") and not d.startswith("pre-sqlite")]
             for fn in files:
                 if fn.endswith(".json"):
                     dst = os.path.join(tmp, "data", os.path.relpath(os.path.join(root, fn), DATA))
                     os.makedirs(os.path.dirname(dst), exist_ok=True)
                     shutil.copyfile(os.path.join(root, fn), dst)
+        if os.path.exists(DB_FILE):   # a consistent copy of the database, made while the binder keeps running
+            os.makedirs(os.path.join(tmp, "data"), exist_ok=True)
+            dst = sqlite3.connect(os.path.join(tmp, "data", "binder.db"))
+            try:
+                with db_lock:
+                    db().backup(dst)
+            finally:
+                dst.close()
         with socket.socket() as s:
             s.bind(("127.0.0.1", 0))
             port = s.getsockname()[1]
@@ -2847,7 +3150,23 @@ def rollback(version_id):
     meta = read_json(os.path.join(folder, "meta.json"), None)
     if meta is None or not re.fullmatch(r"[0-9-]+", version_id):
         raise ValueError("That version isn't available")
-    installed = install_files(folder, f"rollback to {meta.get('commit', '')[:7] or 'older version'}")
+    with open(os.path.join(folder, "server.py"), encoding="utf-8", errors="ignore") as f:
+        uses_db = "DB_FILE" in f.read()
+    # versions before v3.0 keep data in JSON files: write today's data out for them first
+    exported = [] if uses_db else export_to_files()
+    try:
+        installed = install_files(folder, f"rollback to {meta.get('commit', '')[:7] or 'older version'}")
+    except Exception:
+        for k in exported:
+            try:
+                os.remove(os.path.join(DATA, *k.split("/")))
+            except OSError:
+                pass
+        raise
+    if exported and "server.py" in installed:
+        retire_db()
+        log("Rolled back to a version without the database. Your data was written out as JSON files for it; "
+            "binder.db was renamed, not deleted.")
     if installed or same_file(os.path.join(folder, "server.py"), os.path.join(APP, "server.py")):
         write_json(VERSION_FILE, {"version": meta.get("version", ""), "commit": meta.get("commit", ""), "subject": meta.get("subject", ""),
                                   "date": meta.get("date", ""), "installed": now_iso(), "paused": True})
@@ -2874,6 +3193,8 @@ def version_info():
         except OSError:
             out[name] = ""
     cur = current_version()
+    size = sum(os.path.getsize(DB_FILE + ext) for ext in ("", "-wal") if os.path.exists(DB_FILE + ext))
+    out["storage"] = {"kind": "database", "file": "data/binder.db", "size": size}
     out.update(version=file_version(os.path.join(APP, "server.py")),
                updatesFolder=os.path.isdir(UPDATES), github=bool(GH_REPO), repo=GH_REPO,
                commit=cur.get("commit", ""), subject=cur.get("subject", ""), date=cur.get("date", ""),

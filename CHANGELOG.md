@@ -10,6 +10,16 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Your data now lives in one database file** (`data/binder.db`, SQLite, built into Python, nothing to install).
+  - Moves over by itself the first time v3.0 starts. Your old files are kept in `data/pre-sqlite-<date>/`, not deleted.
+  - Saving a card or a day of prices only changes that one entry, so saves are much faster and can't clash with each other.
+  - Changes that touch many things (a restore, a spreadsheet import) go in all together or not at all, even if BEN loses power halfway.
+  - Backups are still the same zip of JSON files: backups from older versions restore here, and backups from here restore in older versions.
+  - Rolling back to an older version from Settings → About writes your data back out as files for it first, so nothing is lost.
+  - Settings → About shows the database file and its size.
+
 ## v2.20 (October 12, 2026)
 
 - **Safer updates:** before installing, the binder now test-starts the new version on its own (with a copy of your data) and checks that its pages answer. If it doesn't start, nothing is installed and you stay on your current version, with the reason shown.
