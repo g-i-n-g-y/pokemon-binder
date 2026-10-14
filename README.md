@@ -12,7 +12,7 @@ A self-hosted Pokémon TCG collection tracker. One small Python server (standard
 - Recent sales tab on each card: the last 5 sales for every condition, side by side
 - Prices from recent sales, Unlimited English only: pick any two per binder in Settings, raw conditions (NM to Damaged, from TCGplayer) or graded (PSA, BGS, CGC, SGC, TAG, ACE, from eBay sales on PriceCharting). LP and MP by default.
 - Custom cards for anything the card database is missing, priced from a TCGplayer link or a price you type
-- Spreadsheet import and a template to fill in (Excel or CSV), and automatic backups on BEN before every update and import
+- Spreadsheet import and a template to fill in (Excel or CSV), and automatic backups on the server before every update and import
 - Market prices as a backup and second opinion: TCGplayer's market price and Cardmarket's 30-day average (converted to US dollars) from [TCGdex](https://tcgdex.dev) (free, no key). Used when a card has no recent sales for your price options (can be turned off in Settings).
 - Daily automatic price refresh at a time you choose, plus a manual refresh button
 - Price history, biggest movers, shopping list with a budget and your own drag-to-reorder priority
@@ -92,7 +92,7 @@ Settings → About shows the installed version, any update problem, and up to 3 
 
 Safety nets:
 - Before installing, the new version is test-started on its own with a copy of your data. If it has an error or doesn't start, nothing is installed and the current version keeps running.
-- A backup of your data is saved first (Settings → Backup → Saved on BEN).
+- A backup of your data is saved first (Settings → Backup → Saved on the server).
 - The last 3 versions are kept in `previous/` next to `server.py`. Rolling back to a version from before v3.0 writes your data back out as the files it uses.
 - The files a version needs are listed in its `server.py` (`APP_FILES`), so versions can have more than two files.
 

@@ -1,8 +1,8 @@
-"""Pokemon Binder - tiny self-hosted collection tracker for BEN.
+"""Pokemon Binder - tiny self-hosted collection tracker you run on your own server.
 
 - Any number of English sets, each in data/sets/<set id>/
 - Card lists come from the PokemonTCG/pokemon-tcg-data project on GitHub
-- Card images are downloaded to BEN when a set is added
+- Card images are downloaded to the server when a set is added
 - Prices refresh once a day from TCGplayer recent sales (Unlimited, English, LP/MP)
 - TCGdex (free, no key) adds TCGplayer market and Cardmarket prices as a backup and second opinion
 Python standard library only. Listens on port 8080 inside the container.
@@ -127,7 +127,7 @@ def db():
     if _db["conn"] is None:
         os.makedirs(DATA, exist_ok=True)
         c = sqlite3.connect(DB_FILE, check_same_thread=False, isolation_level=None, timeout=30)
-        c.execute("PRAGMA journal_mode=WAL")      # readers and the writer don't block each other; safe if BEN loses power
+        c.execute("PRAGMA journal_mode=WAL")      # readers and the writer don't block each other; safe if the server loses power
         c.execute("PRAGMA synchronous=NORMAL")
         c.executescript(SCHEMA_SQL)
         _db["conn"] = c
@@ -2132,7 +2132,7 @@ def make_backup(target):
 
 
 def auto_backup(kind):
-    """Save a backup of all binder data in backups/ on BEN before something that changes it a lot
+    """Save a backup of all binder data in backups/ on the server before something that changes it a lot
     (an update, a spreadsheet import, a restore). Keeps the newest few of each kind. Returns the file name."""
     os.makedirs(BACKUPS, exist_ok=True)
     name = f"{kind}-{time.strftime('%Y%m%d-%H%M%S')}-{int(time.time() * 1000) % 1000:03d}.zip"
@@ -2151,7 +2151,7 @@ def auto_backup(kind):
 
 
 def list_auto_backups():
-    """Backups saved on BEN, newest first: [{name, kind, created, size}]."""
+    """Backups saved on the server, newest first: [{name, kind, created, size}]."""
     out = []
     for f in os.listdir(BACKUPS) if os.path.isdir(BACKUPS) else []:
         m = AUTO_NAME_RE.fullmatch(f)
@@ -2232,7 +2232,7 @@ def warm_up():
 
 # ---------- web ----------
 
-# Which web addresses the binder answers to. IP addresses, localhost, one-word names (like "ben") and
+# Which web addresses the binder answers to. IP addresses, localhost, one-word names (like "myserver") and
 # home/Tailscale names always work. Add others, like a reverse proxy name, in BINDER_HOSTS (comma separated).
 # This blocks "DNS rebinding", where an outside website points its own name at your binder.
 EXTRA_HOSTS = {h.strip().lower() for h in os.environ.get("BINDER_HOSTS", "").split(",") if h.strip()}
@@ -2384,7 +2384,7 @@ class Handler(BaseHTTPRequestHandler):
             name = m_bk.group(1)
             fp = os.path.join(BACKUPS, name)
             if not AUTO_NAME_RE.fullmatch(name) or not os.path.isfile(fp):
-                return self.send(404, {"error": "That backup isn't on BEN any more"})
+                return self.send(404, {"error": "That backup isn't on the server any more"})
             with open(fp, "rb") as f:
                 body = f.read()
             self.send_response(200)
@@ -2455,7 +2455,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/changelog":
             return self.send(200, changelog(), cache="no-store")
         if path == "/api/progress":
-            # everything BEN is working on, for the loading bars
+            # everything the server is working on, for the loading bars
             imgs = {sid: dict(v) for sid, v in list(img_jobs.items()) if isinstance(v, dict)}
             return self.send(200, {"prices": job, "images": imgs, "pokedex": dex_job, "shows": shows_job},
                              cache="no-store")
@@ -2714,7 +2714,7 @@ class Handler(BaseHTTPRequestHandler):
                 name = json.loads(raw or b"{}").get("name", "")
                 assert AUTO_NAME_RE.fullmatch(name) and os.path.isfile(os.path.join(BACKUPS, name))
             except Exception:
-                return self.send(400, {"error": "That backup isn't on BEN any more"})
+                return self.send(400, {"error": "That backup isn't on the server any more"})
             try:
                 count, safety = restore_backup(os.path.join(BACKUPS, name))
             except ValueError as e:
@@ -2852,7 +2852,7 @@ def _safe(fn):
             log(f"{self.command} {self.path} failed:\n{traceback.format_exc().rstrip()}")
             if not self.replied:
                 try:
-                    self.send(500, {"error": f"Something went wrong on BEN ({e.__class__.__name__}). The container log has details"})
+                    self.send(500, {"error": f"Something went wrong on the server ({e.__class__.__name__}). The container log has details"})
                 except OSError:
                     pass
     return run

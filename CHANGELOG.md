@@ -10,17 +10,21 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- Messages and labels say "the server" instead of a server name, so they make sense for anyone running the binder.
+
 ## v3.0 (October 13, 2026)
 
 - **Your data now lives in one database file** (`data/binder.db`, SQLite, built into Python, nothing to install).
   - Moves over by itself the first time v3.0 starts. Your old files are kept in `data/pre-sqlite-<date>/`, not deleted.
   - Saving a card or a day of prices only changes that one entry, so saves are much faster and can't clash with each other.
-  - Changes that touch many things (a restore, a spreadsheet import) go in all together or not at all, even if BEN loses power halfway.
+  - Changes that touch many things (a restore, a spreadsheet import) go in all together or not at all, even if the server loses power halfway.
   - Backups are still the same zip of JSON files: backups from older versions restore here, and backups from here restore in older versions.
   - Rolling back to an older version from Settings → About writes your data back out as files for it first, so nothing is lost.
   - Settings → About shows the database file and its size.
-- **Opens faster, especially on your phone:** BEN now squeezes the page and your binder data before sending them (gzip). The page is about 4 times smaller to download, and opening it again sends nothing at all if it hasn't changed.
-- **BEN works out price changes now:** the ▲▼ changes, biggest movers and gain/drop sorts come from a small summary BEN sends, instead of your phone downloading every saved day of prices. That summary stays the same size however long your history gets. A card's price chart loads when you open that card.
+- **Opens faster, especially on your phone:** the server now squeezes the page and your binder data before sending them (gzip). The page is about 4 times smaller to download, and opening it again sends nothing at all if it hasn't changed.
+- **The server works out price changes now:** the ▲▼ changes, biggest movers and gain/drop sorts come from a small summary the server sends, instead of your phone downloading every saved day of prices. That summary stays the same size however long your history gets. A card's price chart loads when you open that card.
 - The updater can install versions made of more than two files (needed for upcoming changes).
 - A built-in check (`tests/smoke_test.py`, 33 checks) runs before every release.
 
@@ -31,7 +35,7 @@ The binder shows these in **Settings → About → Check for updates**.
 - A price refresh no longer undoes changes made while it runs. New price options, a restored backup, or card show towns changed during a scan are all kept.
 - Card photos must be JPG, PNG, WebP, GIF or HEIC. If a photo is turned down, the reason is shown.
 - Stats opens much faster once months of price history build up.
-- If something unexpected goes wrong on BEN, the page now gets an error message instead of waiting, and the details go to the container log.
+- If something unexpected goes wrong on the server, the page now gets an error message instead of waiting, and the details go to the container log.
 - What's new on phones: each version's tags, change count and date fit without squeezing or cutting off the date. Dates leave out the year when it's this year.
 
 ## v2.19.3 (October 12, 2026)
@@ -51,7 +55,7 @@ The binder shows these in **Settings → About → Check for updates**.
 - **Price change period:** choose what the ▲▼ percentage on each card measures: 1 day, 7 days, 30 days, 90 days, 1 year or all time. Set it in Settings → Cards, or in the Filters panel on phones. It's saved on each device, and 7 days is the default.
 - The same period is used by the biggest movers in Stats, the change column in the shopping list and the price chart on each card
 - **New sorts:** biggest gain and biggest drop, over the chosen period
-- Longer periods fill in over time: until BEN has saved enough days of prices, the change covers the days it has, and the panel says how many
+- Longer periods fill in over time: until the server has saved enough days of prices, the change covers the days it has, and the panel says how many
 
 ## v2.18.1 (October 12, 2026)
 
@@ -70,8 +74,8 @@ The binder shows these in **Settings → About → Check for updates**.
 
 ## v2.17 (October 12, 2026)
 
-- **Automatic backups:** the binder now saves a backup of all your data on BEN before every update, rollback and spreadsheet import. If the backup can't be saved, the update is skipped.
-  - See them in **Settings → Backup → Saved on BEN**, with **Download** and **Restore** for each. The newest 10 update backups are kept.
+- **Automatic backups:** the binder now saves a backup of all your data on the server before every update, rollback and spreadsheet import. If the backup can't be saved, the update is skipped.
+  - See them in **Settings → Backup → Saved on the server**, with **Download** and **Restore** for each. The newest 10 update backups are kept.
 - **Spreadsheet import:** in **Settings → Spreadsheet**, **Download template** gives you every card in the binder with what you own now. Fill in Qty, and optionally Condition, Your Cost and Notes, then **Import spreadsheet**.
   - Excel (.xlsx) and CSV both work, including the Neo Destiny tracker sheet.
   - You see what will change before anything is saved. Rows with a wrong card number or name are skipped and listed.
@@ -173,7 +177,7 @@ The binder shows these in **Settings → About → Check for updates**.
   - Card image downloads after adding a set or Pokémon
   - Making the Pokémon list (Add a Pokémon)
   - Card show scans
-- When BEN doesn't know the total yet, the bar slides back and forth until it does
+- When the server doesn't know the total yet, the bar slides back and forth until it does
 
 ## v2.6 (October 11, 2026)
 
