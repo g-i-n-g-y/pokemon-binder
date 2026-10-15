@@ -1741,15 +1741,17 @@ async function celebrate(sub){
   const frame=now=>{
     if(t0===null) t0=now;
     const t=(now-t0)/1000, W=innerWidth, H=innerHeight;
-    const u=Math.min(72, W/(n+2.2)), gap=u*1.12, fy=H*.42;
+    // phones: bigger letters packed closer, a taller swirl, and the word nearer the middle
+    const narrow=W<640, u=narrow?Math.min(60,(W-28)/(n*1.02)):Math.min(72, W/(n+2.2)), gap=u*(narrow?1.02:1.12), fy=H*(narrow?.44:.42);
+    const RX=narrow?W*.42:W*.38, RY=narrow?H*.24:H*.17, RW=narrow?H*.05:H*.07;
     for(let i=0;i<n;i++){
       const p=P[i], el=els[i];
       // the vortex: an ellipse around the middle, closer letters bigger and blurrier
       const th=p.ph+p.sp*t;
       const d=(Math.sin(th)+1)/2;
-      const sx=W/2+Math.cos(th)*W*.38*p.rx*(1-.15*Math.sin(t*3+i));
-      const sy=H*.46+Math.sin(th)*H*.17*p.ry+Math.sin(th*2+p.tw)*H*.07;
-      const ss=.45+d*1.9, sr=Math.sin(th*1.7+p.tw)*35, sb=d>.78?(d-.78)*14:0;
+      const sx=W/2+Math.cos(th)*RX*p.rx*(1-.15*Math.sin(t*3+i));
+      const sy=H*.46+Math.sin(th)*RY*p.ry+Math.sin(th*2+p.tw)*RW;
+      const ss=narrow?.5+d*1.6:.45+d*1.9, sr=Math.sin(th*1.7+p.tw)*35, sb=d>.78?(d-.78)*14:0;
       // the word: each letter's spot, with a slow float
       const fx=W/2+(i-(n-1)/2)*gap;
       const bob=reduce?0:Math.sin(t*2*Math.PI/1.9+i*.7)*u*.09, tilt=reduce?0:Math.sin(t*1.4+i)*3;
@@ -1763,7 +1765,7 @@ async function celebrate(sub){
       el.style.opacity=fade;
       el.style.zIndex=k<1 ? String(Math.round(d*100)) : "100";
     }
-    msg.style.top=(fy+Math.min(72, W/(n+2.2))*.9+18)+"px";
+    msg.style.top=(fy+u*.9+18)+"px";
     if(t>SWIRL+SETTLE+(n-1)*STAG-.2) msg.classList.add("on");
     if(t>CLOSE) return close();
     raf=requestAnimationFrame(frame);

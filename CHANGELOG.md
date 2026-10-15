@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Next (not released yet)
+
+- Binder complete celebration on phones: bigger letters that fill the width, a taller swirl, and the word sits nearer the middle of the screen.
+
 ## v3.7 (October 14, 2026)
 
 - **Binder complete celebration:** when you own every card in a binder, Unown swirl around the screen like the vortex in Pokémon 3, then fly into place to spell **CONGRATS** and float gently. Tap anywhere (or press Escape) to close. It closes by itself after about 14 seconds.
