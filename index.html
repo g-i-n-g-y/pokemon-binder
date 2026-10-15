@@ -839,7 +839,13 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
 .pg-foot{display:flex;justify-content:space-between;gap:8px;margin-top:10px;font-size:12px;color:var(--muted)}
 .pg-foot b{color:var(--ink);font-weight:600}
 .pg-pager{display:flex;align-items:center;gap:8px;margin-top:14px}
-.pg-pager select{flex:1;min-width:0;text-align:center}
+.pg-where{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:1px;text-align:center}
+.pg-where b{font-size:15px}
+.pg-where span{font-size:12px;color:var(--muted)}
+.pg-strip{display:flex;gap:6px;overflow-x:auto;padding:10px 2px 4px;scrollbar-width:none}
+.pg-strip::-webkit-scrollbar{display:none}
+.pg-strip button{flex:none;min-width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.pg-strip button[aria-current="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .pg-pager .icon-btn{flex:none}
 .pg-bar{position:sticky;bottom:max(10px,env(safe-area-inset-bottom));z-index:6;margin-top:14px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;padding:10px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--dark);box-shadow:0 10px 30px rgba(0,0,0,.45)}
 .pg-bar span{flex:1 1 180px;font-size:14px}
@@ -4126,12 +4132,22 @@ function drawPages(){
     prev.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>';
     const next=document.createElement("button"); next.type="button"; next.className="icon-btn"; next.setAttribute("aria-label","Next side"); next.disabled=pg.at>=sides-1;
     next.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
-    const sel=document.createElement("select"); sel.setAttribute("aria-label","Go to page");
-    for(let i=0;i<sides;i++){ const o=document.createElement("option"); o.value=i; o.textContent=sideName(i)+"  ("+(i+1)+" of "+sides+")"; sel.append(o); }
-    sel.value=String(pg.at);
+    // where you are, then one button per page (tap to go to its front; tap again for the back)
+    const lab=document.createElement("div"); lab.className="pg-where"; lab.setAttribute("aria-live","polite");
+    const lb=document.createElement("b"); lb.textContent=sideName(pg.at); const ls=document.createElement("span"); ls.textContent=(pg.at+1)+" of "+sides+" sides";
+    lab.append(lb,ls);
     prev.onclick=()=>{ pg.at--; drawPages(); }; next.onclick=()=>{ pg.at++; drawPages(); };
-    sel.onchange=()=>{ pg.at=+sel.value; drawPages(); };
-    nav.append(prev,sel,next); V.append(nav);
+    nav.append(prev,lab,next); V.append(nav);
+    const strip=document.createElement("div"); strip.className="pg-strip"; strip.setAttribute("role","group"); strip.setAttribute("aria-label","Pages");
+    for(let p=0;p<Math.ceil(sides/2);p++){
+      const b=document.createElement("button"); b.type="button"; b.textContent=p+1;
+      const here=Math.floor(pg.at/2)===p; if(here) b.setAttribute("aria-current","true");
+      b.setAttribute("aria-label","Page "+(p+1)+(here?", "+(pg.at%2?"back":"front")+" showing":""));
+      b.onclick=()=>{ pg.at = here && p*2+1<sides ? (pg.at%2 ? p*2 : p*2+1) : p*2; drawPages(); };
+      strip.append(b);
+    }
+    V.append(strip);
+    const cur=strip.querySelector("[aria-current]"); if(cur) requestAnimationFrame(()=>cur.scrollIntoView({block:"nearest",inline:"center"}));
   }
   pgBar();
   if(pg.flash){ const f=V.querySelector(".pk.flash"); if(f) f.scrollIntoView({block:"center", behavior:"smooth"}); setTimeout(()=>{ pg.flash=null; },1700); }

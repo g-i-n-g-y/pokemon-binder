@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.8.1 (October 15, 2026)
+
+- Pages on phones: the page dropdown (which opened your phone's big full-screen list) is replaced by buttons under the page, one per page. Tap a number to go to that page's front, and tap it again for the back. The arrows still step one side at a time.
+
 ## v3.8 (October 15, 2026)
 
 - **Find a card:** open the menu and tap **Find a card** to search every English card and set. Type what's printed on the card (a name, the number at the bottom like `80/111`, or both) and tap **Search**. Nothing is searched while you type.
