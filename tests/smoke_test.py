@@ -106,6 +106,20 @@ except server.Busy as e:
     assert "price check" in str(e)
 server.job["running"] = False
 assert server.Handler.timeout and server.Handler.timeout <= 120
+# background steps: an error in one is logged, not fatal
+assert server.safely("test step", lambda: 1 / 0) is None
+assert server.safely("test step", lambda: 5) == 5
+# leftovers from a binder stopped partway are cleaned at start; fresh ones are left alone
+import os
+old_t = time.time() - 7200
+for path in (".trial-abc/x.json", "tmp123.zip", "server.py.tmp", "data/sets/neo4/images/s/9.png.1.tmp", "backups/daily-1.zip.tmp"):
+    full = os.path.join(server.APP, path); os.makedirs(os.path.dirname(full), exist_ok=True)
+    open(full, "w").write("x"); os.utime(full, (old_t, old_t))
+os.utime(os.path.join(server.APP, ".trial-abc"), (old_t, old_t))
+open(os.path.join(server.APP, "fresh.tmp"), "w").write("x")
+assert server.clean_leftovers() == 5
+assert os.path.exists(os.path.join(server.APP, "fresh.tmp")) and os.path.exists(os.path.join(server.APP, "server.py"))
+os.remove(os.path.join(server.APP, "fresh.tmp"))
 print("ok")
 """
 
@@ -193,7 +207,7 @@ def main():
         _, sl = call(base, "GET", "/api/sets")
         check("sets list says how many pictures are saved", "pics" in sl["sets"][0], sl["sets"][0].keys())
         unit = subprocess.run([sys.executable, "-c", UNIT], cwd=tmp, capture_output=True, text=True, timeout=60)
-        check("nightly check picks owned cards plus a third of the rest", unit.stdout.strip() == "ok", (unit.stdout + unit.stderr)[-600:])
+        check("nightly check picks owned cards plus a third of the rest", unit.stdout.strip().splitlines()[-1:] == ["ok"], (unit.stdout + unit.stderr)[-600:])
 
         rec = {"qty": 2, "purchases": [{"d": "2026-10-13", "price": 7.5, "where": "Card show"}, {"d": "", "price": None, "where": ""}], "cond": "MP"}
         code, _ = call(base, "PUT", "/api/set/neo4/card/2", rec)

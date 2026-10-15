@@ -10,6 +10,13 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Background jobs can't stop for good:** the part of the binder that runs the nightly price check, the daily backup and cleanup now guards every step. Before, an error in one step (like the card show site changing) stopped all of it until the binder restarted, with no nightly prices or daily backups in the meantime. The nightly price check also runs on its own now, so cleanup and backups keep going while it works.
+- **Leftover temporary files are cleaned up:** if the binder is stopped partway through an update test, a restore, a backup or a picture download, the half-finished files are deleted the next time it starts, so they can't quietly fill the drive.
+- If restarting after an update ever fails, updates are no longer blocked until the container restarts.
+- Settings → About → Status stops checking back every 5 seconds once you close Settings, even if the server couldn't be reached.
+
 ## v3.9.7 (October 15, 2026)
 
 - **Privacy mode keeps the binder.** Cards and Pages stay open in privacy mode; only Shopping list, Upgrades and Stats are greyed out. In Pages every card shows in color, with no prices, no "owned" counts (each side just says how many cards) and no "Owned first" order.

@@ -2588,7 +2588,7 @@ function watchStatusJob(){
     if(n) n.textContent="Checking "+(j.name||"prices")+": card "+Math.min(j.done+1,j.total||1)+" of "+(j.total||"…");
     showJob(j);   // the top of the page shows it too
     stJobTimer=setTimeout(watchStatusJob,2000);
-  }).catch(()=>{ stJobTimer=setTimeout(watchStatusJob,5000); });
+  }).catch(()=>{ if($("settings").open) stJobTimer=setTimeout(watchStatusJob,5000); });
 }
 function loadVersion(){
   loadStatus();

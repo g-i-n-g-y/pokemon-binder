@@ -2350,27 +2350,35 @@ def watchdog():
         time.sleep(120)
 
 
+def safely(label, fn, *args):
+    """Run one background step; an error is logged instead of stopping everything after it."""
+    try:
+        return fn(*args)
+    except Exception as e:
+        log(f"{label} failed: {e}")
+
+
+def housekeeping():
+    """Every 30 minutes: tidy up, save the daily backup, retry missing pictures, look for new sets and shows."""
+    safely("freeing the card index", release_card_index)
+    safely("cleanup of removed binders", purge_removed)
+    safely("daily backup", lambda: daily_backup_due() and auto_backup("daily"))
+    for sid in list(sets_list()["order"]):
+        safely(f"{sid}: picture retry", start_images, sid)   # retries any pictures that failed earlier
+    if os.path.exists(DEX_INDEX):
+        safely("master set index", start_dex_index)   # picks up new sets for master set binders (about once a month)
+    if safely("card show check", shows_due) and not shows_job["running"]:
+        threading.Thread(target=scan_shows, args=("weekly",), daemon=True).start()
+
+
 def scheduler():
+    """Runs for as long as the binder does. Each step is guarded, so one error can't stop the nightly
+    price check or the daily backup for good. The nightly check runs on its own, so housekeeping keeps going during it."""
     time.sleep(15)
     ticks = 0
     while True:
         if ticks % 30 == 0:
-            release_card_index()
-            try:
-                purge_removed()
-            except Exception as e:
-                log(f"cleanup of removed binders: {e}")
-            try:
-                if daily_backup_due():
-                    auto_backup("daily")
-            except Exception as e:
-                log(f"daily backup failed: {e}")
-            for sid in list(sets_list()["order"]):
-                start_images(sid)  # retries any images that failed earlier
-            if os.path.exists(DEX_INDEX):
-                start_dex_index()  # picks up new sets for master set binders (about once a month)
-            if shows_due() and not shows_job["running"]:
-                threading.Thread(target=scan_shows, args=("weekly",), daemon=True).start()
+            safely("housekeeping", housekeeping)
         ticks += 1
         try:
             st = get_settings()
@@ -2385,13 +2393,49 @@ def scheduler():
                     cur["lastAuto"] = today
                     write_json(SETTINGS, cur)
                 log(f"Scheduled price refresh ({st['time']} {st['tz']}).")
-                refresh_all("scheduled")
+                threading.Thread(target=safely, args=("scheduled price refresh", refresh_all, "scheduled"), daemon=True).start()
         except Exception as e:
             log(f"scheduler: {e}")
         time.sleep(60)
 
 
 # ---------- first start: move the original Neo Destiny files into data/sets/neo4 ----------
+
+def clean_leftovers(age=3600):
+    """Delete temporary files left behind when the binder was stopped partway through something
+    (an update test start, a restore upload, a backup being written, a picture download). Runs at start."""
+    cutoff, freed, count = time.time() - age, 0, 0
+
+    def drop(path):
+        nonlocal freed, count
+        try:
+            if os.path.getmtime(path) > cutoff:
+                return   # might still be in use
+            if os.path.isdir(path):
+                size = sum(os.path.getsize(os.path.join(r, f)) for r, _, fs in os.walk(path) for f in fs)
+                shutil.rmtree(path)
+            else:
+                size = os.path.getsize(path)
+                os.remove(path)
+            freed += size
+            count += 1
+        except OSError:
+            pass
+    for f in os.listdir(APP):
+        if f.startswith(".trial-") or (f.startswith("tmp") and f.endswith(".zip")) or f.endswith(".tmp"):
+            drop(os.path.join(APP, f))
+    for root, dirs, files in os.walk(DATA):
+        for f in files:
+            if f.endswith(".tmp"):
+                drop(os.path.join(root, f))
+    if os.path.isdir(BACKUPS):
+        for f in os.listdir(BACKUPS):
+            if f.endswith(".tmp"):
+                drop(os.path.join(BACKUPS, f))
+    if count:
+        log(f"Cleaned up {count} leftover temporary file{'s' if count != 1 else ''} ({freed / 1048576:.1f} MB).")
+    return count
+
 
 def setup():
     os.makedirs(SETS_DIR, exist_ok=True)
@@ -4230,7 +4274,12 @@ def restart_self(delay=0):
     if delay:
         time.sleep(delay)
     log("Restarting with the new server.py...")
-    os.execv(sys.executable, [sys.executable, "-u", os.path.abspath(__file__)])
+    try:
+        os.execv(sys.executable, [sys.executable, "-u", os.path.abspath(__file__)])
+    except OSError as e:   # very unlikely; don't leave updates blocked until the container restarts
+        log(f"Couldn't restart ({e}). Restart the container to finish the update.")
+        with job_lock:
+            big["what"] = ""
 
 
 def version_info():
@@ -4262,6 +4311,7 @@ if __name__ == "__main__":
         urllib.request.urlopen = _no_downloads
         log(f"Pokemon Binder test start on port {PORT}")
         ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
+    safely("cleaning up leftover files", clean_leftovers)
     threading.Thread(target=warm_up, daemon=True).start()
     threading.Thread(target=scheduler, daemon=True).start()
     threading.Thread(target=watchdog, daemon=True).start()
