@@ -10,6 +10,11 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Price check progress in Settings → About:** while a price check runs, Status shows a progress bar with "Checking Neo Destiny: card 16 of 113" and the percent, updating every 2 seconds.
+- **Updates wait for a price check instead of failing:** if you install an update while prices are being checked, it shows the check's progress bar and installs as soon as the check finishes. Closing Settings while it waits cancels the update.
+
 ## v3.7.3 (October 14, 2026)
 
 - Card details on a computer: the window is as tall as the card picture side and no taller, so there's no big empty space, and it keeps the same size when you switch tabs. The **Prices** tab now shows the recent sales right under the prices (on phones, Recent sales stays its own tab).

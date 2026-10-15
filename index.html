@@ -1240,6 +1240,7 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
     <section class="ui-page" data-page="about" data-title="About">
       <div class="ver" id="stVersion">Checking installed version&hellip;</div>
       <div class="upd"><button class="btn" type="button" id="stUpdate">Check for updates</button><span class="note" id="stUpdMsg" aria-live="polite"></span></div>
+      <div class="pbar" id="stUpdBar" role="progressbar" aria-label="Price check progress" hidden><i></i></div>
       <h3 class="ui-h">Status</h3>
       <div class="ui-group" id="stStatus"><div class="ui-row ui-static"><span class="ui-l"><small>Checking&hellip;</small></span></div></div>
       <div class="prev" id="stPrevWrap" hidden>
@@ -2358,8 +2359,15 @@ function loadStatus(){
     r.append(l,v); return r; };
   fetch("api/status").then(r=>r.json()).then(s=>{
     const rows=[];
-    rows.push(row("Last price check", s.refreshing ? "Running now" : agoText(s.lastRefresh),
-      s.settings&&s.settings.auto ? "Runs each night at "+(s.settings.time||"03:00") : "Nightly check is off"));
+    const pc=row(s.refreshing ? "Price check" : "Last price check", s.refreshing ? "Running now" : agoText(s.lastRefresh),
+      s.settings&&s.settings.auto ? "Runs each night at "+(s.settings.time||"03:00") : "Nightly check is off");
+    if(s.refreshing){   // a progress bar that follows the check while this page is open
+      pc.classList.add("ui-stack"); pc.id="stPrice";
+      const top=document.createElement("div"); top.style.cssText="display:flex;align-items:center;gap:12px"; top.append(...pc.children); pc.append(top);
+      const bar=document.createElement("div"); bar.className="pbar"; bar.id="stPriceBar"; bar.setAttribute("role","progressbar"); bar.setAttribute("aria-label","Price check progress"); bar.append(document.createElement("i"));
+      pc.append(bar); watchStatusJob();
+    }
+    rows.push(pc);
     const bk=s.lastBackup; rows.push(row("Last automatic backup", bk ? agoText(bk.created) : "none yet", "A daily copy is kept for 7 days"));
     rows.push(row("Database size", fmtSize(s.dbSize)));
     rows.push(row("Card pictures", fmtSize(s.pictures), "Saved on "+srv()+" as you view cards"));
@@ -2372,6 +2380,21 @@ function loadStatus(){
     else rows.push(row("Recent problems", "None"));
     box.replaceChildren(...rows);
   }).catch(()=>{ box.replaceChildren(row("Status", "Couldn't reach "+srv(), "", true)); });
+}
+// While a price check runs, keep the Status bar and its "card 12 of 113" line moving (every 2 seconds).
+let stJobTimer=null;
+function watchStatusJob(){
+  clearTimeout(stJobTimer);
+  fetch("api/refresh").then(r=>r.json()).then(j=>{
+    const bar=$("stPriceBar"); if(!bar || !$("settings").open) return;
+    if(!j.running){ loadStatus(); return; }
+    setBar(bar, j.done, j.total);
+    const v=document.querySelector("#stPrice .ui-v"), n=document.querySelector("#stPrice .ui-l small");
+    if(v) v.textContent=(j.total ? Math.round(j.done/j.total*100) : 0)+"%";
+    if(n) n.textContent="Checking "+(j.name||"prices")+": card "+Math.min(j.done+1,j.total||1)+" of "+(j.total||"…");
+    showJob(j);   // the top of the page shows it too
+    stJobTimer=setTimeout(watchStatusJob,2000);
+  }).catch(()=>{ stJobTimer=setTimeout(watchStatusJob,5000); });
 }
 function loadVersion(){
   loadStatus();
@@ -2431,13 +2454,33 @@ $("stUpdate").onclick=async()=>{
     const ok=await askConfirm(latestVer?"Update to v"+latestVer+"?":"Update available", changes ? (n===1?"1 change since your version:":n+" changes since your version:") : "Install the files from your updates folder?",
       "Install update", {safe:true, body: changes?changeList(changes):null});
     if(!ok){ b.disabled=false; return; }
-    msg.textContent="Installing…";
-    const r=await fetch("api/update",{method:"POST"}); const j=await r.json();
+    let r, j;
+    for(;;){
+      if(!await waitForPriceCheck(msg)){ msg.textContent="Update not installed: Settings was closed while waiting. Check for updates again any time."; b.disabled=false; return; }
+      msg.textContent="Installing…";
+      r=await fetch("api/update",{method:"POST"}); j=await r.json();
+      if(r.status!==409) break;   // a price check started in between: wait for it too
+    }
     if(!r.ok) throw new Error(j.error||"Update failed");
     if(!j.installed.length){ msg.textContent="Nothing new to install."; b.disabled=false; loadVersion(); return; }
     afterInstall(j, msg, "Installed. Reloading…");
   }catch(e){ msg.textContent=e.message+"."; b.disabled=false; }
 };
+// Updates wait for a running price check, so the check isn't cut off. Shows its progress, then carries on.
+// Resolves true when no check is running, false if Settings is closed while waiting.
+async function waitForPriceCheck(msg){
+  const bar=$("stUpdBar");
+  try{
+    for(;;){
+      const j=await fetch("api/refresh").then(r=>r.json());
+      if(!j.running) return true;
+      if(!$("settings").open) return false;
+      setBar(bar, j.done, j.total);
+      msg.textContent="Waiting for the price check to finish ("+(j.name||"prices")+": card "+Math.min(j.done+1,j.total||1)+" of "+(j.total||"…")+"). The update installs right after.";
+      await new Promise(res=>setTimeout(res,2000));
+    }
+  } finally { hideBar(bar); }
+}
 async function doRollback(p){
   const ok=await askConfirm(p.version?"Roll back to v"+p.version+"?":"Roll back to this version?", "“"+verTitle(p)+"” will be reinstalled. Your collection, purchases and photos are not affected.", "Roll back", {safe:true});
   if(!ok) return;
