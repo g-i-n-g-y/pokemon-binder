@@ -882,20 +882,14 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
 .vb-logo{position:absolute;top:16px;left:14px;max-width:58%;max-height:84px;object-fit:contain;filter:drop-shadow(0 3px 4px rgba(0,0,0,.3))}
 .vb-name{position:absolute;top:16px;left:16px;right:16px;font-family:var(--f-display);font-weight:800;font-size:30px;line-height:1;color:var(--v4);
   text-shadow:0 2px 0 rgba(255,255,255,.6)}
-.vb-mid{position:absolute;left:0;right:0;top:58%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:6px}
-.vb-feat,.vb-dot{position:relative;aspect-ratio:1.645;overflow:hidden;background:var(--v3)}
-.vb-feat{width:72%;max-width:330px;border-radius:3px;border:3px solid #e2c25a;
-  box-shadow:0 0 0 1px rgba(0,0,0,.35),0 10px 22px rgba(0,0,0,.35)}
-.vb-feat img,.vb-dot img{display:block;width:128.2%;max-width:none;margin:-22.4% 0 0 -14.1%;-webkit-user-drag:none;user-select:none}
-.vb-feat.no-art{visibility:hidden}
-.vb-pick button:has(.no-art){display:none}
-.vb-credit{font-size:11px;color:#1d1a24;background:rgba(255,255,255,.6);padding:1px 8px;border-radius:999px}
-.vb-credit:empty{display:none}
+.vb-mon{position:absolute;left:50%;top:57%;width:84%;height:60%;transform:translate(-50%,-50%);object-fit:contain;
+  filter:drop-shadow(0 6px 10px rgba(0,0,0,.28));-webkit-user-drag:none;user-select:none}
+.vb-mon.no-art{display:none}
 .vb-pick{position:absolute;left:12px;bottom:12px;display:flex;gap:8px}
-.vb-pick button{width:44px;height:44px;padding:0;border-radius:50%;overflow:hidden;cursor:pointer;background:var(--v3);
+.vb-pick button{width:44px;height:44px;padding:0;border-radius:50%;overflow:hidden;cursor:pointer;background:rgba(255,255,255,.7);
   border:2px solid rgba(255,255,255,.85);box-shadow:0 2px 6px rgba(0,0,0,.3);opacity:.75}
 .vb-pick button[aria-pressed="true"]{opacity:1;border-color:var(--v4);box-shadow:0 0 0 2px #fff,0 2px 6px rgba(0,0,0,.3)}
-.vb-pick .vb-dot{width:auto;height:100%;aspect-ratio:1.645;transform:translateX(-20%)}
+.vb-pick .vb-dot{display:block;width:100%;height:100%;object-fit:contain;padding:3px;box-sizing:border-box}
 .vb-star{position:absolute;right:14px;bottom:12px;width:44px;height:44px;fill:var(--v4);opacity:.8;filter:drop-shadow(2px 2px 0 rgba(255,255,255,.7))}
 @media (min-width:760px){.pg-side.cover.vb-cover{min-height:0;border-radius:12px 0 0 12px}}
 </style>
@@ -4147,22 +4141,31 @@ function sideEl(i, L){
 const pagesWide = () => matchMedia("(min-width:760px)").matches;
 // The inside cover, styled like the vintage binders made for each set: the set's logo in the corner, rays of
 // light, a band across the middle and one featured Pokémon. The featured Pokémon is one of the binder's hits
-// (its most valuable Pokémon cards), shown as the card's own artwork and credited to the original artist.
+// (its most valuable Pokémon cards), drawn with Ken Sugimori's official artwork like the vintage binders
+// (shiny colors for Shining cards).
 // The small round buttons switch between the hits; the pick is saved with the binder's pages.
 // Colors [light, deep, band, band edge]: the four Neo sets have their own; other sets take theirs from the logo.
 const COVER_STYLE={neo1:["#f6f7fa","#bfc5d0","#a3a9b4","#5c626d"], neo2:["#ecf7dc","#7fc06a","#3f8a4a","#1f4d2a"],
   neo3:["#ffe27a","#ee6a2c","#c63c1f","#6e1a10"], neo4:["#ffe24d","#e8407a","#f39a4c","#6a2a6e"]};
-const coverStyleCache={}, artistCache={};
+const coverStyleCache={}, coverDex={};
 const RARE_RANK = r => /Shining|Secret|Crystal|Gold Star|Star/.test(r) ? 4 : /Holo/.test(r) ? 3 : /Rare/.test(r) ? 2 : /Uncommon/.test(r) ? 1 : 0;
 function coverHits(){
   return state.cards.filter(c=>!c.custom && (c.type==="Pokémon" || isDex(state.sid)))
     .sort((a,b)=>(basePrice(b.n)-basePrice(a.n)) || (RARE_RANK(b.rarity||"")-RARE_RANK(a.rarity||""))).slice(0,3);
 }
 const cardGid = c => (isMulti(state.sid) || c.extra) ? c.n : state.sid+"-"+c.n;
-function coverCredit(el, c){
-  const g=cardGid(c), show=()=>{ el.textContent=artistCache[g] ? "Art: "+artistCache[g] : ""; };
-  if(g in artistCache) return show();
-  fetch("api/artists?c="+enc(g)).then(r=>r.json()).then(j=>{ artistCache[g]=(j.artists||{})[g]||""; show(); }).catch(()=>{});
+const isShining = c => /Shining/.test((c.rarity||"")+" "+c.name);
+function hitDex(c){ return isDex(state.sid) ? +String(state.sid).slice(4) : coverDex[cardGid(c)]; }
+// Pokédex numbers for the hits are asked for once, then the cover redraws.
+let coverAsking=false;
+function loadCoverDex(hits){
+  const need=hits.map(cardGid).filter(g=>!(g in coverDex));
+  if(!need.length || coverAsking || isDex(state.sid)) return;
+  coverAsking=true;
+  fetch("api/covernums?c="+enc(need.join(","))).then(r=>r.json()).then(j=>{
+    for(const g of need) coverDex[g]=(j.dex||{})[g]||0;
+    coverAsking=false; if(state.view==="pages") drawPages();
+  }).catch(()=>{ coverAsking=false; });
 }
 // The logo's two strongest hues, turned into cover colors.
 function logoStyle(img){
@@ -4185,9 +4188,9 @@ function logoStyle(img){
 }
 function setCoverStyle(cv, st){ ["--v1","--v2","--v3","--v4"].forEach((k,i)=>cv.style.setProperty(k, st[i])); }
 function coverArt(c, cls){
-  const f=document.createElement("div"); f.className=cls;
-  const im=document.createElement("img"); im.alt=c.name; im.decoding="async"; im.draggable=false;
-  im.src=base()+"/img/"+enc(c.n)+".png?full=1"; im.onerror=()=>f.classList.add("no-art"); f.append(im); return f;
+  const d=hitDex(c), im=document.createElement("img"); im.className=cls; im.alt=c.name; im.decoding="async"; im.draggable=false;
+  if(d) im.src="art/"+d+(isShining(c) ? "s" : "")+".png"; else im.classList.add("no-art");
+  im.onerror=()=>im.classList.add("no-art"); return im;
 }
 function coverEl(){
   const cv=document.createElement("div"); cv.className="pg-side cover vb-cover";
@@ -4202,11 +4205,8 @@ function coverEl(){
   } else { const t=document.createElement("div"); t.className="vb-name"; t.textContent=s.name||""; cv.append(t); }
   const hits=coverHits(), L=state.layout||{};
   const feat=state.cards.find(c=>c.n===L.cover && !c.custom) || hits[0];
-  if(feat){
-    const mid=document.createElement("div"); mid.className="vb-mid";
-    const cr=document.createElement("div"); cr.className="vb-credit";
-    mid.append(coverArt(feat,"vb-feat"), cr); cv.append(mid); coverCredit(cr, feat);
-  }
+  loadCoverDex(feat && !hits.includes(feat) ? hits.concat(feat) : hits);
+  if(feat) cv.append(coverArt(feat,"vb-mon"));
   if(hits.length>1){
     const pick=document.createElement("div"); pick.className="vb-pick"; pick.setAttribute("role","group"); pick.setAttribute("aria-label","Cover Pokémon");
     for(const c of hits){

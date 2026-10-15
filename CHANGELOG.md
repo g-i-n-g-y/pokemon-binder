@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.9.4 (October 15, 2026)
+
+- **Cover Pokémon as a full cutout.** The featured Pokémon is now Ken Sugimori's official artwork, the same style the vintage binders used, so it's a clean cutout that's never cut off at the edges. Shining cards show the Pokémon in its shiny colors (Shining Charizard is black). The artwork is downloaded once and kept on the server. The card-art window and its artist credit are gone.
+
 ## v3.9.3 (October 15, 2026)
 
 - **Pages open on the inside cover** on phones, like opening a real binder. Swipe or tap page 1 to go on.

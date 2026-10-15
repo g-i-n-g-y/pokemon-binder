@@ -24,7 +24,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "3.9.3"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
+APP_VERSION = "3.9.4"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -1086,13 +1086,14 @@ UNOWN_DIR = os.path.join(DATA, "unown")
 unown_lock = threading.Lock()
 
 
-ARTIST_DIR = os.path.join(DATA, "artists")
-artist_lock = threading.Lock()
+DEXNO_DIR = os.path.join(DATA, "dexno")
+ART_DIR = os.path.join(DATA, "art")
+cover_lock = threading.Lock()
 
 
-def card_artists(gids):
-    """Who illustrated each card (for the art credit on the binder covers). Read once per set from the
-    card database and kept on the server in data/artists/<set>.json."""
+def card_dex(gids):
+    """The Pokédex number of each card's Pokémon (for the binder covers). Read once per set from the
+    card database and kept on the server in data/dexno/<set>.json."""
     known = {s["id"] for s in catalog()}
     by_set, out = {}, {}
     for g in gids[:6]:
@@ -1100,22 +1101,36 @@ def card_artists(gids):
         if sid in known and num:
             by_set.setdefault(sid, []).append((g, num))
     for sid, want in by_set.items():
-        dest = os.path.join(ARTIST_DIR, sid + ".json")
-        with artist_lock:
-            names = read_json(dest, None)
-            if names is None:
+        dest = os.path.join(DEXNO_DIR, sid + ".json")
+        with cover_lock:
+            nums = read_json(dest, None)
+            if nums is None:
                 try:
                     raw = json.loads(http_get(f"{GH}/cards/en/{sid}.json"))
                 except Exception as e:
-                    log(f"Artists {sid}: {e}")
+                    log(f"Pokédex numbers {sid}: {e}")
                     continue
-                names = {str(c["number"]): c.get("artist") or "" for c in raw}
-                os.makedirs(ARTIST_DIR, exist_ok=True)
-                write_json(dest, names)
+                nums = {str(c["number"]): (c.get("nationalPokedexNumbers") or [0])[0] or 0 for c in raw}
+                os.makedirs(DEXNO_DIR, exist_ok=True)
+                write_json(dest, nums)
         for g, num in want:
-            if names.get(num):
-                out[g] = names[num]
+            if nums.get(num):
+                out[g] = nums[num]
     return out
+
+
+def pokemon_art(num, shiny=False):
+    """A Pokémon's official Ken Sugimori artwork (the art the vintage binders used), downloaded once from
+    PokeAPI and kept on the server. Shiny colors for Shining cards."""
+    num = int(num)
+    if not 1 <= num <= 1025:
+        raise ValueError("no such Pokémon")
+    dest = os.path.join(ART_DIR, f"{num}{'s' if shiny else ''}.png")
+    with cover_lock:
+        if not (os.path.exists(dest) and os.path.getsize(dest) > 0):
+            os.makedirs(ART_DIR, exist_ok=True)
+            _download(f"{SPRITES}/other/official-artwork/{'shiny/' if shiny else ''}{num}.png", dest)
+    return dest
 
 
 def unown_sprite(letter):
@@ -3086,6 +3101,13 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_file(os.path.join(APP, "index.html"), "text/html; charset=utf-8", "no-cache")
         if path == "/fonts.css":   # fonts kept on the server; the page asks for fonts.css?v=<n>, so a new version means a new address
             return self.send_file(os.path.join(APP, "fonts.css"), "text/css; charset=utf-8", "max-age=31536000, immutable")
+        m = re.fullmatch(r"/art/(\d{1,4})(s?)\.png", path)
+        if m:
+            try:
+                return self.send_file(pokemon_art(m.group(1), m.group(2) == "s"), "image/png")
+            except Exception as e:
+                log(f"Pokémon art {m.group(1)}{m.group(2)}: {e}")
+                return self.send(404, b"not found", "text/plain")
         m = re.fullmatch(r"/unown/([a-z])\.png", path)
         if m:
             try:
@@ -3251,10 +3273,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, set_trends(m.group(1), today), cache="no-store")
             except ValueError:
                 return self.send(400, {"error": "bad date"})
-        if path == "/api/artists":   # art credits for the binder covers: ?c=neo4-1,neo4-107
+        if path == "/api/covernums":   # Pokédex numbers for the binder covers: ?c=neo4-1,neo4-107
             q = (urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("c") or [""])[0]
             gids = [g for g in q.split(",") if re.fullmatch(NUM_RE, g)]
-            return self.send(200, {"artists": card_artists(gids)})
+            return self.send(200, {"dex": card_dex(gids)})
         m = re.fullmatch(rf"/api/set/({SID_RE})/dexnums", path)
         if m:   # Pokédex numbers for a binder's cards, for the Pages view's "Pokédex number" order
             sid = m.group(1)
