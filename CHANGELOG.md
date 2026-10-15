@@ -10,6 +10,23 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.8 (October 15, 2026)
+
+- **Find a card:** open the menu and tap **Find a card** to search every English card and set. Type what's printed on the card (a name, the number at the bottom like `80/111`, or both) and tap **Search**. Nothing is searched while you type.
+  - Results come in two groups: **Sets** and **Cards**. Each card shows which of your binders already have it, and whether you own it.
+  - Open a set to see all its cards as pictures, with **Find in this set** to jump to a name or number, and a button to add the whole set as a binder.
+  - Tap a card for its TCGplayer and eBay sold links, the binders it's in (tap to open it there), and **Add to** any binder.
+  - The first search after this update makes the list of every card from every set (about a minute, once), with a progress bar. Newly added cards get their prices in the background a few seconds later.
+- **Your own binders:** menu > **Add a binder** > **My own**. Name it (like Favorites or Trade pile) and fill it with cards from any set using Find a card. Prices, owned, purchases, photos, spreadsheets and pages work like any other binder.
+  - In the sets menu, tap **Edit**, then the binder's name to rename it.
+  - Cards you added (to your own binders, or extra cards in a set or master set binder) have **Remove from this binder** in card details.
+- **Pages:** a new view that lays your binder out like a real one, with 4, 9, 12 or 16 pockets a page. Page 1 starts on the right after the inside cover, and each page has a front and a back.
+  - Start from an order (set number, rarity, Pokédex number, Pokémon then Trainers and Energy, value, owned first, or order added), then tap **Arrange** to move cards: tap a card, then tap where it goes (or drag it with a mouse). **Add gap before** leaves an empty pocket.
+  - Owned cards are in color, missing ones are faded with their price, and each side shows how many you own and what it costs to fill.
+  - On a computer you see two pages side by side, like an open binder. On a phone you see one side at a time: swipe or use the arrows.
+  - Card details say where each card goes, like "Page 3, front, row 2, pocket 1". Tap it to jump there.
+- The "Missing a card?" tile at the end of every binder now has **Find a card** as well as **+ Custom card**.
+
 ## v3.7.4 (October 14, 2026)
 
 - **Price check progress in Settings → About:** while a price check runs, Status shows a progress bar with "Checking Neo Destiny: card 16 of 113" and the percent, updating every 2 seconds.

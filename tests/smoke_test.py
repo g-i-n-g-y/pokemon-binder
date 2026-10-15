@@ -51,6 +51,16 @@ def sample_binder(root):
     write(root, "sets/neo4/prices.json", {"p": {"1": [25.0], "2": [10.0]}, "info": {"1": {"cond": {"LP": [25.0, 5, "2026-10-01"]},
                                           "recent": {"LP": [["2026-10-01", 25.0]]}, "src": "sales"}}, "updated": "2026-10-12T07:00:00Z"})
     write(root, "sets/neo4/history.json", {"2026-10-11": {"1": 24.0, "2": 9.0}, "2026-10-12": {"1": 25.0, "2": 10.0}})
+    # a tiny every-card list for Find a card (the real one is made from the card database)
+    with open(os.path.join(root, "data", "card_index.json"), "w") as f:
+        json.dump({"fetched": time.time(),
+                   "sets": {"neo1": ["Neo Genesis", "Neo", 111, "2000/12/16", 111], "neo4": ["Neo Destiny", "Neo", 105, "2002/02/28", 113],
+                            "base1": ["Base", "Base", 102, "1999/01/09", 102]},
+                   "cards": [["neo1-80", "Totodile", "80", "Common", "Pokémon", "", "neo1", 158],
+                             ["neo1-81", "Totodile", "81", "Common", "Pokémon", "", "neo1", 158],
+                             ["neo4-1", "Card 1", "1", "Rare", "Pokémon", "", "neo4", 0],
+                             ["base1-4", "Charizard", "4", "Rare Holo", "Pokémon", "", "base1", 6],
+                             ["base1-58", "Pikachu", "58", "Common", "Pokémon", "", "base1", 25]]}, f)
 
 
 # Checks of small helpers, run inside the test folder (imports server.py without starting it).
@@ -225,6 +235,55 @@ def main():
         check("backup restores", code == 200, res)
         _, st = call(base, "GET", "/api/set/neo4/state")
         check("restore brought the card back", st["collection"].get("2") == rec)
+
+        # Find a card, your own binders and the Pages view (v3.8)
+        q = urllib.parse.quote
+        code, r = call(base, "GET", "/api/find?q=" + q("Totodile 80/111"))
+        check("find a card by name and number", code == 200 and [c["n"] for c in r["cards"]] == ["neo1-80"], str(r)[:200])
+        code, r = call(base, "GET", "/api/find?q=" + q("neo genesis"))
+        check("find a set by name", code == 200 and r["sets"] and r["sets"][0]["id"] == "neo1")
+        code, r = call(base, "GET", "/api/find?q=" + q("1/105"))
+        check("search says which binders have a card", code == 200 and r["cards"] and r["cards"][0]["in"][0]["sid"] == "neo4", str(r)[:200])
+        code, r = call(base, "GET", "/api/find/set/neo1")
+        check("browse a whole set", code == 200 and len(r["cards"]) == 2)
+        code, own = call(base, "POST", "/api/sets/own", {"name": "Favorites"})
+        check("make your own binder", code == 200 and own.get("id") == "my-1", str(own))
+        code, r = call(base, "POST", "/api/set/my-1/cards", {"id": "base1-4"})
+        check("add a card to your own binder", code == 200 and r == {"n": "base1-4", "already": False}, str(r))
+        code, r = call(base, "POST", "/api/set/neo4/cards", {"id": "neo4-1"})
+        check("a set's own card isn't added twice", code == 200 and r.get("already") and r["n"] == "1", str(r))
+        code, r = call(base, "POST", "/api/set/neo4/cards", {"id": "neo1-80"})
+        check("add a card from another set to a set binder", code == 200 and r.get("already") is False, str(r))
+        code, _ = call(base, "POST", "/api/set/my-1/cards", {"id": "nope-1"})
+        check("unknown card is turned down", code == 400)
+        _, st = call(base, "GET", "/api/set/my-1/state")
+        check("your own binder lists its cards", [c["n"] for c in st["cards"]] == ["base1-4"] and st["cards"][0]["set"] == "Base")
+        code, r = call(base, "PUT", "/api/set/neo4/layout", {"pockets": 9, "order": "num", "slots": ["2", None, "1", "bogus", "1"]})
+        check("save a binder layout", code == 200 and r.get("slots") == ["2", None, "1"], str(r))
+        code, _ = call(base, "PUT", "/api/set/neo4/layout", {"pockets": 7})
+        check("odd pocket sizes are turned down", code == 400)
+        code, _ = call(base, "PUT", "/api/sets/my-1/name", {"name": "Faves"})
+        check("rename your own binder", code == 200)
+        code, _ = call(base, "PUT", "/api/sets/neo4/name", {"name": "X"})
+        check("set binders can't be renamed", code == 400)
+        code, r = call(base, "GET", "/api/set/my-1/dexnums")
+        check("Pokédex numbers for the Pages view", code == 200 and r["dex"].get("base1-4") == 6, str(r))
+        code, z = call(base, "GET", "/api/backup")
+        names = zipfile.ZipFile(io.BytesIO(z)).namelist() if code == 200 else []
+        check("backups hold added cards and layouts", "sets/my-1/extra.json" in names and "sets/neo4/layout.json" in names, str(names)[:300])
+        code, _ = call(base, "DELETE", "/api/set/neo4/cards/1")
+        check("a set's own cards can't be taken out", code == 400)
+        code, _ = call(base, "DELETE", "/api/set/neo4/cards/neo1-80")
+        check("take an added card back out", code == 200)
+        _, st = call(base, "GET", "/api/set/neo4/state")
+        check("taken-out card is gone", not any(c["n"] == "neo1-80" for c in st["cards"]))
+        req = urllib.request.Request(base + "/api/set/my-1/cards", data=b'{"id":"base1-58"}', method="POST",
+                                     headers={"Content-Type": "application/json", "Origin": "http://evil.example", "Sec-Fetch-Site": "cross-site"})
+        try:
+            OPENER.open(req, timeout=10); blocked = False
+        except urllib.error.HTTPError as e:
+            blocked = e.code == 403
+        check("other websites can't add cards", blocked)
 
         log.seek(0)
         text = log.read()

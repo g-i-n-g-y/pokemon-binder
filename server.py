@@ -16,7 +16,7 @@ GITHUB_REPO to an empty value to use a folder mounted at /updates instead (same 
 needed for a private copy of the repository. Replaced files are kept in previous/.
 """
 from html import unescape
-import ast, contextlib, gzip, io, json, os, re, shutil, socket, sqlite3, subprocess, sys, tempfile, threading, time, traceback, urllib.error, urllib.parse, urllib.request, zipfile
+import ast, contextlib, gzip, io, json, os, unicodedata, re, shutil, socket, sqlite3, subprocess, sys, tempfile, threading, time, traceback, urllib.error, urllib.parse, urllib.request, zipfile
 from datetime import datetime, timedelta, timezone
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 try:
@@ -24,7 +24,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "3.7.4"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
+APP_VERSION = "3.8"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -62,6 +62,9 @@ SID_RE = r"[a-z0-9][a-z0-9.\-]{0,40}"
 NUM_RE = r"[A-Za-z0-9\-]{1,24}"
 DEX_RE = re.compile(r"dex-(\d{1,4})")   # a Pokémon master set binder, like dex-158 for Totodile
 DEX_INDEX = os.path.join(DATA, "dex_index.json")
+CARD_INDEX = os.path.join(DATA, "card_index.json")   # every English card, for Find a card (made with the Pokémon list)
+CARD_INDEX_V = 1   # bump when the every-card list gets new fields, so it's made again
+OWN_RE = re.compile(r"my-(\d{1,5})")   # a binder you fill yourself, like my-1
 SPRITES = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon"
 
 lock = threading.Lock()
@@ -137,7 +140,8 @@ def write_file_json(path, obj):
 
 DB_FILE = os.path.join(DATA, "binder.db")
 DB_SCHEMA = 1
-SET_FILES = ("collection", "prices", "history", "tcg_ids", "slots", "shop", "pc_urls", "tcgdex_ids", "custom", "cards")
+SET_FILES = ("collection", "prices", "history", "tcg_ids", "slots", "shop", "pc_urls", "tcgdex_ids", "custom", "cards",
+             "extra", "layout")
 DOC_RE = re.compile(rf"(?:settings|sets|shows)\.json|sets/{SID_RE}/(?:{'|'.join(SET_FILES)})\.json")
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
@@ -466,11 +470,107 @@ def fetch_cards(sid):
 
 
 def set_cards(sid):
-    """Every card in a binder: the card database's list plus any custom cards you added."""
+    """Every card in a binder: the card database's list, cards you added from Find a card, and custom cards."""
     cards = read_json(sdir(sid, "cards.json"), None)
     if cards is None:
-        cards = dex_cards(sid) if is_dex(sid) else fetch_cards(sid)
-    return cards + custom_cards(sid)
+        cards = [] if is_own(sid) else dex_cards(sid) if is_dex(sid) else fetch_cards(sid)
+    return cards + extra_list(sid) + custom_cards(sid)
+
+
+def binder_size(sid):
+    """How many cards a binder holds, without downloading anything. None if its card list isn't saved yet."""
+    cards = read_json(sdir(sid, "cards.json"), None)
+    if cards is None and not is_own(sid):
+        return None
+    return len(cards or []) + len(extra_list(sid)) + len(custom_list(sid))
+
+
+# ---------- cards added from Find a card ----------
+# Saved per binder in extra.json, each remembering its own set, like the cards in a master set binder.
+# Their number is the card database's id (like neo1-80), so it never clashes with a set's own numbers.
+# Your own binders ("my-1") hold only these.
+
+def extra_list(sid):
+    out = read_json(sdir(sid, "extra.json"), [])
+    return [c for c in out if isinstance(c, dict) and re.fullmatch(NUM_RE, str(c.get("n", "")))] if isinstance(out, list) else []
+
+
+def forget_card(sid, n):
+    """Delete everything saved for one card in a binder: copies, purchases, prices, history, photos, layout spot."""
+    for f, key in (("collection.json", None), ("prices.json", "p"), ("prices.json", "info"), ("shop.json", None)):
+        d = read_json(sdir(sid, f), {})
+        box = d.get(key) if key else d
+        if isinstance(box, dict) and n in box:
+            box.pop(n)
+            write_json(sdir(sid, f), d)
+    hist = read_json(sdir(sid, "history.json"), {})
+    if any(isinstance(day, dict) and n in day for day in hist.values()):
+        for day in hist.values():
+            if isinstance(day, dict):
+                day.pop(n, None)
+        write_json(sdir(sid, "history.json"), hist)
+    lay = read_json(sdir(sid, "layout.json"), None)
+    if isinstance(lay, dict) and n in (lay.get("slots") or []):
+        lay["slots"] = [None if x == n else x for x in lay["slots"]]
+        write_json(sdir(sid, "layout.json"), lay)
+    for f in (n, n + ".json", n + "_back", n + "_back.json"):
+        if os.path.exists(sdir(sid, "photos", f)):
+            os.remove(sdir(sid, "photos", f))
+    for full in (True, False):
+        if os.path.exists(image_path(sid, n, full)):
+            os.remove(image_path(sid, n, full))
+
+
+def add_card(sid, gid):
+    """Put a card from the card database into a binder. Returns {"n": its number in this binder, "already": bool}."""
+    card = index_card(gid)
+    if not card:
+        raise ValueError("That card isn't in the card list")
+    with lock:
+        if not is_multi(sid):
+            local = gid[len(sid) + 1:] if gid.startswith(sid + "-") else None
+            if local and any(c["n"] == local for c in (read_json(sdir(sid, "cards.json"), None) or [])):
+                return {"n": local, "already": True}
+        elif is_dex(sid) and any(c["n"] == gid for c in (read_json(sdir(sid, "cards.json"), None) or [])):
+            return {"n": gid, "already": True}
+        lst = extra_list(sid)
+        if any(c["n"] == gid for c in lst):
+            return {"n": gid, "already": True}
+        if len(lst) >= 2000:
+            raise ValueError("That's the most cards one binder can hold")
+        lst.append(dict(card, extra=True, added=today_local()))
+        write_json(sdir(sid, "extra.json"), lst)
+    log(f"{sid}: added {gid} ({card['name']})")
+    refresh_soon(sid, [gid])
+    return {"n": gid, "already": False}
+
+
+def remove_card(sid, n):
+    """Take a card you added from Find a card back out of a binder."""
+    with lock:
+        lst = extra_list(sid)
+        if not any(c["n"] == n for c in lst):
+            raise ValueError("Only cards you added yourself can be taken out")
+        write_json(sdir(sid, "extra.json"), [c for c in lst if c["n"] != n])
+        forget_card(sid, n)
+
+
+def refresh_soon(sid, ns):
+    """Get prices for a few newly added cards in the background, once nothing else is checking prices."""
+    if TRIAL:   # a test start answers pages only
+        return
+
+    def go():
+        time.sleep(3)
+        for _ in range(240):   # up to an hour
+            if sid not in sets_list()["order"]:
+                return
+            have = {c["n"] for c in set_cards(sid)}
+            left = [n for n in ns if n in have]
+            if not left or refresh_prices(sid, "new card", only=set(left)) is not False:
+                return
+            time.sleep(15)
+    threading.Thread(target=go, daemon=True).start()
 
 
 # ---------- custom cards (ones the card database is missing) ----------
@@ -570,27 +670,13 @@ def delete_custom(sid, n):
         if not any(c["n"] == n for c in lst):
             raise ValueError("That custom card isn't in this binder any more")
         write_json(sdir(sid, "custom.json"), [c for c in lst if c["n"] != n])
-        for f, key in (("collection.json", None), ("prices.json", "p"), ("prices.json", "info"), ("shop.json", None)):
-            d = read_json(sdir(sid, f), {})
-            box = d.get(key) if key else d
-            if isinstance(box, dict) and n in box:
-                box.pop(n)
-                write_json(sdir(sid, f), d)
-        hist = read_json(sdir(sid, "history.json"), {})
-        if any(isinstance(day, dict) and n in day for day in hist.values()):
-            for day in hist.values():
-                if isinstance(day, dict):
-                    day.pop(n, None)
-            write_json(sdir(sid, "history.json"), hist)
-        for f in (n, n + ".json", n + "_back", n + "_back.json"):
-            if os.path.exists(sdir(sid, "photos", f)):
-                os.remove(sdir(sid, "photos", f))
+        forget_card(sid, n)
 
 
 def card_ref(sid, c):
     """(card id for price lookups, set name, number printed on the card).
     In a Pokémon master set binder each card remembers its own set."""
-    if is_dex(sid) or c.get("custom"):
+    if is_multi(sid) or c.get("custom") or c.get("extra"):
         return (None if c.get("custom") else c["n"]), c.get("set", ""), c.get("num", c["n"])
     return f"{sid}-{c['n']}", sets_list()["meta"].get(sid, {}).get("name", sid), c["n"]
 
@@ -599,6 +685,15 @@ def card_ref(sid, c):
 
 def is_dex(sid):
     return bool(DEX_RE.fullmatch(sid or ""))
+
+
+def is_own(sid):
+    return bool(OWN_RE.fullmatch(sid or ""))
+
+
+def is_multi(sid):
+    """Binders whose cards come from many sets (master sets and your own binders)."""
+    return is_dex(sid) or is_own(sid)
 
 
 def build_dex_index():
@@ -612,7 +707,7 @@ def build_dex_index():
         sets = sorted(catalog(), key=lambda s: (s.get("releaseDate", ""), s["id"]))
         dex_job["total"] = len(sets)
         log(f"Pokémon list: reading {len(sets)} sets...")
-        by_dex, done_sets = {}, []
+        by_dex, done_sets, every, set_info = {}, [], [], {}
         for i, st in enumerate(sets):
             dex_job["done"] = i
             try:
@@ -621,11 +716,16 @@ def build_dex_index():
                 log(f"Pokémon list: {st['id']}: {e}")
                 continue
             done_sets.append(st["id"])
+            set_info[st["id"]] = [st["name"], st.get("series", ""), st.get("printedTotal", 0), st.get("releaseDate", ""),
+                                  st.get("total", 0)]
             for c in raw:
-                if c.get("supertype") != "Pokémon":
-                    continue
                 n = f"{st['id']}-{c['number']}"
                 if not re.fullmatch(NUM_RE, n):
+                    continue
+                every.append([n, c["name"], str(c["number"]), c.get("rarity") or "", c.get("supertype", ""),
+                              (c.get("images") or {}).get("large") or (c.get("images") or {}).get("small", ""), st["id"],
+                              ((c.get("nationalPokedexNumbers") or [0])[0] or 0)])
+                if c.get("supertype") != "Pokémon":
                     continue
                 card = {"n": n, "num": str(c["number"]), "set": st["name"], "pt": st.get("printedTotal", 0),
                         "date": st.get("releaseDate", ""), "name": c["name"], "rarity": c.get("rarity") or "",
@@ -642,7 +742,9 @@ def build_dex_index():
             for c in cards:
                 counts[c["name"]] = counts.get(c["name"], 0) + 1
             names[d] = min(counts, key=lambda k: (-counts[k], len(k)))
-        write_json(DEX_INDEX, {"fetched": time.time(), "sets": done_sets, "names": names, "cards": by_dex})
+        write_json(DEX_INDEX, {"fetched": time.time(), "sets": done_sets, "names": names, "cards": by_dex, "cardIndex": CARD_INDEX_V})
+        write_file_json(CARD_INDEX, {"fetched": time.time(), "sets": set_info, "cards": every})
+        CARD_IDX["at"] = 0
         dex_job["done"] = len(sets)
         log(f"Pokémon list ready: {len(by_dex)} Pokémon.")
         for sid in sets_list()["order"]:   # new sets may have new cards for your master set binders
@@ -663,7 +765,8 @@ def dex_stale(idx):
     if not idx:
         return True
     have = set(idx.get("sets") or [])
-    return time.time() - idx.get("fetched", 0) > 30 * DAY or any(s["id"] not in have for s in catalog())
+    return (time.time() - idx.get("fetched", 0) > 30 * DAY or any(s["id"] not in have for s in catalog())
+            or not os.path.isfile(CARD_INDEX) or idx.get("cardIndex") != CARD_INDEX_V)   # made before Find a card existed
 
 
 def start_dex_index(force=False):
@@ -685,6 +788,250 @@ def dex_cards(sid):
             c["i"] = len(out)
             out.append(c)
     write_json(sdir(sid, "cards.json"), out)
+    return out
+
+
+# ---------- Find a card ----------
+# Searches every English card (data/card_index.json, made with the Pokémon list). Only runs when you
+# tap Search, never while typing.
+
+CARD_IDX = {"at": 0, "cards": [], "sets": {}, "by": {}, "used": 0}
+CARD_IDX_IDLE = 15 * 60   # the list takes about 20 MB in memory, so it's let go after 15 minutes without a search
+
+
+def release_card_index():
+    if CARD_IDX["at"] and time.time() - CARD_IDX["used"] > CARD_IDX_IDLE:
+        CARD_IDX.update(at=0, cards=[], sets={}, by={})
+
+
+def _fold(t):
+    t = unicodedata.normalize("NFKD", str(t or "").lower())
+    t = "".join(ch for ch in t if not unicodedata.combining(ch))
+    return t.replace("♀", " f").replace("♂", " m").replace("’", "'")
+
+
+def _num_fold(t):
+    t = _fold(t).strip().lstrip("#")
+    m = re.fullmatch(r"([a-z]*)0*(\d+)([a-z]*)", t)
+    return (m.group(1) + m.group(2) + m.group(3)) if m else t
+
+
+def card_index():
+    """The every-card list, kept in memory and reloaded when the file changes."""
+    try:
+        at = os.path.getmtime(CARD_INDEX)
+    except OSError:
+        return None
+    CARD_IDX["used"] = time.time()
+    if CARD_IDX["at"] != at:
+        raw = read_file_json(CARD_INDEX, None)
+        if not raw:
+            return None
+        sets = raw.get("sets") or {}
+        cards = []
+        for c in raw.get("cards") or []:
+            st = sets.get(c[6]) or ["", "", 0, "", 0]
+            cards.append((c, _fold(c[1]), _num_fold(c[2]), _fold(st[0]),
+                          tuple(re.findall(r"[a-z0-9']+", _fold(c[1]))), tuple(re.findall(r"[a-z0-9']+", _fold(st[0])))))
+        CARD_IDX.update(at=at, cards=cards, sets=sets, by={c[0][0]: c[0] for c in cards})
+    return CARD_IDX
+
+
+def _card_out(c, sets):
+    st = sets.get(c[6]) or ["", "", 0, "", 0]
+    return {"n": c[0], "name": c[1], "num": c[2], "rarity": c[3], "type": c[4], "img": c[5],
+            "setId": c[6], "set": st[0], "pt": st[2], "date": st[3]}
+
+
+def index_card(gid):
+    """One card from the every-card list, shaped like a card in a master set binder."""
+    idx = card_index()
+    c = idx and idx["by"].get(gid)
+    if not c:
+        return None
+    o = _card_out(c, idx["sets"])
+    return {"n": o["n"], "num": o["num"], "set": o["set"], "pt": o["pt"], "date": o["date"], "name": o["name"],
+            "rarity": o["rarity"], "type": o["type"], "img": o["img"], "src": o["setId"]}
+
+
+def where_cards():
+    """Which of your binders hold each card: {card id: [{sid, n, qty}]}."""
+    out = {}
+    for sid in sets_list()["order"]:
+        coll = read_json(sdir(sid, "collection.json"), {})
+        coll = coll if isinstance(coll, dict) else {}
+        base = read_json(sdir(sid, "cards.json"), None) or []
+        for c in base + extra_list(sid):
+            gid = c["n"] if (is_multi(sid) or c.get("extra")) else f"{sid}-{c['n']}"
+            rec = coll.get(c["n"]) if isinstance(coll.get(c["n"]), dict) else {}
+            out.setdefault(gid, []).append({"sid": sid, "n": c["n"], "qty": int(rec.get("qty") or 0)})
+    return out
+
+
+def find_status():
+    idx = card_index()
+    if not idx and not dex_job["running"]:
+        start_dex_index(force=True)
+    return {"ready": bool(idx), "building": dex_job["running"], "done": dex_job["done"], "total": dex_job["total"],
+            "error": dex_job["error"]}
+
+
+def find(q):
+    """Sets and cards matching what's typed: a name, the number printed on the card (80 or 80/111), a set, or a mix."""
+    out = find_status()
+    out.update(q=q, sets=[], cards=[], count=0)
+    idx = card_index()
+    if not idx:
+        return out
+    text = _fold(q)[:80]
+    m = re.search(r"#?\s*([a-z]{0,6}\d{1,4}[a-z]?)\s*/\s*([a-z]{0,6}\d{1,4})", text)
+    num = total = None
+    if m:
+        num, total = _num_fold(m.group(1)), _num_fold(m.group(2))
+        text = text[:m.start()] + " " + text[m.end():]
+    words = re.findall(r"[a-z0-9'.\-]+", text)
+    if num is None:
+        nums = [w for w in words if re.fullmatch(r"#?[a-z]{0,6}\d{1,4}[a-z]?", w) and any(ch.isdigit() for ch in w)
+                and not re.fullmatch(r"(19|20)\d\d", w)]
+        if nums:
+            num = _num_fold(nums[-1])
+            words.remove(nums[-1])
+    words = [x for w in words for x in re.findall(r"[a-z0-9']+", w)]
+    sets = idx["sets"]
+    if words and num is None:
+        phrase = " ".join(words)
+        hits = []
+        for sid, st in sets.items():
+            name = _fold(st[0])
+            if phrase in name or sid == phrase or all(w in name.split() or w in name for w in words):
+                hits.append((0 if name == phrase or sid == phrase else 1, st[3], sid, st))
+        hits.sort()
+        mine = set(sets_list()["order"])
+        out["sets"] = [{"id": sid, "name": st[0], "series": st[1], "pt": st[2], "date": st[3], "total": st[4],
+                        "inBinder": sid in mine} for _, _, sid, st in hits[:12]]
+    if not words and num is None:
+        return out
+    total_i = int(total) if total and total.isdigit() else None
+    found = []
+    for c, fname, fnum, fset, nwords, swords in idx["cards"]:
+        if num is not None and fnum != num:
+            continue
+        st = sets.get(c[6]) or ["", "", 0, "", 0]
+        if total is not None:
+            if total_i is not None:
+                if st[2] != total_i:
+                    continue
+            elif not fnum.startswith(re.sub(r"\d+", "", total)):
+                continue
+        in_name = 0
+        ok = True
+        for w in words:   # each typed word starts a word in the card's name or its set's name
+            if any(x.startswith(w) for x in nwords):
+                in_name += 1
+            elif not any(x.startswith(w) for x in swords):
+                ok = False
+                break
+        if not ok or (words and not in_name and num is None):
+            continue
+        score = (5 if num is not None else 0) + (5 if total is not None else 0) + in_name
+        if words and fname == " ".join(words):
+            score += 3
+        found.append((-score, st[3], num_key(c[2]), c))
+    found.sort(key=lambda x: x[:3])
+    out["count"] = len(found)
+    where = where_cards()
+    for _, _, _, c in found[:60]:
+        o = _card_out(c, sets)
+        o["in"] = where.get(c[0], [])
+        out["cards"].append(o)
+    return out
+
+
+def find_set(set_id):
+    """Every card in one set, in number order, with which of your binders hold them."""
+    out = find_status()
+    idx = card_index()
+    if not idx:
+        return out
+    st = idx["sets"].get(set_id)
+    if not st:
+        raise ValueError("That set isn't in the card list")
+    where = where_cards()
+    cards = sorted((t[0] for t in idx["cards"] if t[0][6] == set_id), key=lambda c: num_key(c[2]))
+    out.update(set={"id": set_id, "name": st[0], "series": st[1], "pt": st[2], "date": st[3], "total": st[4],
+                    "inBinder": set_id in sets_list()["order"]},
+               cards=[dict(_card_out(c, idx["sets"]), **{"in": where.get(c[0], [])}) for c in cards])
+    return out
+
+
+# ---------- your own binders ----------
+
+def add_own(name):
+    """Start an empty binder you fill yourself from Find a card. Returns its details."""
+    name = re.sub(r"\s+", " ", str(name or "")).strip()[:40]
+    if not name:
+        raise ValueError("Give the binder a name")
+    with lock:
+        sl = sets_list()
+        used = [int(m.group(1)) for m in (OWN_RE.fullmatch(k) for k in sl["meta"]) if m]
+        sid = f"my-{max(used, default=0) + 1}"
+        write_json(sdir(sid, "cards.json"), [])
+        write_json(sdir(sid, "extra.json"), [])
+        meta = {"id": sid, "name": name, "series": "My binder", "kind": "own", "printedTotal": 0, "total": 0,
+                "releaseDate": "", "added": int(time.time())}
+        sl["meta"][sid] = meta
+        sl["order"].append(sid)
+        write_json(SETS_FILE, sl)
+    log(f"Added your own binder {name} ({sid})")
+    return meta
+
+
+def rename_own(sid, name):
+    name = re.sub(r"\s+", " ", str(name or "")).strip()[:40]
+    if not name:
+        raise ValueError("Give the binder a name")
+    with lock:
+        sl = sets_list()
+        if not is_own(sid) or sid not in sl["meta"]:
+            raise ValueError("Only your own binders can be renamed")
+        sl["meta"][sid]["name"] = name
+        write_json(SETS_FILE, sl)
+    return sl["meta"][sid]
+
+
+# ---------- binder layout (pages and pockets) ----------
+
+POCKETS = (4, 9, 12, 16)
+LAYOUT_ORDERS = ("num", "rarity", "dex", "type", "value", "owned", "added")
+
+
+def save_layout(sid, raw):
+    """Save how a binder's cards sit in its pages: pocket size, starting order and every slot (card or empty)."""
+    try:
+        pockets = int(raw.get("pockets"))
+    except (TypeError, ValueError):
+        pockets = 0
+    if pockets not in POCKETS:
+        raise ValueError("Pick 4, 9, 12 or 16 pockets a page")
+    slots = raw.get("slots")
+    if slots is not None:
+        if not isinstance(slots, list) or len(slots) > 6000:
+            raise ValueError("That layout is too big")
+        have = {c["n"] for c in set_cards(sid)}
+        seen, clean = set(), []
+        for x in slots:
+            if isinstance(x, str) and x in have and x not in seen:
+                seen.add(x)
+                clean.append(x)
+            else:
+                clean.append(None)
+        while clean and clean[-1] is None:
+            clean.pop()
+        slots = clean
+    order = raw.get("order") if raw.get("order") in LAYOUT_ORDERS else "num"
+    out = {"pockets": pockets, "order": order, "slots": slots}
+    with lock:
+        write_json(sdir(sid, "layout.json"), out)
     return out
 
 
@@ -763,6 +1110,8 @@ def sets_list():
 def add_set(sid):
     if is_dex(sid):
         return add_dex(sid)
+    if is_own(sid):
+        raise ValueError("Make your own binder with My own binder")
     meta = next((s for s in catalog() if s["id"] == sid), None)
     if not meta:
         raise ValueError("Unknown set")
@@ -1527,7 +1876,7 @@ def daily_cards(sid, cards, day=None):
     return out
 
 
-def refresh_prices(sid, reason="daily", only_daily=False):
+def refresh_prices(sid, reason="daily", only_daily=False, only=None):
     with job_lock:
         if job["running"] or big["what"]:
             return False
@@ -1537,6 +1886,8 @@ def refresh_prices(sid, reason="daily", only_daily=False):
         cards = set_cards(sid)
         if only_daily:
             cards = daily_cards(sid, cards)
+        if only:
+            cards = [c for c in cards if c["n"] in only]
         job["total"] = len(cards)
         log(f"{sid}: price refresh started ({reason}, {len(cards)} cards).")
         ids = read_json(sdir(sid, "tcg_ids.json"), {})
@@ -1633,7 +1984,8 @@ def refresh_prices(sid, reason="daily", only_daily=False):
                 prices["updated"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             write_json(sdir(sid, "prices.json"), prices)
             snapshot_history(sid, prices)
-        job["message"] = f"{name}: updated {priced} of {len(cards)} prices."
+        job["message"] = (f"{name}: got prices for the card you added." if only and len(cards) == 1
+                          else f"{name}: updated {priced} of {len(cards)} prices.")
         log(f"{sid}: price refresh done, {priced} of {len(cards)} priced.")
     except Exception as e:
         job["message"] = f"Price refresh failed: {e}"
@@ -1782,7 +2134,7 @@ def spending():
     hist_by_set, cur_by_set = {}, {}
     for sid in sl["order"]:
         coll = read_json(sdir(sid, "collection.json"), {})
-        cards = {c["n"]: c["name"] for c in (read_json(sdir(sid, "cards.json"), None) or [])}
+        cards = {c["n"]: c["name"] for c in (read_json(sdir(sid, "cards.json"), None) or []) + extra_list(sid)}
         prices = read_json(sdir(sid, "prices.json"), {})
         base = {n: v[0] for n, v in (prices.get("p") or {}).items() if v}
         info = prices.get("info") or {}
@@ -1923,6 +2275,7 @@ def scheduler():
     ticks = 0
     while True:
         if ticks % 30 == 0:
+            release_card_index()
             try:
                 purge_removed()
             except Exception as e:
@@ -2120,7 +2473,7 @@ def shows_due():
 def set_totals(sid):
     """Same math as the page header: value counts owned copies at their condition's price when set."""
     coll = read_json(sdir(sid, "collection.json"), {})
-    cards = (read_json(sdir(sid, "cards.json"), None) or []) + custom_list(sid)
+    cards = (read_json(sdir(sid, "cards.json"), None) or []) + extra_list(sid) + custom_list(sid)
     prices = read_json(sdir(sid, "prices.json"), {})
     p, info = prices.get("p") or {}, prices.get("info") or {}
     t = {"owned": 0, "count": len(cards), "value": 0.0, "paid": 0.0, "need": 0.0, "full": 0.0}
@@ -2763,10 +3116,11 @@ class Handler(BaseHTTPRequestHandler):
                 m["owned"] = sum(1 for v in coll.values() if (v or {}).get("qty", 0) > 0)
                 cards = read_json(sdir(sid, "cards.json"), None)
                 m["custom"] = len(custom_list(sid))
-                m["count"] = (len(cards) if cards is not None else m.get("total", 0)) + m["custom"]
+                size = binder_size(sid)
+                m["count"] = size if size is not None else m.get("total", 0) + m["custom"]
                 m["images"] = sid in img_jobs
-                if cards is not None:
-                    have, want = pictures_saved(sid, cards)
+                if size is not None:
+                    have, want = pictures_saved(sid, (cards or []) + extra_list(sid))
                     m["pics"] = {"saved": have, "total": want}
                     m["totals"] = set_totals(sid)
                 out.append(m)
@@ -2797,6 +3151,15 @@ class Handler(BaseHTTPRequestHandler):
                              cache="no-store")
         if path == "/api/catalog":
             return self.send(200, {"sets": catalog()}, cache="no-store")
+        if path == "/api/find":
+            q = (urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("q") or [""])[0]
+            return self.send(200, find(q[:120]), cache="no-store")
+        m = re.fullmatch(rf"/api/find/set/({SID_RE})", path)
+        if m:
+            try:
+                return self.send(200, find_set(m.group(1)), cache="no-store")
+            except ValueError as e:
+                return self.send(404, {"error": str(e)})
         if path == "/api/refresh":
             return self.send(200, job, cache="no-store")
         if path == "/api/settings":
@@ -2833,6 +3196,22 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, set_trends(m.group(1), today), cache="no-store")
             except ValueError:
                 return self.send(400, {"error": "bad date"})
+        m = re.fullmatch(rf"/api/set/({SID_RE})/dexnums", path)
+        if m:   # Pokédex numbers for a binder's cards, for the Pages view's "Pokédex number" order
+            sid = m.group(1)
+            if not self.in_binder(sid):
+                return self.send(404, {"error": "Set not in binder"})
+            idx = card_index()
+            if not idx:
+                return self.send(200, {"ready": False, "dex": {}}, cache="no-store")
+            multi, out = is_multi(sid), {}
+            for c in set_cards(sid):
+                if c.get("custom"):
+                    continue
+                row = idx["by"].get(c["n"] if (multi or c.get("extra")) else f"{sid}-{c['n']}")
+                if row and len(row) > 7 and row[7]:
+                    out[c["n"]] = row[7]
+            return self.send(200, {"ready": True, "dex": out}, cache="no-store")
         m = re.fullmatch(rf"/api/set/({SID_RE})/state", path)
         if m:
             sid = m.group(1)
@@ -2846,7 +3225,8 @@ class Handler(BaseHTTPRequestHandler):
                 body = {"set": sets_list()["meta"].get(sid, {}), "cards": cards,
                         "collection": read_json(sdir(sid, "collection.json"), {}),
                         "prices": read_json(sdir(sid, "prices.json"), {}), "slots": set_slots(sid),
-                        "shop": read_json(sdir(sid, "shop.json"), {})}
+                        "shop": read_json(sdir(sid, "shop.json"), {}),
+                        "layout": read_json(sdir(sid, "layout.json"), None)}
             return self.send(200, body, cache="no-store")
         m = re.fullmatch(rf"/set/({SID_RE})/sprite\.png", path)
         if m:
@@ -2875,6 +3255,24 @@ class Handler(BaseHTTPRequestHandler):
             return self.do_PUT_shows()
         if self.path == "/api/sets/order":
             return self.do_PUT_set_order()
+        m = re.fullmatch(rf"/api/sets/({SID_RE})/name", self.path)
+        if m:
+            try:
+                return self.send(200, rename_own(m.group(1), json.loads(self.body(4096) or b"{}").get("name")))
+            except (ValueError, AttributeError) as e:
+                return self.send(400, {"error": str(e) or "Couldn't rename"})
+        m = re.fullmatch(rf"/api/set/({SID_RE})/layout", self.path)
+        if m:
+            if not self.in_binder(m.group(1)):
+                return self.send(400, {"error": "That binder isn't here"})
+            try:
+                raw = json.loads(self.body(256 * 1024) or b"{}")
+                assert isinstance(raw, dict)
+                return self.send(200, save_layout(m.group(1), raw))
+            except ValueError as e:
+                return self.send(400, {"error": str(e)})
+            except Exception:
+                return self.send(400, {"error": "Couldn't save the layout"})
         m = re.fullmatch(rf"/api/set/({SID_RE})/slots", self.path)
         if m:
             return self.do_PUT_slots(m.group(1))
@@ -3039,6 +3437,15 @@ class Handler(BaseHTTPRequestHandler):
             except ValueError as e:
                 return self.send(400, {"error": str(e)})
             return self.send(200, {"ok": True})
+        m = re.fullmatch(rf"/api/set/({SID_RE})/cards/({NUM_RE})", self.path)
+        if m:
+            if not self.in_binder(m.group(1)):
+                return self.send(400, {"error": "That binder isn't here"})
+            try:
+                remove_card(m.group(1), m.group(2))
+            except ValueError as e:
+                return self.send(400, {"error": str(e)})
+            return self.send(200, {"ok": True})
         m = re.fullmatch(rf"/api/sets/({SID_RE})", self.path)
         if not m:
             return self.send(400, {"error": "bad request"})
@@ -3143,6 +3550,25 @@ class Handler(BaseHTTPRequestHandler):
         if m_rs:
             try:
                 return self.send(200, restore_set(m_rs.group(1)))
+            except ValueError as e:
+                return self.send(400, {"error": str(e)})
+        if path == "/api/sets/own":
+            try:
+                return self.send(200, add_own(json.loads(self.body(4096) or b"{}").get("name")))
+            except (ValueError, AttributeError) as e:
+                return self.send(400, {"error": str(e) or "Couldn't make the binder"})
+        m_add = re.fullmatch(rf"/api/set/({SID_RE})/cards", path)
+        if m_add:
+            sid = m_add.group(1)
+            if not self.in_binder(sid):
+                return self.send(400, {"error": "That binder isn't here"})
+            try:
+                gid = json.loads(self.body(4096) or b"{}").get("id", "")
+                assert isinstance(gid, str) and re.fullmatch(NUM_RE, gid)
+            except Exception:
+                return self.send(400, {"error": "bad request"})
+            try:
+                return self.send(200, add_card(sid, gid))
             except ValueError as e:
                 return self.send(400, {"error": str(e)})
         if path == "/api/sets":

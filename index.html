@@ -760,6 +760,99 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
 .toast[popover]:not(:popover-open){display:none}
 .toast button{flex:none;border:0;border-radius:8px;background:var(--dark);color:var(--bg);font:inherit;font-weight:600;font-size:14px;padding:6px 12px;cursor:pointer}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
+/* ---------- Find a card (v3.8) ---------- */
+#fdlg.float{width:min(760px,calc(100% - 24px))}
+#fdlg .sheet{display:flex;flex-direction:column;gap:14px}
+.fd-form{display:flex;gap:8px}
+.fd-form .field{flex:1;min-width:0}
+.fd-form .btn{flex:none;justify-content:center}
+.fd-hint{font-size:14px;color:var(--muted);line-height:1.5}
+.fd-hint code{font-family:var(--f-mono);font-size:13px;color:var(--ink)}
+.fd-sec{display:flex;flex-direction:column;gap:8px}
+.fd-sec>.ui-h{margin:2px 2px 0}
+.fd-row{display:grid;grid-template-columns:52px minmax(0,1fr);gap:12px;align-items:center;width:100%;padding:10px 12px;border:0;background:none;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.fd-row+.fd-row{border-top:1px solid var(--line)}
+.fd-row:hover{background:var(--sleeve)}
+.fd-row img,.fd-row .ph{width:52px;aspect-ratio:63/88;border-radius:4px;object-fit:cover;background:var(--sleeve);display:block}
+.fd-row b{font-family:var(--f-display);font-weight:700;font-size:16px;line-height:1.2}
+.fd-row small{display:block;font-size:13px;color:var(--muted);margin-top:2px;line-height:1.35}
+.fd-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+.fd-tag{font-size:11px;letter-spacing:.03em;padding:2px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.fd-tag.own{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.fd-sethead{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px}
+.fd-sethead h3{margin:0;font-family:var(--f-display);font-size:22px;line-height:1.15}
+.fd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:12px}
+.fd-tile{display:flex;flex-direction:column;gap:4px;border:0;background:none;padding:0;color:var(--ink);font:inherit;text-align:left;cursor:pointer;min-width:0}
+.fd-tile img,.fd-tile .ph{width:100%;aspect-ratio:63/88;border-radius:6px;object-fit:cover;background:var(--sleeve);display:block}
+.fd-tile .nm{font-size:13px;font-weight:600;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fd-tile .no{font-family:var(--f-mono);font-size:11px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.fd-tile .no .fd-tag{font-family:var(--f-body);padding:1px 6px}
+.fd-tile:focus-visible img,.fd-row:focus-visible{outline:2px solid var(--dark);outline-offset:2px}
+.fd-dim{position:absolute;inset:0;z-index:4;background:rgba(5,4,8,.55)}
+.fd-pick{position:absolute;inset:auto 0 0 0;z-index:5;max-height:88%;overflow-y:auto;overscroll-behavior:contain;background:var(--surface);border-top:1px solid var(--line);border-radius:16px 16px 0 0;box-shadow:0 -14px 34px rgba(0,0,0,.5);padding:16px 18px max(22px,env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px}
+.fd-pick>*{flex-shrink:0}
+.fd-ph{display:grid;grid-template-columns:96px minmax(0,1fr) auto;gap:14px;align-items:start}
+.fd-ph img,.fd-ph .ph{width:96px;aspect-ratio:63/88;border-radius:6px;object-fit:cover;background:var(--sleeve)}
+.fd-ph b{font-family:var(--f-display);font-size:20px;line-height:1.15;display:block}
+.fd-ph small{display:block;font-size:13px;color:var(--muted);margin-top:4px;line-height:1.4}
+#fdPick .links{margin:-4px 0 0}
+.fd-new{display:flex;gap:8px;padding:10px 14px}
+.fd-new .field{flex:1;min-width:0}
+@media (prefers-reduced-motion:no-preference){.fd-pick{animation:fdup .22s cubic-bezier(.2,.8,.2,1)}@keyframes fdup{from{transform:translateY(40px);opacity:.4}}}
+@media (max-width:640px){
+  .fd-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  .fd-ph{grid-template-columns:76px minmax(0,1fr) auto}
+  .fd-ph img,.fd-ph .ph{width:76px}
+}
+.own-form{display:flex;flex-direction:column;gap:12px;margin-top:4px}
+.addkind button{white-space:nowrap}
+.srow .go .pen{font-size:13px;color:var(--muted);margin-left:4px}
+/* ---------- Pages: the binder as real binder pages (v3.8) ---------- */
+.pg-tools{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.pg-tools select{font:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.pg-tools .btn[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.pg-tools .grow{flex:1}
+.pg-sum{font-size:13px;color:var(--muted);margin:10px 0 0;line-height:1.45}
+.pg-spreads{display:flex;flex-direction:column;gap:26px;margin-top:16px}
+.pg-spread{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;max-width:980px}
+.pg-side{padding:14px;background:var(--surface);border:1px solid var(--line);min-width:0}
+.pg-spread .pg-side:first-child{border-radius:12px 0 0 12px;border-right-width:3px}
+.pg-spread .pg-side:last-child{border-radius:0 12px 12px 0}
+.pg-side.cover{display:grid;place-items:center;color:var(--muted);font-size:13px;background:repeating-linear-gradient(135deg,var(--bg) 0 10px,var(--surface) 10px 20px)}
+.pg-grid{display:grid;gap:8px}
+.pk{position:relative;aspect-ratio:63/88;border-radius:6px;background:var(--bg);border:1px solid var(--line);overflow:hidden;cursor:pointer;padding:0;font:inherit;color:inherit;min-width:0}
+.pk img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;-webkit-user-drag:none;user-select:none}
+.pg-arr .pk{user-select:none;-webkit-user-select:none}
+.pk .pk-nm{position:absolute;inset:auto 0 0 0;padding:14px 5px 4px;font-size:11px;font-weight:600;line-height:1.15;background:linear-gradient(transparent,rgba(0,0,0,.75));color:#fff;text-align:left}
+.pk .pk-no{position:absolute;top:4px;left:5px;font-family:var(--f-mono);font-size:10px;color:var(--muted)}
+.pk.need img{filter:grayscale(1);opacity:.45}
+.pk.need::after{content:attr(data-price);position:absolute;top:5px;right:5px;font-family:var(--f-mono);font-size:10px;padding:1px 5px;border-radius:999px;background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+.pk.need[data-price=""]::after{display:none}
+.pk.gap{border-style:dashed;background:transparent;cursor:default}
+.pg-arr .pk,.pg-arr .pk.gap{cursor:grab}
+.pk.sel{outline:3px solid var(--dark);outline-offset:2px;z-index:1}
+.pk.hit{outline:3px dashed var(--light);outline-offset:2px}
+.pk.flash{animation:pkflash 1.6s ease}
+@keyframes pkflash{0%,40%{outline:3px solid var(--light);outline-offset:3px}100%{outline:3px solid transparent;outline-offset:3px}}
+.pk-ghost{position:fixed;z-index:300;pointer-events:none;width:90px;aspect-ratio:63/88;border-radius:6px;overflow:hidden;box-shadow:0 14px 30px rgba(0,0,0,.55);transform:translate(-50%,-60%) rotate(-3deg)}
+.pk-ghost img{width:100%;height:100%;object-fit:cover}
+.pg-foot{display:flex;justify-content:space-between;gap:8px;margin-top:10px;font-size:12px;color:var(--muted)}
+.pg-foot b{color:var(--ink);font-weight:600}
+.pg-pager{display:flex;align-items:center;gap:8px;margin-top:14px}
+.pg-pager select{flex:1;min-width:0;text-align:center}
+.pg-pager .icon-btn{flex:none}
+.pg-bar{position:sticky;bottom:max(10px,env(safe-area-inset-bottom));z-index:6;margin-top:14px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;padding:10px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--dark);box-shadow:0 10px 30px rgba(0,0,0,.45)}
+.pg-bar span{flex:1 1 180px;font-size:14px}
+:root[data-private] .pk.need img{filter:none;opacity:1}
+:root[data-private] .pk.need::after,:root[data-private] .pg-foot .cost{display:none}
+.dspot{border:0;background:none;padding:0;font:inherit;font-size:13px;color:var(--muted);cursor:pointer;text-align:left;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+.dspot:hover{color:var(--ink)}
+@media (max-width:640px){
+  .views button{font-size:13px;padding:10px 4px}
+  .pg-side{padding:10px;border-radius:12px!important;border-right-width:1px!important}
+  .pg-grid{gap:6px}
+  .pg-tools select{flex:1 1 140px}
+}
 </style>
 </head>
 <body>
@@ -803,6 +896,7 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
 
   <nav class="views" id="views" aria-label="Views">
     <button type="button" data-v="cards" aria-pressed="true">Cards</button>
+    <button type="button" data-v="pages" aria-pressed="false">Pages</button>
     <button type="button" data-v="shop" aria-pressed="false">Shopping<span class="hide-xs"> list</span></button>
     <button type="button" data-v="upg" aria-pressed="false">Upgrades</button>
     <button type="button" data-v="stats" aria-pressed="false">Stats</button>
@@ -832,6 +926,20 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
 
   <main class="grid" id="grid"></main>
   </div>
+
+  <section id="vPages" hidden aria-label="Binder pages">
+    <div class="pg-tools">
+      <select id="pgPk" aria-label="Pockets on each page">
+        <option value="4">4-pocket pages</option><option value="9" selected>9-pocket pages</option>
+        <option value="12">12-pocket pages</option><option value="16">16-pocket pages</option>
+      </select>
+      <select id="pgOrder" aria-label="Starting order"></select>
+      <button class="btn" type="button" id="pgArr" aria-pressed="false">Arrange</button>
+    </div>
+    <p class="pg-sum" id="pgSum"></p>
+    <div id="pgView"></div>
+    <div class="pg-bar" id="pgBar" hidden><span id="pgBarText"></span><button class="btn" type="button" id="pgGap">Add gap before</button><button class="btn" type="button" id="pgUngap" hidden>Remove gap</button><button class="btn primary" type="button" id="pgDone">Done</button></div>
+  </section>
 
   <section id="vShop" hidden aria-label="Shopping list">
     <div class="shop-head">
@@ -935,6 +1043,7 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
         <div class="eyebrow" id="dNo"></div>
         <h2 id="dName"></h2>
         <div class="note" id="dRar"></div>
+        <button class="dspot" type="button" id="dSpot" hidden></button>
         <div class="cs-own own-only" id="dOwn"></div>
       </div>
       <div class="links" id="dLinks"></div>
@@ -955,6 +1064,7 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
       <span class="s yours" id="dYours" hidden></span>
       <span class="s mkt" id="dMkt" hidden></span>
       <div class="spark" id="dSpark"></div></div>
+    <div class="cedit" id="dExtra" hidden><button class="btn" type="button" id="dXDel">Remove from this binder</button></div>
     <div class="cedit" id="dCustom" hidden><button class="btn" type="button" id="dCEdit">Edit custom card</button><button class="btn" type="button" id="dCDel">Delete custom card</button></div>
     </div>
     <div class="tabpane" id="tabSales" hidden>
@@ -1024,6 +1134,21 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
   </div>
 </dialog>
 
+<dialog id="fdlg" class="float" aria-labelledby="fdTitle">
+  <div class="sheet" id="fdSheet">
+    <button class="close" type="button" id="fdClose">Close ✕</button>
+    <h2 id="fdTitle">Find a card</h2>
+    <form class="fd-form" id="fdForm" role="search">
+      <input type="search" id="fdQ" class="field" placeholder="Card name, number or set" aria-label="Card name, number or set" enterkeyhint="search" autocomplete="off" maxlength="80">
+      <button class="btn primary" type="submit">Search</button>
+    </form>
+    <div class="pbar" id="fdBar" role="progressbar" aria-label="Making the card list" hidden><i></i></div>
+    <div id="fdBody" aria-live="polite"></div>
+  </div>
+  <div class="fd-dim" id="fdDim" hidden></div>
+  <div class="fd-pick" id="fdPick" hidden role="group" aria-label="Card"></div>
+</dialog>
+
 <dialog id="cdlg" class="float" aria-labelledby="cTitle">
   <div class="sheet">
     <button class="close" type="button" id="cClose">Close ✕</button>
@@ -1069,7 +1194,7 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
       <div class="allsum" id="allSum" hidden></div>
       <div class="ui-group setlist" id="setList"></div>
       <div id="rmList" class="rm-list" hidden></div>
-      <div class="ui-group"><button class="ui-row" type="button" id="addOpen"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span class="ui-l"><b>Add a set or Pokémon</b></span><span class="ui-chev" aria-hidden="true"></span></button></div>
+      <div class="ui-group"><button class="ui-row" type="button" id="findOpen"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></span><span class="ui-l"><b>Find a card</b><small>Search every English card and set</small></span><span class="ui-chev" aria-hidden="true"></span></button><button class="ui-row" type="button" id="addOpen"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span class="ui-l"><b>Add a binder</b><small>A set, every card of a Pokémon, or your own</small></span><span class="ui-chev" aria-hidden="true"></span></button></div>
       <button class="verline" type="button" id="verLine" title="What's new">Pokémon Binder <span id="verNum"></span></button>
     </div>
     <div id="drAdd" hidden>
@@ -1078,6 +1203,7 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
       <div class="seg addkind" id="addKind" role="group" aria-label="What to add">
         <button type="button" data-k="set" aria-pressed="true">A set</button>
         <button type="button" data-k="dex" aria-pressed="false">A Pokémon</button>
+        <button type="button" data-k="own" aria-pressed="false">My own</button>
       </div>
       <input type="search" id="addQ" class="field" placeholder="Search sets, like Neo Genesis" aria-label="Search sets">
       <div class="note" id="addMsg"></div>
@@ -1285,7 +1411,19 @@ const numVal = n => { const m=/^([A-Za-z]*)(\d+)/.exec(n); return m ? [m[1], +m[
 // A Pokémon master set binder (id like dex-158) holds one Pokémon's cards from every set.
 // Each of its cards carries its own set name (set), printed number (num) and set size (pt).
 const isDex = id => /^dex-\d+$/.test(id||"");
-const byNum = (a,b) => { if(!!a.custom!==!!b.custom) return a.custom?1:-1; if(a.custom) return numVal(a.n)[1]-numVal(b.n)[1]; if(a.i!=null && b.i!=null) return a.i-b.i; const x=numVal(a.n), y=numVal(b.n); return x[0]<y[0]?-1:x[0]>y[0]?1:x[1]-y[1]; };
+// ---------- binder kinds ----------
+// Set binders hold one set. Master sets (dex-158) and your own binders (my-1) hold cards from many sets,
+// and each of those cards remembers its own set and number.
+const isOwn = id => /^my-\d+$/.test(id||"");
+const isMulti = id => isDex(id) || isOwn(id);
+const padNo = (num, pt) => { const n=numVal(String(num||"")); return (n[0] ? num : String(n[1]).padStart(3,"0"))+(pt?"/"+pt:""); };
+const ebaySoldUrl = (set, name, no) => "https://www.ebay.com/sch/i.html?_nkw="+q((set||"").replace(/ Base Set$/,"")+" "+name+" "+no)+"+-1st&LH_Sold=1&LH_Complete=1";
+const tcgSearchUrl = (set, name) => "https://www.tcgplayer.com/search/pokemon/product?q="+q(name+" "+(set||"").replace(/ Base Set$/,""));
+const binderName = sid => (state.sets.find(s=>s.id===sid)||{}).name || sid;
+
+const byNum = (a,b) => { if(!!a.custom!==!!b.custom) return a.custom?1:-1; if(a.custom) return numVal(a.n)[1]-numVal(b.n)[1];
+  /* cards added from Find a card: after the set's own, in the order added */ if(!!a.extra!==!!b.extra) return a.extra?1:-1; if(a.extra) return (a.k||0)-(b.k||0);
+  if(a.i!=null && b.i!=null) return a.i-b.i; const x=numVal(a.n), y=numVal(b.n); return x[0]<y[0]?-1:x[0]>y[0]?1:x[1]-y[1]; };
 const printed = () => state.set.printedTotal || 0;
 const label = c => {
   const num=c.num||c.n, pt=c.num ? c.pt : printed(), n=numVal(num);
@@ -1400,21 +1538,23 @@ function cardImg(c){
 function header(){
   const s=state.set, name=s.name||"";
   const t=$("setTitle"); t.replaceChildren();
-  const dex=isDex(state.sid), sp=$("sprite");
+  const dex=isDex(state.sid), own=isOwn(state.sid), sp=$("sprite");
   sp.hidden=!dex; if(dex){ sp.src=base()+"/sprite.png"; sp.alt=name+" sprite"; sp.onerror=()=>{ sp.hidden=true; }; } else sp.removeAttribute("src");
-  const parts=dex ? [name] : name.split(" "); const a=document.createElement("span"); a.className="l"; a.textContent=parts[0]||"";
+  const parts=dex||own ? [name] : name.split(" "); const a=document.createElement("span"); a.className="l"; a.textContent=parts[0]||"";
   const b=document.createElement("span"); b.className="d"; b.textContent=parts.length>1 ? " "+parts.slice(1).join(" ") : "";
   t.append(a,b);
   const secret=state.cards.filter(isSecret).length;
-  $("eyebrow").textContent=dex
+  $("eyebrow").textContent=own
+    ? ["My binder", "Unlimited", state.cards.filter(c=>!c.custom).length+" card"+(state.cards.filter(c=>!c.custom).length===1?"":"s")].join(" · ")
+    : dex
     ? ["Master set", "#"+String(s.dex||state.sid.slice(4)).padStart(4,"0"), "all sets", "Unlimited", state.cards.filter(c=>!c.custom).length+" cards"].join(" · ")
     : [s.series, year(s.releaseDate), "Unlimited", (printed()||state.cards.length)+" cards"+(secret?" + "+secret+" secret":"")].filter(Boolean).join(" · ");
   const nCustom=state.cards.filter(c=>c.custom).length;
   if(nCustom){ $("eyebrow").append(" · "); $("eyebrow").append(customBadge(nCustom)); }
   gapNote(dex);
-  $("fSort").options[0].textContent=dex ? "Sort: release date" : "Sort: set number";
-  $("fQ").placeholder=matchMedia("(max-width:640px)").matches ? (dex ? "Search set or number" : "Search name or number")
-    : (dex ? "Search set or number (80/111)" : "Search name or number (1/105)");
+  $("fSort").options[0].textContent=dex ? "Sort: release date" : own ? "Sort: order added" : "Sort: set number";
+  $("fQ").placeholder=matchMedia("(max-width:640px)").matches ? (own ? "Search name, set or number" : dex ? "Search set or number" : "Search name or number")
+    : (own ? "Search name, set or number (80/111)" : dex ? "Search set or number (80/111)" : "Search name or number (1/105)");
   document.title=(name ? name+" · " : "")+"Pokémon Binder";
 }
 // Flags binders whose card list may be incomplete. Set binders: numbers 1 to the printed
@@ -1457,8 +1597,8 @@ function stats(){
 
 // ---------- grid ----------
 function rarityOptions(){
-  const sel=$("fRar"); sel.replaceChildren(); const o=document.createElement("option"); o.value=""; o.textContent=isDex(state.sid) ? "All sets" : "All rarities"; sel.append(o);
-  sel.setAttribute("aria-label", isDex(state.sid) ? "Set" : "Rarity");
+  const sel=$("fRar"); sel.replaceChildren(); const o=document.createElement("option"); o.value=""; o.textContent=isMulti(state.sid) ? "All sets" : "All rarities"; sel.append(o);
+  sel.setAttribute("aria-label", isMulti(state.sid) ? "Set" : "Rarity");
   [...new Set(state.cards.map(cat))].forEach(r=>{ const x=document.createElement("option"); x.value=r; x.textContent=r; sel.append(x); });
   sel.value=""; state.rar="";
 }
@@ -1478,7 +1618,7 @@ function render(){
     list.sort((a,b)=>{ const x=pc.get(a.n), y=pc.get(b.n); if(x==null&&y==null) return 0; if(x==null) return 1; if(y==null) return -1; return dir*(x-y); });
   }
   const g=$("grid"); g.replaceChildren();
-  if(!list.length){ const e=document.createElement("div"); e.className="empty"; e.textContent=state.cards.length ? "No cards match these filters." : (state.ready ? "This set has no cards yet." : "Loading cards…"); g.append(e); }
+  if(!list.length){ const e=document.createElement("div"); e.className="empty"; e.textContent=state.cards.length ? "No cards match these filters." : (state.ready ? (isOwn(state.sid) ? "This binder is empty. Add cards with Find a card." : "This set has no cards yet.") : "Loading cards…"); g.append(e); }
   for(const c of list){
     const b=document.createElement("div"); b.setAttribute("role","button"); b.tabIndex=0;
     b.className="sleeve"+(qty(c.n)>0?"":" need"); b.dataset.n=c.n; b.setAttribute("aria-label",c.name+" details");
@@ -1523,7 +1663,7 @@ function setOwnFilter(v){ state.filter=v; [...$("fOwn").children].forEach(x=>x.s
 function chip(label, on, fn){ const b=document.createElement("button"); b.type="button"; b.className="chip"; b.textContent=label; b.setAttribute("aria-pressed",on); b.onclick=fn; return b; }
 function drawFilterSheet(shown){
   const own=$("fsOwn"); own.replaceChildren(...["all","need","own"].map(v=>{ const b=document.createElement("button"); b.type="button"; b.textContent=OWN_LABELS[v]; b.setAttribute("aria-pressed",state.filter===v); b.onclick=()=>setOwnFilter(v); return b; }));
-  $("fsRarLbl").textContent=isDex(state.sid) ? "Set" : "Rarity";
+  $("fsRarLbl").textContent=isMulti(state.sid) ? "Set" : "Rarity";
   $("fsRar").replaceChildren(...[...$("fRar").options].map(o=>chip(o.value ? o.textContent : "All", state.rar===o.value, ()=>{ $("fRar").value=o.value; state.rar=o.value; render(); })));
   $("fsSort").replaceChildren(...[...$("fSort").options].map(o=>chip(o.textContent.replace(/^Sort: /,"").replace(/^./,c=>c.toUpperCase()), state.sort===o.value, ()=>{ $("fSort").value=o.value; state.sort=o.value; render(); })));
   $("fsPeriod").replaceChildren(...PERIODS.map(([d,l])=>chip(l, state.period===d, ()=>setPeriod(d))));
@@ -1604,13 +1744,16 @@ function customBadge(count){
 function missTile(){
   const t=document.createElement("div"); t.className="miss";
   const dex=isDex(state.sid), who=dex ? (state.set.name||"").replace(/^#?\d+\s*/,"") : "";
-  const h=document.createElement("b"); h.textContent=dex&&who ? "Missing a "+who+" card?" : "Missing a card?";
-  const p=document.createElement("div"); p.className="s"; p.textContent=dex ? "Some promos and trainer kit cards aren't in the card database." : "Add any card the list doesn't have, like a promo or a variant.";
+  const own=isOwn(state.sid);
+  const h=document.createElement("b"); h.textContent=own ? "Add cards" : dex&&who ? "Missing a "+who+" card?" : "Missing a card?";
+  const p=document.createElement("div"); p.className="s";
+  p.textContent=own ? "Find any card from any set and add it here." : dex ? "Find it in the card list, or add a custom card for promos and trainer kit cards the list doesn't have." : "Find it in the card list, or add a custom card for a promo or variant.";
   t.append(h,p);
+  const fb=document.createElement("button"); fb.type="button"; fb.className="btn"; fb.textContent="Find a card"; fb.onclick=()=>openFind(own || !dex ? null : who); t.append(fb);
   // PokéCottage has every Gen 1 and 2 page (#1 to #251) so far; raise this as they add more.
   const dexNo=+(state.set.dex||String(state.sid).replace(/^dex-/,""));
   if(dex && who && dexNo>=1 && dexNo<=COTTAGE_MAX){ const a=document.createElement("a"); a.className="btn"; a.target="_blank"; a.rel="noopener"; a.href="https://pokecottage.com/pokemon-master-sets/"+cottageSlug(who); a.textContent="Check PokéCottage's "+who+" list ↗"; t.append(a); }
-  const add=document.createElement("button"); add.type="button"; add.className="btn"; add.textContent="+ Add a card"; add.onclick=()=>openCustom(null);
+  const add=document.createElement("button"); add.type="button"; add.className="btn"; add.textContent="+ Custom card"; add.onclick=()=>openCustom(null);
   t.append(add); return t;
 }
 let editing=null;
@@ -1618,7 +1761,7 @@ function openCustom(n){
   const c=n ? customOf(n) : null; editing=c ? c.n : null;
   $("cTitle").textContent=c ? "Edit custom card" : "Add a card";
   $("cSave").textContent=c ? "Save changes" : "Add card";
-  $("cName").value=c?c.name:""; $("cSet").value=c?c.set||"":(isDex(state.sid)?"":(state.set.name||"")); $("cNum").value=c?c.num||"":"";
+  $("cName").value=c?c.name:""; $("cSet").value=c?c.set||"":(isMulti(state.sid)?"":(state.set.name||"")); $("cNum").value=c?c.num||"":"";
   $("cRar").value=c?c.rarity||"":""; $("cTcg").value=c&&c.tcg ? "https://www.tcgplayer.com/product/"+c.tcg : "";
   const man=c && (state.info[c.n]||{}).manual; $("cPrice").value=man ? man.toFixed(2) : "";
   $("cPic").value=""; $("cPicName").textContent=c ? "Optional. Choose a picture to replace this card's photo." : "Optional. A photo of the card becomes its picture.";
@@ -1881,7 +2024,8 @@ function openCard(n){
   $("dNo").textContent="No. "+label(c);
   $("dName").textContent=c.name;
   $("dRar").textContent=(c.custom?"Custom card · ":"")+(c.set ? c.set+(c.rarity?" · "+c.rarity:"") : cat(c))+(isSecret(c)?" · secret rare":"");
-  $("dCustom").hidden=!c.custom;
+  $("dCustom").hidden=!c.custom; $("dExtra").hidden=!c.extra;
+  { const sp=cardSpot(n); $("dSpot").hidden=!sp; if(sp){ $("dSpot").textContent="In your binder: "+sp.text; $("dSpot").title="Show it on the Pages view"; } }
   $("dP").textContent=basePrice(n) ? money(basePrice(n)) : "–";
   lpmpBox(n); mktLine(n); drawSales(n); ownLine(n); setCardTab(cardTab);
   { const sd=document.querySelector("#dlg .cs-side"); if(sd) sd.scrollTop=0; }
@@ -1916,7 +2060,7 @@ function saveCard(n, patch, done){
   const allOwned=()=>state.cards.length>0 && state.cards.every(c=>qty(c.n)>0);
   const wasDone=allOwned();
   state.own[n]=next;
-  if(!wasDone && allOwned() && celeOn() && !isPrivate()) setTimeout(()=>celebrate((state.set.name||"Your binder")+" · all "+state.cards.length+" cards"),350); render(); if(state.open===n && $("dlg").open) ownLine(n); if(state.view==="shop") drawShop(); if(state.view==="upg") drawUpg(); if(state.view==="stats") state.spendStale=true;
+  if(!wasDone && allOwned() && celeOn() && !isPrivate()) setTimeout(()=>celebrate((state.set.name||"Your binder")+" · all "+state.cards.length+" cards"),350); render(); if(state.open===n && $("dlg").open) ownLine(n); if(state.view==="pages") drawPages(); if(state.view==="shop") drawShop(); if(state.view==="upg") drawUpg(); if(state.view==="stats") state.spendStale=true;
   saveChain=saveChain.then(()=>fetch("api/set/"+enc(sid)+"/card/"+enc(n),{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(next)}))
     .then(r=>{ if(!r.ok) throw 0; const s=state.sets.find(x=>x.id===sid); if(s){ s.owned=state.cards.filter(c=>qty(c.n)>0).length; } done&&done(true); })
     .catch(()=>{ done&&done(false); });
@@ -2743,7 +2887,12 @@ function drawSets(){
     if(isDex(s.id)){ const im=document.createElement("img"); im.className="sprite"; im.alt=""; im.src="set/"+enc(s.id)+"/sprite.png"; im.onerror=()=>im.remove(); b.prepend(im); }
     l.append(b,sm); go.append(lead,l);
     go.setAttribute("aria-label", s.name+", "+own+" of "+total+" owned"+(s.id===state.sid?", open now":""));
-    if(editing){ go.disabled=true;
+    if(editing && isOwn(s.id)){   // your own binders: tap the name to rename it
+      const pen=document.createElement("span"); pen.className="pen"; pen.setAttribute("aria-hidden","true"); pen.textContent="✎"; b.append(pen);
+      go.setAttribute("aria-label","Rename "+s.name); go.onclick=()=>renameOwn(s);
+      sm.textContent="Tap to rename";
+    }
+    else if(editing){ go.disabled=true;
       const pc=s.pics; if(pc && pc.total) sm.textContent=s.images ? "Getting pictures…" : pc.saved>=pc.total ? "All pictures saved" : "Pictures "+pc.saved+"/"+pc.total; }
     else { const c=document.createElement("span"); c.className="ui-chev"; c.setAttribute("aria-hidden","true"); go.append(c); go.onclick=()=>{ $("drawer").close(); openSet(s.id); }; }
     if(editing && state.sets.length>1){
@@ -2970,12 +3119,13 @@ function drawDex(){
 function setAddKind(k){
   addKind=k;
   [...$("addKind").children].forEach(x=>x.setAttribute("aria-pressed", x.dataset.k===k));
-  $("addTitle").textContent=k==="dex" ? "Add a Pokémon" : "Add a set";
+  $("addTitle").textContent=k==="own" ? "Make your own binder" : k==="dex" ? "Add a Pokémon" : "Add a set";
+  $("addQ").hidden=k==="own";
   $("addQ").placeholder=k==="dex" ? "Search Pokémon, like Totodile or 158" : "Search sets, like Neo Genesis";
   $("addQ").setAttribute("aria-label", k==="dex" ? "Search Pokémon" : "Search sets");
   $("addQ").value="";
   if(k==="dex") loadDex().then(drawCatalog);
-  drawCatalog(); $("addQ").focus();
+  drawCatalog(); if(k!=="own") $("addQ").focus();
 }
 $("addKind").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b) setAddKind(b.dataset.k); });
 
@@ -2985,6 +3135,7 @@ const cottageSlug = name => name.toLowerCase().normalize("NFD").replace(/[\u0300
   .replace(/♀/g,"-f").replace(/♂/g,"-m").replace(/['’.:]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
 
 function drawCatalog(){
+  if(addKind==="own") return drawOwn();
   if(addKind==="dex") return drawDex();
   hideBar($("addBar"));
   const C=$("catalog"); C.replaceChildren();
@@ -3095,7 +3246,8 @@ let loadSeq=0;
 function openSet(sid){
   state.sid=sid; store("nd-set",sid||undefined);
   if(sid && location.hash!=="#"+sid) history.replaceState(null,"","#"+sid);
-  state.cards=[]; state.own={}; state.prices={}; state.info={}; state.updated=""; state.ready=false; state.trends={}; state.histFirst=""; state.seriesCache={};
+  state.cards=[]; state.own={}; state.prices={}; state.info={}; state.updated=""; state.ready=false; state.layout=null; dexNumsFor=null;
+  if(typeof pg!=="undefined"){ pg.at=0; pg.sel=-1; pg.arr=false; } state.trends={}; state.histFirst=""; state.seriesCache={};
   if(!sid){ state.set={name:"Pokémon Binder"}; header(); rarityOptions(); render(); $("sync").textContent="Open the menu to add your first set."; return Promise.resolve(); }
   state.set=(state.sets.find(s=>s.id===sid))||{name:sid}; header(); render();
   return loadState();
@@ -3104,7 +3256,9 @@ function loadState(){
   const sid=state.sid, seq=++loadSeq;
   return fetch("api/set/"+enc(sid)+"/state").then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error||"Couldn't load"); return j; })).then(s=>{
     if(seq!==loadSeq) return;
+    (s.cards||[]).forEach((c,i)=>{ if(c.extra) c.k=i; });
     state.set=s.set||state.set; state.cards=(s.cards||[]).slice().sort(byNum);
+    state.layout=s.layout||null; dexNumsFor=null;
     state.own=s.collection||{};
     const pr=s.prices||{}; state.prices={}; for(const k in (pr.p||{})) state.prices[k]=[pr.p[k][0]];
     state.info=pr.info||{}; state.updated=pr.updated||"";
@@ -3188,10 +3342,10 @@ function setView(v){
   if(isPrivate()) v="cards";
   state.view=v; store("nd-view",v);
   [...$("views").children].forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===v));
-  $("vCards").hidden=v!=="cards"; $("vShop").hidden=v!=="shop"; $("vUpg").hidden=v!=="upg"; $("vStats").hidden=v!=="stats";
+  $("vCards").hidden=v!=="cards"; $("vPages").hidden=v!=="pages"; $("vShop").hidden=v!=="shop"; $("vUpg").hidden=v!=="upg"; $("vStats").hidden=v!=="stats";
   renderView();
 }
-function renderView(){ if(state.view==="shop") drawShop(); else if(state.view==="upg") drawUpg(); else if(state.view==="stats") loadStats(); }
+function renderView(){ if(state.view==="pages") drawPages(); else if(state.view==="shop") drawShop(); else if(state.view==="upg") drawUpg(); else if(state.view==="stats") loadStats(); }
 $("views").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b) setView(b.dataset.v); });
 
 // ---------- shopping list ----------
@@ -3547,10 +3701,539 @@ function drawLog(log){
 }
 $("dlg").addEventListener("close",()=>{ if(state.view==="stats" && state.spendStale) loadStats(); if(state.view==="shop") drawShop(); });
 
+// ---------- Find a card ----------
+// Search every English card and set. Nothing is searched while typing: only when Search (or Enter) is tapped.
+const fd={view:"home", q:"", res:null, set:null, setQ:"", pick:null, poll:null, scroll:0};
+function openFind(text){
+  if($("drawer").open) $("drawer").close();
+  if(text!=null){ $("fdQ").value=text; }
+  fdShow();
+  if(!$("fdlg").open) $("fdlg").showModal();
+  if(text) fdSearch();
+  else if(fd.view==="home") setTimeout(()=>$("fdQ").focus(),60);
+}
+// The back arrow in the title bar (from a set to the results)
+const fdBack=(()=>{
+  const bar=$("fdlg").querySelector(".fbar"), b=document.createElement("button");
+  b.type="button"; b.className="fclose ui-back"; b.title="Back"; b.setAttribute("aria-label","Back to results"); b.hidden=true;
+  b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>';
+  bar.prepend(b); b.onclick=()=>fdGoBack(); return b;
+})();
+function fdGoBack(){
+  if(!$("fdPick").hidden){ fdClosePick(); return true; }
+  if(fd.view==="set"){ fd.view=fd.res ? "results" : "home"; fdShow(); $("fdSheet").scrollTop=fd.scroll; return true; }
+  return false;
+}
+$("fdlg").addEventListener("cancel",e=>{ if(fdGoBack()) e.preventDefault(); });
+$("fdClose").onclick=()=>$("fdlg").close();
+$("fdlg").addEventListener("close",()=>{ clearTimeout(fd.poll); fdClosePick(); });
+$("fdForm").onsubmit=e=>{ e.preventDefault(); fdSearch(); };
+$("fdDim").onclick=()=>fdClosePick();
+$("findOpen").onclick=()=>openFind();
+
+function fdNote(text){ const p=document.createElement("p"); p.className="fd-hint"; p.textContent=text; return p; }
+function fdBuilding(r){
+  if(r.building || !r.ready){ setBar($("fdBar"), r.done||0, r.total||0); }
+  const B=$("fdBody"); B.replaceChildren();
+  B.append(fdNote(r.error && !r.building ? "Couldn't make the card list ("+r.error+"). Check that "+srv()+" is online and try again."
+    : "Making the list of every card from every set. This happens once and takes about a minute"+(r.total ? ": "+r.done+" of "+r.total+" sets." : ".")));
+}
+async function fdSearch(){
+  const text=$("fdQ").value.trim();
+  clearTimeout(fd.poll); fdClosePick();
+  if(!text){ fd.view="home"; fd.res=null; fdShow(); return; }
+  fd.q=text; fd.view="results";
+  $("fdBody").replaceChildren(fdNote("Searching…"));
+  try{
+    const r=await fetch("api/find?q="+enc(text)).then(x=>x.json());
+    if(fd.q!==text) return;
+    if(!r.ready){ fdBuilding(r); if(!r.error || r.building) fd.poll=setTimeout(fdSearch,2500); return; }
+    hideBar($("fdBar"));
+    fd.res=r; fdShow(); $("fdSheet").scrollTop=0;
+  }catch(_){ $("fdBody").replaceChildren(fdNote("Couldn't search. Check that "+srv()+" is online.")); }
+}
+function fdShow(){
+  fdBack.hidden = fd.view!=="set";
+  $("fdForm").hidden = fd.view==="set";
+  const B=$("fdBody"); B.replaceChildren();
+  if(fd.view==="set" && fd.set) return fdDrawSet();
+  if(fd.view==="results" && fd.res) return fdDrawResults();
+  const h=document.createElement("div"); h.className="fd-hint";
+  h.innerHTML='Type what\'s printed on the card. The number at the bottom, like <code>80/111</code>, narrows it to one set. '
+    +'Try <code>Totodile</code>, <code>80/111</code>, <code>Dark Gengar 6</code>, or a set like <code>Neo Genesis</code> to see all its cards.';
+  B.append(h);
+}
+function fdTags(c){
+  const box=document.createElement("span"); box.className="fd-tags";
+  for(const w of (c.in||[])){
+    const own=w.qty>0 && !isPrivate();
+    const t=document.createElement("span"); t.className="fd-tag"+(own?" own":"");
+    t.textContent=(own?"Owned · ":"In ")+binderName(w.sid); box.append(t);
+  }
+  return box;
+}
+function fdImg(c, cls){
+  if(!c.img){ const d=document.createElement("span"); d.className="ph"; return d; }
+  const im=document.createElement("img"); im.alt=""; im.loading="lazy"; im.decoding="async"; im.src=smallImg(c.img);
+  if(cls) im.className=cls;
+  im.onerror=()=>{ const d=document.createElement("span"); d.className="ph"; im.replaceWith(d); };
+  return im;
+}
+function fdDrawResults(){
+  const r=fd.res, B=$("fdBody");
+  if(r.sets.length){
+    const sec=document.createElement("div"); sec.className="fd-sec";
+    const h=document.createElement("h3"); h.className="ui-h"; h.textContent="Sets"; sec.append(h);
+    const g=document.createElement("div"); g.className="ui-group";
+    for(const st of r.sets){
+      const row=document.createElement("button"); row.type="button"; row.className="ui-row";
+      const l=document.createElement("span"); l.className="ui-l";
+      const b=document.createElement("b"); b.textContent=st.name;
+      const sm=document.createElement("small"); sm.textContent=[st.total+" cards", st.series, year(st.date), st.inBinder?"One of your binders":""].filter(Boolean).join(" · ");
+      l.append(b,sm); const ch=document.createElement("span"); ch.className="ui-chev"; ch.setAttribute("aria-hidden","true");
+      row.append(l,ch); row.onclick=()=>fdOpenSet(st.id); g.append(row);
+    }
+    sec.append(g); B.append(sec);
+  }
+  if(r.cards.length){
+    const sec=document.createElement("div"); sec.className="fd-sec";
+    const h=document.createElement("h3"); h.className="ui-h"; h.textContent="Cards ";
+    const sp=document.createElement("span"); sp.textContent=r.count>r.cards.length ? r.cards.length+" of "+r.count : String(r.count); h.append(sp); sec.append(h);
+    const g=document.createElement("div"); g.className="ui-group";
+    for(const c of r.cards) g.append(fdRow(c));
+    sec.append(g);
+    if(r.count>r.cards.length) sec.append(fdNote("Showing the first "+r.cards.length+". Add the number at the bottom of the card, like 80/111, or the set name to narrow it down."));
+    B.append(sec);
+  }
+  if(!r.sets.length && !r.cards.length) B.append(fdNote("Nothing matched “"+r.q+"”. Check the spelling, or try just the name or just the number."));
+}
+function fdRow(c){
+  const row=document.createElement("button"); row.type="button"; row.className="fd-row";
+  const d=document.createElement("span"); const b=document.createElement("b"); b.textContent=c.name;
+  const sm=document.createElement("small"); sm.textContent=[c.set, padNo(c.num,c.pt), c.rarity].filter(Boolean).join(" · ");
+  d.append(b,sm); if(c.in && c.in.length) d.append(fdTags(c));
+  row.append(fdImg(c), d); row.onclick=()=>fdOpenPick(c); return row;
+}
+async function fdOpenSet(id){
+  fd.scroll=$("fdSheet").scrollTop; fd.view="set"; fd.set=null; fd.setQ="";
+  fdBack.hidden=false; $("fdForm").hidden=true;
+  $("fdBody").replaceChildren(fdNote("Loading the set…"));
+  try{
+    const r=await fetch("api/find/set/"+enc(id)).then(x=>x.json());
+    if(fd.view!=="set") return;
+    if(!r.ready || !r.set){ $("fdBody").replaceChildren(fdNote(r.error||"Couldn't load that set.")); return; }
+    fd.set=r; fdShow(); $("fdSheet").scrollTop=0;
+  }catch(_){ $("fdBody").replaceChildren(fdNote("Couldn't load that set. Check that "+srv()+" is online.")); }
+}
+function fdDrawSet(){
+  const r=fd.set, st=r.set, B=$("fdBody");
+  const head=document.createElement("div"); head.className="fd-sethead";
+  const t=document.createElement("div"); const h=document.createElement("h3"); h.textContent=st.name;
+  const sm=document.createElement("div"); sm.className="note"; sm.textContent=[st.total+" cards", st.series, year(st.date)].filter(Boolean).join(" · ");
+  t.append(h,sm); head.append(t);
+  const act=document.createElement("button"); act.type="button"; act.className="btn";
+  if(st.inBinder){ act.textContent="Open this binder"; act.onclick=()=>fdOpenIn(st.id, null); }
+  else {
+    act.textContent="+ Add the whole set as a binder";
+    act.onclick=async()=>{
+      act.disabled=true; act.textContent="Adding…";
+      try{
+        const x=await fetch("api/sets",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:st.id})});
+        const j=await x.json(); if(!x.ok) throw new Error(j.error||"Couldn't add that set");
+        st.inBinder=true; await loadSets(); act.disabled=false; act.textContent="Open this binder"; act.onclick=()=>fdOpenIn(st.id, null);
+        toast(st.name+" added as a binder.", "Open", ()=>fdOpenIn(st.id, null));
+      }catch(err){ act.disabled=false; act.textContent="+ Add the whole set as a binder"; toast(err.message+"."); }
+    };
+  }
+  head.append(act); B.append(head);
+  const f=document.createElement("form"); f.className="fd-form"; f.setAttribute("role","search");
+  const inp=document.createElement("input"); inp.type="search"; inp.className="field"; inp.placeholder="Find in this set: name or number"; inp.setAttribute("aria-label","Find in this set"); inp.value=fd.setQ; inp.setAttribute("enterkeyhint","search");
+  const go=document.createElement("button"); go.type="submit"; go.className="btn"; go.textContent="Find";
+  f.append(inp,go); B.append(f);
+  const grid=document.createElement("div"); grid.className="fd-grid";
+  const draw=()=>{
+    grid.replaceChildren();
+    const term=fd.setQ.trim().toLowerCase();
+    const list=r.cards.filter(c=>!term || c.name.toLowerCase().includes(term) || normNum(String(c.num))===normNum(term.replace(/^#/,"").split("/")[0]));
+    for(const c of list){
+      const b=document.createElement("button"); b.type="button"; b.className="fd-tile"; b.setAttribute("aria-label",c.name+" "+padNo(c.num,c.pt));
+      const nm=document.createElement("span"); nm.className="nm"; nm.textContent=c.name;
+      const no=document.createElement("span"); no.className="no"; no.textContent=padNo(c.num,c.pt);
+      const own=!isPrivate() && (c.in||[]).some(w=>w.qty>0);
+      if(c.in && c.in.length){ const tg=document.createElement("span"); tg.className="fd-tag"+(own?" own":""); tg.textContent=own?"Owned":"In binder"; no.append(tg); }
+      b.append(fdImg(c), nm, no); b.onclick=()=>fdOpenPick(c); grid.append(b);
+    }
+    if(!list.length) grid.append(fdNote("No card in this set matches that."));
+  };
+  f.onsubmit=e=>{ e.preventDefault(); fd.setQ=inp.value; draw(); };
+  draw(); B.append(grid);
+}
+// The card panel: links, which binders have it, and where it can be added.
+function fdOpenPick(c){ fd.pick=c; $("fdDim").hidden=false; $("fdPick").hidden=false; fdDrawPick(); $("fdPick").scrollTop=0; setTimeout(()=>{ const x=$("fdPick").querySelector(".fclose"); if(x) x.focus(); },30); }
+function fdClosePick(){ fd.pick=null; $("fdDim").hidden=true; $("fdPick").hidden=true; }
+function fdDrawPick(){
+  const c=fd.pick, P=$("fdPick"); P.replaceChildren(); if(!c) return;
+  const head=document.createElement("div"); head.className="fd-ph";
+  const d=document.createElement("div"); const b=document.createElement("b"); b.textContent=c.name;
+  const sm=document.createElement("small"); sm.textContent=[c.set, padNo(c.num,c.pt), c.rarity].filter(Boolean).join(" · ");
+  const L=document.createElement("div"); L.className="links";
+  [["TCGplayer",tcgSearchUrl(c.set,c.name)],["eBay sold",ebaySoldUrl(c.set,c.name,padNo(c.num,c.pt).replace(/^0+/,""))]]
+    .forEach(([t,u])=>{ const a=document.createElement("a"); a.href=u; a.target="_blank"; a.rel="noopener"; a.textContent=t+" ↗"; L.append(a); });
+  d.append(b,sm);
+  const x=document.createElement("button"); x.type="button"; x.className="fclose"; x.setAttribute("aria-label","Close"); x.title="Close";
+  x.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  x.onclick=()=>fdClosePick();
+  head.append(fdImg(c), d, x); P.append(head, L);
+  const inn=(c.in||[]).filter(w=>state.sets.some(s=>s.id===w.sid));
+  if(inn.length){
+    const h=document.createElement("h3"); h.className="ui-h"; h.textContent="In your binders"; P.append(h);
+    const g=document.createElement("div"); g.className="ui-group";
+    for(const w of inn){
+      const row=document.createElement("button"); row.type="button"; row.className="ui-row";
+      const l=document.createElement("span"); l.className="ui-l"; const bb=document.createElement("b"); bb.textContent=binderName(w.sid);
+      const s2=document.createElement("small"); s2.textContent=isPrivate() ? "In this binder" : w.qty>0 ? (w.qty>1?"Owned ×"+w.qty:"Owned") : "Need";
+      l.append(bb,s2); const v=document.createElement("span"); v.className="ui-v"; v.textContent="Open";
+      row.append(l,v); row.onclick=()=>fdOpenIn(w.sid, w.n); g.append(row);
+    }
+    P.append(g);
+  }
+  const have=new Set(inn.map(w=>w.sid));
+  const targets=state.sets.filter(s=>!have.has(s.id));
+  const h2=document.createElement("h3"); h2.className="ui-h"; h2.textContent=inn.length ? "Also add to" : "Add to"; P.append(h2);
+  const g2=document.createElement("div"); g2.className="ui-group";
+  for(const s of targets){
+    const row=document.createElement("button"); row.type="button"; row.className="ui-row";
+    const l=document.createElement("span"); l.className="ui-l"; const bb=document.createElement("b"); bb.textContent=s.name;
+    const s2=document.createElement("small"); s2.textContent=isOwn(s.id) ? "Your own binder" : isDex(s.id) ? "Adds it to this master set" : "Adds it as an extra card";
+    l.append(bb,s2); const v=document.createElement("span"); v.className="ui-v"; v.textContent="Add";
+    row.append(l,v); row.onclick=()=>fdAdd(c, s.id, row); g2.append(row);
+  }
+  const nb=document.createElement("button"); nb.type="button"; nb.className="ui-row";
+  nb.innerHTML='<span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span class="ui-l"><b>New binder</b><small>Your own binder, like Favorites or Trade pile</small></span>';
+  nb.onclick=()=>{
+    const f=document.createElement("form"); f.className="fd-new";
+    const inp=document.createElement("input"); inp.className="field"; inp.placeholder="Binder name"; inp.maxLength=40; inp.setAttribute("aria-label","New binder name");
+    const ok=document.createElement("button"); ok.type="submit"; ok.className="btn primary"; ok.textContent="Make and add";
+    f.append(inp,ok); nb.replaceWith(f); inp.focus();
+    f.onsubmit=async e=>{
+      e.preventDefault(); if(!inp.value.trim()){ inp.focus(); return; }
+      ok.disabled=true; ok.textContent="Making…";
+      try{
+        const r=await fetch("api/sets/own",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:inp.value})});
+        const j=await r.json(); if(!r.ok) throw new Error(j.error||"Couldn't make the binder");
+        await loadSets(); await fdAdd(c, j.id, null);
+      }catch(err){ ok.disabled=false; ok.textContent="Make and add"; toast(err.message+"."); }
+    };
+  };
+  g2.append(nb); P.append(g2);
+}
+async function fdAdd(c, sid, row){
+  if(row){ row.disabled=true; const v=row.querySelector(".ui-v"); if(v) v.textContent="Adding…"; }
+  try{
+    const r=await fetch("api/set/"+enc(sid)+"/cards",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:c.n})});
+    const j=await r.json(); if(!r.ok) throw new Error(j.error||"Couldn't add the card");
+    c.in=(c.in||[]).filter(w=>w.sid!==sid).concat([{sid, n:j.n, qty:(state.sid===sid?qty(j.n):0)}]);
+    await loadSets();
+    if(state.sid===sid) loadState();
+    if(fd.pick===c) fdDrawPick();
+    if(fd.view==="results") fdShow(); else if(fd.view==="set") { const top=$("fdSheet").scrollTop; fdShow(); $("fdSheet").scrollTop=top; }
+    toast((j.already ? c.name+" is already in " : "Added "+c.name+" to ")+binderName(sid)+".", "Open", ()=>fdOpenIn(sid, j.n));
+  }catch(err){ if(row){ row.disabled=false; const v=row.querySelector(".ui-v"); if(v) v.textContent="Add"; } toast((err&&err.message&&err.message!=="Failed to fetch") ? err.message+"." : "Couldn't add. Check that "+srv()+" is online."); }
+}
+function fdOpenIn(sid, n){
+  $("fdlg").close();
+  const go=()=>{ if(n!=null && state.cards.some(x=>x.n===n)){ setView("cards"); openCard(n); } };
+  if(state.sid===sid && state.ready){ go(); return; }
+  openSet(sid).then(go);
+}
+
+// ---------- your own binders ----------
+function drawOwn(){
+  hideBar($("addBar")); $("addMsg").textContent="";
+  const C=$("catalog"); C.replaceChildren();
+  const f=document.createElement("form"); f.className="own-form";
+  const lab=document.createElement("label"); lab.className="f"; lab.textContent="Binder name";
+  const inp=document.createElement("input"); inp.id="ownName"; inp.maxLength=40; inp.placeholder="Favorites, Trade pile, Gym leaders…"; inp.autocomplete="off"; lab.append(inp);
+  const ok=document.createElement("button"); ok.type="submit"; ok.className="btn primary"; ok.textContent="Make binder";
+  const p=document.createElement("p"); p.className="note"; p.textContent="An empty binder you fill yourself, with cards from any set, using Find a card. Prices, owned, purchases, photos and pages work like any other binder.";
+  f.append(lab,ok,p); C.append(f);
+  f.onsubmit=async e=>{
+    e.preventDefault(); if(!inp.value.trim()){ inp.focus(); return; }
+    ok.disabled=true; ok.textContent="Making…";
+    try{
+      const r=await fetch("api/sets/own",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:inp.value})});
+      const j=await r.json(); if(!r.ok) throw new Error(j.error||"Couldn't make the binder");
+      await loadSets(); $("drawer").close(); showAdd(false); openSet(j.id);
+      toast(j.name+" is ready. Add cards with Find a card.", "Find a card", ()=>openFind());
+    }catch(err){ ok.disabled=false; ok.textContent="Make binder"; $("addMsg").textContent=err.message+"."; }
+  };
+  setTimeout(()=>inp.focus(),50);
+}
+async function renameOwn(s){
+  const box=document.createElement("label"); box.className="f"; box.textContent="New name";
+  const inp=document.createElement("input"); inp.maxLength=40; inp.value=s.name; box.append(inp);
+  setTimeout(()=>{ inp.focus(); inp.select(); },60);
+  inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); $("cfOk").click(); } });
+  const ok=await askConfirm("Rename binder", "", "Rename", {safe:true, body:box});
+  if(!ok || !inp.value.trim() || inp.value.trim()===s.name) return;
+  try{
+    const r=await fetch("api/sets/"+enc(s.id)+"/name",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:inp.value})});
+    const j=await r.json(); if(!r.ok) throw new Error(j.error||"Couldn't rename");
+    await loadSets(); drawSets(); if(state.sid===s.id){ state.set.name=j.name; header(); }
+  }catch(err){ toast((err&&err.message&&err.message!=="Failed to fetch") ? err.message+"." : "Couldn't rename. Check that "+srv()+" is online."); }
+}
+$("dXDel").onclick=async()=>{
+  const n=state.open, c=state.cards.find(x=>x.n===n); if(!c || !c.extra) return;
+  const extra = qty(n)>0 ? " Your "+qty(n)+" cop"+(qty(n)===1?"y":"ies")+", purchases and photos for it are deleted too." : "";
+  const ok=await askConfirm("Remove from this binder?", c.name+" · "+(c.set||"")+" "+padNo(c.num,c.pt), "Remove",
+    {body:Object.assign(document.createElement("div"),{className:"note",textContent:"It's taken out of "+(state.set.name||"this binder")+"."+extra+" You can add it again with Find a card."})});
+  if(!ok) return;
+  const r=await fetch("api/set/"+enc(state.sid)+"/cards/"+enc(n),{method:"DELETE"}).catch(()=>null);
+  if(!r || !r.ok){ $("dSaved").textContent="Couldn't remove. Check that "+srv()+" is online."; return; }
+  $("dlg").close(); toast("Removed "+c.name+" from "+(state.set.name||"this binder")+".");
+  await loadState(); loadSets();
+};
+
+// ---------- Pages: the binder laid out like a real binder ----------
+// Page 1 starts on the right-hand side (the inside cover is on the left), then each spread is the back of one
+// page and the front of the next. The layout (pocket size, starting order, and any cards you moved) is saved
+// on the server per binder. Until you move a card, the pages simply follow the starting order.
+const POCKETS=[4,9,12,16], PK_COLS={4:2,9:3,12:3,16:4};
+const RAR_RANK=["Common","Uncommon","Rare","Rare Holo","Rare Shining","Rare Holo EX","Rare Ultra","Rare Secret"];
+function pageOrders(){
+  const o=[["num", isDex(state.sid) ? "Release date" : isOwn(state.sid) ? "Set and number" : "Set number"],
+           ["rarity","Rarity"],["dex","Pokédex number"],["type","Pokémon, then Trainers and Energy"],["value","Value, high to low"],["owned","Owned first"]];
+  if(isOwn(state.sid)) o.unshift(["added","Order added"]);
+  return o;
+}
+const defaultOrder = () => isOwn(state.sid) ? "added" : "num";
+function orderCards(order){
+  const base=state.cards.slice();
+  if(order==="num" && isOwn(state.sid)) base.sort((a,b)=>(a.date||"").localeCompare(b.date||"") || (a.set||"").localeCompare(b.set||"") || (numVal(a.num||a.n)[1]-numVal(b.num||b.n)[1]));
+  const pos=new Map(base.map((c,i)=>[c.n,i])), by=f=>base.slice().sort((a,b)=>f(a,b) || pos.get(a.n)-pos.get(b.n));
+  if(order==="rarity"){ const r=c=>{ const i=RAR_RANK.indexOf(c.rarity); return i<0 ? RAR_RANK.length+(c.rarity?0:1) : i; }; return by((a,b)=>r(a)-r(b)); }
+  if(order==="dex"){ loadDexNums(); return by((a,b)=>(a.dex||99999)-(b.dex||99999)); }
+  if(order==="type"){ const t=c=>c.type==="Pokémon"?0:c.type==="Trainer"?1:c.type==="Energy"?2:c.custom?4:3; return by((a,b)=>t(a)-t(b)); }
+  if(order==="value") return by((a,b)=>basePrice(b.n)-basePrice(a.n));
+  if(order==="owned") return by((a,b)=>(qty(b.n)>0)-(qty(a.n)>0));
+  return base;
+}
+// Pokédex numbers come from the server only when the Pokédex order is picked.
+let dexNumsFor=null;
+function loadDexNums(){
+  const sid=state.sid; if(dexNumsFor===sid || !state.ready) return;
+  dexNumsFor=sid;
+  fetch("api/set/"+enc(sid)+"/dexnums").then(r=>r.json()).then(j=>{
+    if(state.sid!==sid) return;
+    if(!j.ready){ dexNumsFor=null; return; }
+    for(const c of state.cards) if(j.dex[c.n]) c.dex=j.dex[c.n];
+    if(state.view==="pages") drawPages();
+    if(state.open && $("dlg").open){ const sp=cardSpot(state.open); if(sp) $("dSpot").textContent="In your binder: "+sp.text; }
+  }).catch(()=>{ dexNumsFor=null; });
+}
+function pageLayout(){
+  const L=state.layout||{}, pk=POCKETS.includes(+L.pockets) ? +L.pockets : 9;
+  const order=pageOrders().some(o=>o[0]===L.order) ? L.order : defaultOrder();
+  const ordered=orderCards(order).map(c=>c.n), have=new Set(ordered);
+  let slots, custom=Array.isArray(L.slots);
+  if(custom){
+    slots=L.slots.map(x=>x && have.has(x) ? x : null);
+    const placed=new Set(slots.filter(Boolean)), more=ordered.filter(n=>!placed.has(n));   // new cards go at the end
+    if(more.length){ while(slots.length && slots[slots.length-1]==null) slots.pop(); slots=slots.concat(more); }
+  } else slots=ordered;
+  return {pk, order, slots, custom};
+}
+const sideName = i => "Page "+(Math.floor(i/2)+1)+", "+(i%2 ? "back" : "front");
+function cardSpot(n){
+  const L=pageLayout(), i=L.slots.indexOf(n); if(i<0) return null;
+  const side=Math.floor(i/L.pk), k=i%L.pk, cols=PK_COLS[L.pk];
+  return {side, text:sideName(side)+", row "+(Math.floor(k/cols)+1)+", pocket "+(k%cols+1)};
+}
+const pg={at:0, arr:false, sel:-1, saveT:null, flash:null};
+function saveLayout(next){
+  state.layout=next;
+  clearTimeout(pg.saveT);
+  pg.saveT=setTimeout(()=>{
+    const sid=state.sid;
+    fetch("api/set/"+enc(sid)+"/layout",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(next)})
+      .then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error||"Couldn't save the pages"); }))
+      .catch(err=>toast((err&&err.message&&err.message!=="Failed to fetch") ? err.message+"." : "Couldn't save the pages. Check that "+srv()+" is online."));
+  },350);
+}
+function pocket(n, i, L){
+  const c=n ? state.cards.find(x=>x.n===n) : null;
+  const b=document.createElement("button"); b.type="button"; b.className="pk"; b.dataset.i=i;
+  if(!c){ b.classList.add("gap"); b.setAttribute("aria-label","Empty pocket"); if(!pg.arr) b.tabIndex=-1; }
+  else {
+    const own=qty(n)>0; if(!own) b.classList.add("need");
+    b.dataset.price=!own && basePrice(n) ? money0(basePrice(n)) : "";
+    const no=document.createElement("span"); no.className="pk-no"; no.textContent=label(c);
+    const im=document.createElement("img"); im.alt=""; im.loading="lazy"; im.decoding="async"; im.draggable=false; im.src=base()+"/img/"+enc(n)+".png";
+    im.onerror=()=>{ if(!im.dataset.r && c.img){ im.dataset.r=1; im.src=smallImg(c.img); } else im.remove(); };
+    const nm=document.createElement("span"); nm.className="pk-nm"; nm.textContent=c.name;
+    b.append(no,im,nm);
+    b.setAttribute("aria-label",c.name+" "+label(c)+", "+(own?"owned":"needed"));
+  }
+  if(i===pg.sel) b.classList.add("sel");
+  if(n && n===pg.flash) b.classList.add("flash");
+  return b;
+}
+function sideEl(i, L){
+  const box=document.createElement("div"); box.className="pg-side"; box.dataset.side=i;
+  const g=document.createElement("div"); g.className="pg-grid"; g.style.gridTemplateColumns="repeat("+PK_COLS[L.pk]+",minmax(0,1fr))";
+  let own=0, cards=0, cost=0;
+  for(let k=0;k<L.pk;k++){
+    const idx=i*L.pk+k, n=L.slots[idx]||null; g.append(pocket(n, idx, L));
+    if(n){ cards++; if(qty(n)>0) own++; else cost+=basePrice(n); }
+  }
+  const f=document.createElement("div"); f.className="pg-foot";
+  const a=document.createElement("b"); a.textContent=sideName(i);
+  const r=document.createElement("span"); r.textContent=cards ? own+" of "+cards+" owned" : "Empty";
+  if(cost>0){ const c=document.createElement("span"); c.className="cost"; c.textContent=" · "+money0(cost)+" to fill"; r.append(c); }
+  f.append(a,r); box.append(g,f); return box;
+}
+const pagesWide = () => matchMedia("(min-width:760px)").matches;
+function drawPages(){
+  const V=$("pgView"); if(!V || state.view!=="pages") return;
+  const L=pageLayout(), sides=Math.max(1, Math.ceil(L.slots.length/L.pk));
+  $("pgPk").value=String(L.pk);
+  const os=$("pgOrder"); os.replaceChildren();
+  for(const [v,t] of pageOrders()){ const o=document.createElement("option"); o.value=v; o.textContent="Order: "+t; os.append(o); }
+  os.value=L.order;
+  $("pgArr").setAttribute("aria-pressed", pg.arr); $("pgArr").textContent=pg.arr ? "Done arranging" : "Arrange";
+  const pages=Math.ceil(sides/2), cards=L.slots.filter(Boolean).length;
+  $("pgSum").textContent = !cards ? "No cards yet." :
+    cards+" card"+(cards===1?"":"s")+" fill "+pages+" page"+(pages===1?"":"s")+" ("+sides+" side"+(sides===1?"":"s")+" of "+L.pk+" pockets). Page 1 starts on the right, after the inside cover."
+    +(L.custom ? " You've moved some cards: new cards go at the end." : "")
+    +(pg.arr ? " Tap a card, then tap where it should go"+(matchMedia("(pointer:fine)").matches ? ", or drag it there." : ".") : "");
+  V.replaceChildren(); V.classList.toggle("pg-arr", pg.arr);
+  pg.at=Math.max(0, Math.min(pg.at, sides-1));
+  if(pagesWide()){
+    const wrap=document.createElement("div"); wrap.className="pg-spreads";
+    for(let s=-1; s<sides; s+=2){   // [inside cover | page 1 front], [page 1 back | page 2 front], ...
+      const sp=document.createElement("div"); sp.className="pg-spread";
+      if(s<0){ const cv=document.createElement("div"); cv.className="pg-side cover"; cv.textContent="Inside cover"; sp.append(cv); }
+      else sp.append(sideEl(s, L));
+      if(s+1<sides) sp.append(sideEl(s+1, L));
+      else { const e=document.createElement("div"); e.className="pg-side cover"; e.textContent="Back cover"; sp.append(e); }
+      wrap.append(sp);
+    }
+    V.append(wrap);
+  } else {
+    V.append(sideEl(pg.at, L));
+    const nav=document.createElement("div"); nav.className="pg-pager";
+    const prev=document.createElement("button"); prev.type="button"; prev.className="icon-btn"; prev.setAttribute("aria-label","Previous side"); prev.disabled=pg.at===0;
+    prev.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>';
+    const next=document.createElement("button"); next.type="button"; next.className="icon-btn"; next.setAttribute("aria-label","Next side"); next.disabled=pg.at>=sides-1;
+    next.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
+    const sel=document.createElement("select"); sel.setAttribute("aria-label","Go to page");
+    for(let i=0;i<sides;i++){ const o=document.createElement("option"); o.value=i; o.textContent=sideName(i)+"  ("+(i+1)+" of "+sides+")"; sel.append(o); }
+    sel.value=String(pg.at);
+    prev.onclick=()=>{ pg.at--; drawPages(); }; next.onclick=()=>{ pg.at++; drawPages(); };
+    sel.onchange=()=>{ pg.at=+sel.value; drawPages(); };
+    nav.append(prev,sel,next); V.append(nav);
+  }
+  pgBar();
+  if(pg.flash){ const f=V.querySelector(".pk.flash"); if(f) f.scrollIntoView({block:"center", behavior:"smooth"}); setTimeout(()=>{ pg.flash=null; },1700); }
+}
+function pgBar(){
+  const L=pageLayout(), on=pg.arr && pg.sel>=0, n=on ? L.slots[pg.sel] : null;
+  $("pgBar").hidden=!on; if(!on) return;
+  const c=n && state.cards.find(x=>x.n===n);
+  $("pgBarText").textContent=c ? c.name+" "+label(c)+" picked up. Tap where it should go." : "Empty pocket picked. Tap a card to move it here, or remove the gap.";
+  $("pgGap").hidden=!c; $("pgUngap").hidden=!!c;
+}
+// Move the card at index a to pocket b (swapping with whatever is there).
+function pgMove(a, b){
+  const L=pageLayout(); if(a===b || a<0 || b<0) return;
+  const s=L.slots.slice(); while(s.length<=Math.max(a,b)) s.push(null);
+  [s[a], s[b]]=[s[b], s[a]];
+  while(s.length && s[s.length-1]==null) s.pop();
+  pg.sel=-1; saveLayout({pockets:L.pk, order:L.order, slots:s}); drawPages();
+}
+$("pgView").addEventListener("click",e=>{
+  const b=e.target.closest(".pk"); if(!b || pg.drag) return;
+  const i=+b.dataset.i, n=pageLayout().slots[i];
+  if(!pg.arr){ if(n) openCard(n); return; }
+  if(pg.sel<0){ pg.sel=i; drawPages(); return; }
+  if(pg.sel===i){ pg.sel=-1; drawPages(); return; }
+  pgMove(pg.sel, i);
+});
+$("pgArr").onclick=()=>{ pg.arr=!pg.arr; pg.sel=-1; drawPages(); };
+$("pgDone").onclick=()=>{ pg.sel=-1; drawPages(); };
+$("pgGap").onclick=()=>{   // push this card (and everything after it) one pocket along, leaving an empty pocket
+  const L=pageLayout(), s=L.slots.slice(); if(pg.sel<0) return;
+  s.splice(pg.sel,0,null); pg.sel++; saveLayout({pockets:L.pk, order:L.order, slots:s}); drawPages();
+};
+$("pgUngap").onclick=()=>{
+  const L=pageLayout(), s=L.slots.slice(); if(pg.sel<0 || s[pg.sel]) return;
+  s.splice(pg.sel,1); pg.sel=-1; saveLayout({pockets:L.pk, order:L.order, slots:s}); drawPages();
+};
+$("pgPk").onchange=()=>{ const L=pageLayout(); saveLayout({pockets:+$("pgPk").value, order:L.order, slots:L.custom ? L.slots : null}); pg.sel=-1; drawPages(); };
+$("pgOrder").onchange=async()=>{
+  const L=pageLayout(), v=$("pgOrder").value;
+  if(L.custom){
+    const ok=await askConfirm("Start the pages over?", "Order: "+(pageOrders().find(o=>o[0]===v)||[,v])[1], "Start over",
+      {body:Object.assign(document.createElement("div"),{className:"note",textContent:"Every card goes back into this order, and the cards you moved go back too."})});
+    if(!ok){ $("pgOrder").value=L.order; return; }
+  }
+  pg.sel=-1; saveLayout({pockets:L.pk, order:v, slots:null}); drawPages();
+};
+// Drag a card to another pocket while arranging, with a mouse. (On touch screens it's tap, then tap,
+// so a finger on the pages still scrolls.)
+$("pgView").addEventListener("pointerdown",e=>{
+  if(!pg.arr || e.pointerType==="touch" || (e.button!==undefined && e.button!==0)) return;
+  const b=e.target.closest(".pk"); if(!b || b.classList.contains("gap")) return;
+  const from=+b.dataset.i, x0=e.clientX, y0=e.clientY, id=e.pointerId;
+  let ghost=null, hit=null;
+  const move=ev=>{
+    if(ev.pointerId!==id) return;
+    if(!ghost){
+      if(Math.hypot(ev.clientX-x0, ev.clientY-y0)<8) return;
+      pg.drag=true; ghost=document.createElement("div"); ghost.className="pk-ghost";
+      const im=b.querySelector("img"); if(im) ghost.append(im.cloneNode());
+      document.body.append(ghost); b.classList.add("sel");
+      try{ b.releasePointerCapture(id); }catch(_){}
+    }
+    ev.preventDefault();
+    ghost.style.left=ev.clientX+"px"; ghost.style.top=ev.clientY+"px";
+    const t=document.elementFromPoint(ev.clientX, ev.clientY), p=t && t.closest("#pgView .pk");
+    if(hit && hit!==p) hit.classList.remove("hit");
+    hit=p && p!==b ? p : null; if(hit) hit.classList.add("hit");
+  };
+  const end=ev=>{
+    if(ev.pointerId!==id) return;
+    window.removeEventListener("pointermove",move); window.removeEventListener("pointerup",end); window.removeEventListener("pointercancel",end);
+    if(!ghost) return;
+    ghost.remove(); b.classList.remove("sel");
+    if(hit && ev.type==="pointerup") pgMove(from, +hit.dataset.i); else drawPages();
+    setTimeout(()=>{ pg.drag=false; },0);
+  };
+  window.addEventListener("pointermove",move,{passive:false}); window.addEventListener("pointerup",end); window.addEventListener("pointercancel",end);
+});
+// Phones: swipe left or right to turn the page (not while arranging).
+(()=>{
+  let x0=null, y0=0;
+  $("pgView").addEventListener("touchstart",e=>{ if(pg.arr || pagesWide()) return; const t=e.touches[0]; x0=t.clientX; y0=t.clientY; },{passive:true});
+  $("pgView").addEventListener("touchend",e=>{
+    if(x0==null) return; const t=e.changedTouches[0], dx=t.clientX-x0, dy=t.clientY-y0; x0=null;
+    if(Math.abs(dx)<60 || Math.abs(dx)<Math.abs(dy)*1.5) return;
+    const sides=Math.max(1, Math.ceil(pageLayout().slots.length/pageLayout().pk));
+    const to=pg.at+(dx<0?1:-1); if(to<0 || to>=sides) return;
+    pg.at=to; drawPages();
+  });
+})();
+matchMedia("(min-width:760px)").addEventListener("change",()=>{ if(state.view==="pages") drawPages(); });
+// From card details: jump to the card's pocket.
+$("dSpot").onclick=()=>{
+  const n=state.open, sp=cardSpot(n); if(!sp) return;
+  $("dlg").close(); pg.at=sp.side; pg.flash=n; setView("pages");
+};
+
 // ---------- start ----------
 header(); render();
 setPrivate(isPrivate());
-{ const v=recall("nd-view"); if(v==="shop"||v==="upg"||v==="stats") setView(v); }
+{ const v=recall("nd-view"); if(v==="pages"||v==="shop"||v==="upg"||v==="stats") setView(v); }
 getSlots().then(loadSets).then(()=>{
   const want=location.hash.slice(1)||recall("nd-set");
   const sid=state.sets.some(s=>s.id===want) ? want : (state.sets[0] ? state.sets[0].id : null);

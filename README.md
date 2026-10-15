@@ -7,6 +7,9 @@ A self-hosted Pokémon TCG collection tracker. One small Python server (standard
 
 - Any English set: card lists from [PokemonTCG/pokemon-tcg-data](https://github.com/PokemonTCG/pokemon-tcg-data), card images downloaded locally
 - Pokémon master set binders: every English card of one Pokémon (like all the Totodile cards) across every set, with its game sprite from [PokeAPI](https://github.com/PokeAPI/sprites)
+- Your own binders, filled with cards from any set (like Favorites or Trade pile)
+- Find a card: search every English card and set by name, number (like `80/111`) or set, see which binders have it, and add it to any binder
+- Pages: lay out a binder like a real one (4, 9, 12 or 16 pockets), arrange cards by tapping or dragging, and see where each card goes
 - Owned cards in color, needed cards in greyscale; tap **Need** to mark a card owned
 - Search by name or by the number on the card (like `1/105`)
 - Recent sales tab on each card: the last 5 sales for every condition, side by side
