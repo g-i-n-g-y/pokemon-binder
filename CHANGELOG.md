@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.10.2 (October 15, 2026)
+
+- Home page: the Completion switch is gone. The eye (privacy) button already hides the completion rings, along with everything else privacy mode hides.
+
 ## v3.10.1 (October 15, 2026)
 
 - Home page on phones: the privacy and Settings buttons sat flush against the top of the screen. They now have the same space above them as on a binder, so they line up when you switch between the two.
@@ -17,7 +21,7 @@ The binder shows these in **Settings → About → Check for updates**.
 ## v3.10 (October 15, 2026)
 
 - **Home page.** The binder now opens on a home page instead of a binder's card values. It shows a shelf of your binders, each as a small cover with its cover Pokémon in the set's colors, plus its name, year and card count. Tap one to open it.
-- **Completion rings** show how complete each binder is. Turn them off with the Completion switch; privacy mode always hides them, along with Recently added.
+- **Completion rings** show how complete each binder is. The privacy button hides them, along with Recently added.
 - **Find a card** is at the top of the home page.
 - **Recently added** shows the cards you got most recently and which binder they're in; tap one to open it. The server now remembers the day a card first becomes owned (older cards use their purchase dates).
 - **Add a binder** is the last spot on the shelf, and **Edit** opens the binder list to reorder, remove or get pictures.

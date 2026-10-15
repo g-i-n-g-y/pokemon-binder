@@ -906,9 +906,6 @@ body.at-home > .wrap:not(.home){display:none}
 .hm-find .btn{height:46px;border-radius:12px;padding:0 18px}
 .hm-h{display:flex;align-items:center;gap:12px;margin:6px 0 10px}
 .hm-h h2{flex:1;margin:0}
-.hm-pct{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);cursor:pointer}
-.hm-pct .ui-switch{transform:scale(.8);margin:-4px}
-:root[data-private] .hm-pct{display:none}
 .hm-link{border:0;background:none;padding:4px 0;font:inherit;font-size:13px;color:var(--muted);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .hm-shelf{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 @media (min-width:640px){.hm-shelf{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -929,7 +926,7 @@ body.at-home > .wrap:not(.home){display:none}
   background:conic-gradient(#fff calc(var(--p)*1%),rgba(255,255,255,.28) 0)}
 .bk .ring::before{content:"";position:absolute;inset:4px;border-radius:50%;background:rgba(0,0,0,.55)}
 .bk .ring i{position:relative;font-style:normal}
-.home.no-pct .bk .ring,:root[data-private] .bk .ring{display:none}
+:root[data-private] .bk .ring{display:none}
 .bk.add{background:var(--surface);border-style:dashed;color:var(--muted);display:grid;place-items:center;text-align:center;font-size:14px}
 .bk.add::before{display:none}
 .bk.add svg{width:28px;height:28px;display:block;margin:0 auto 6px}
@@ -1135,7 +1132,6 @@ body.at-home > .wrap:not(.home){display:none}
   <form class="hm-find" id="hmFind" role="search"><input type="search" class="field" id="hmQ" placeholder="Find a card: name, or 80/111" aria-label="Find a card" enterkeyhint="search"><button class="btn primary" type="submit">Search</button></form>
   <section aria-labelledby="hmBindersH">
     <div class="hm-h"><h2 class="eyebrow" id="hmBindersH">Your binders</h2>
-      <label class="hm-pct" id="hmPctRow"><span>Completion</span><input type="checkbox" class="ui-switch" id="hmPct" checked></label>
       <button class="hm-link" type="button" id="hmEdit">Edit</button></div>
     <div class="hm-shelf" id="hmShelf"></div>
   </section>
@@ -4464,7 +4460,7 @@ $("dSpot").onclick=()=>{
 
 // ---------- home: a shelf of your binders ----------
 // The home page shows each binder as a small cover (its cover Pokémon in the set's colors), how complete it is
-// (switch off, and always hidden in privacy mode), Find a card, and the cards you got most recently.
+// (hidden by the privacy button), Find a card, and the cards you got most recently.
 // The home button at the top of a binder comes back here; the phone's back button works too.
 const atHome = () => document.body.classList.contains("at-home");
 function showHome(){
@@ -4484,7 +4480,6 @@ let homeData=null;
 function loadHome(){
   return Promise.all([fetch("api/home").then(r=>r.json()), loadSets()]).then(([j])=>{ homeData=j; if(atHome()) drawHome(); }).catch(()=>{});
 }
-const homePct = () => recall("nd-homepct")!=="off";
 function homeStyle(b, el, img){   // the binder's colors: the Neo sets have their own, others come from the logo or the Pokémon
   const st=COVER_STYLE[b.id] || coverStyleCache[b.id];
   if(st){ el.style.setProperty("--v1",st[0]); el.style.setProperty("--v2",st[1]); return; }
@@ -4493,7 +4488,6 @@ function homeStyle(b, el, img){   // the binder's colors: the Neo sets have thei
   else if(img) img.addEventListener("load",()=>{ if(!coverStyleCache[b.id]) use(logoStyle(img)); },{once:true});
 }
 function drawHome(){
-  $("home").classList.toggle("no-pct", !homePct()); $("hmPct").checked=homePct();
   const shelf=$("hmShelf"), list=homeData ? homeData.binders : state.sets.map(s=>({id:s.id, name:s.name, releaseDate:s.releaseDate, printedTotal:s.printedTotal, count:s.count, owned:s.owned}));
   shelf.replaceChildren();
   for(const b of list){
@@ -4513,7 +4507,7 @@ function drawHome(){
     const ri=document.createElement("i"); ri.textContent=pct+"%"; ring.append(ri);
     const nm=document.createElement("span"); nm.className="bk-nm"; const nb=document.createElement("b"); nb.textContent=b.name; const ns=document.createElement("span"); ns.textContent=sub; nm.append(nb,ns);
     t.append(ring,nm);
-    t.setAttribute("aria-label", b.name+", "+sub+(homePct() && !isPrivate() ? ", "+pct+"% complete" : ""));
+    t.setAttribute("aria-label", b.name+", "+sub+(!isPrivate() ? ", "+pct+"% complete" : ""));
     t.onclick=()=>goBinder(b.id);
     shelf.append(t);
   }
@@ -4538,7 +4532,6 @@ function agoText(d){
   const days=Math.round((new Date(todayStr())-new Date(d.slice(0,10)))/864e5);
   return days<=0 ? "today" : days===1 ? "yesterday" : days<7 ? days+" days ago" : days<14 ? "last week" : days<60 ? Math.round(days/7)+" weeks ago" : new Date(d).toLocaleDateString(undefined,{month:"short",year:"numeric"});
 }
-$("hmPct").onchange=e=>{ store("nd-homepct", e.target.checked ? undefined : "off"); drawHome(); };
 $("hmPriv").onclick=()=>{ setPrivate(!isPrivate()); if(atHome()) drawHome(); };
 $("hmCog").onclick=()=>$("cog").click();
 $("hmEdit").onclick=()=>{ showAdd(false); drawSets(); openDrawer(); loadSets().then(drawSets).then(()=>setEdit(true)); };

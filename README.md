@@ -20,7 +20,7 @@ A self-hosted Pokémon TCG collection tracker. One small Python server (standard
 - Daily automatic price refresh at a time you choose, plus a manual refresh button
 - Price history, biggest movers, shopping list with a budget and your own drag-to-reorder priority
 - Upgrades list: worn copies you own and what a better one costs
-- A home page with a shelf of your binders (cover Pokémon, completion you can hide), Find a card and recently added cards
+- A home page with a shelf of your binders (cover Pokémon, completion that privacy mode hides), Find a card and recently added cards
 - All-binders totals in the sets menu (Edit on the home page)
 - Card shows: upcoming shows in your towns from [TreasureHunter.show](https://www.treasurehunter.show), checked weekly or on demand
 - One-file backup and restore
