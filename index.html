@@ -164,11 +164,14 @@ dialog.cele::backdrop{background:transparent}
 @media (min-width:760px){
   /* the window is as tall as the picture side; the tabs side scrolls inside that height, so switching tabs never resizes it */
   dialog#dlg.float{width:min(880px,calc(100% - 48px));height:fit-content;max-height:min(90vh,820px)}
-  dialog#dlg.float .sheet.card-sheet{display:grid;grid-template-columns:300px minmax(0,1fr);gap:0;padding:0;overflow:hidden}
+  dialog#dlg.float .sheet.card-sheet{display:grid;grid-template-columns:316px minmax(0,1fr);gap:0;padding:0;overflow:hidden}
   #dlg .cs-side{padding:22px;border-right:1px solid var(--line);overflow-y:auto;overscroll-behavior:contain;align-items:stretch;text-align:left}
   #dlg .cs-side .big-art{width:100%;max-width:100%;margin:0}
   #dlg .cs-id{align-items:flex-start}
-  #dlg .cs-side .links{justify-content:flex-start}
+  /* store links: two equal buttons per row, a lone last one runs the full width */
+  #dlg .cs-side .links{display:grid;grid-template-columns:1fr 1fr}
+  #dlg .cs-side .links a{justify-content:center;white-space:nowrap;padding-left:8px;padding-right:8px}
+  #dlg .cs-side .links a:last-child:nth-child(odd){grid-column:1/-1}
   #dlg .cs-main{padding:18px 24px 24px;overflow-y:auto;overscroll-behavior:contain;min-height:0;height:0;min-height:100%}
   #dlg .cs-side{min-height:0}
 }
@@ -1888,8 +1891,8 @@ function openCard(n){
   const setName=(c.set||state.set.name).replace(/ Base Set$/,"");
   const s=q(setName+" "+c.name+" "+(c.num ? c.num+(c.pt?"/"+c.pt:"") : n));
   [["eBay sold","https://www.ebay.com/sch/i.html?_nkw="+s+"+-1st&LH_Sold=1&LH_Complete=1"],
-   ["TCGplayer", c.tcg ? "https://www.tcgplayer.com/product/"+c.tcg : "https://www.tcgplayer.com/search/pokemon/product?q="+q(c.name+" "+setName)],
-   ["PriceCharting",(state.info[n]||{}).pc || "https://www.pricecharting.com/search-products?type=prices&q="+s]]
+   ["PriceCharting",(state.info[n]||{}).pc || "https://www.pricecharting.com/search-products?type=prices&q="+s],
+   ["TCGplayer", c.tcg ? "https://www.tcgplayer.com/product/"+c.tcg : "https://www.tcgplayer.com/search/pokemon/product?q="+q(c.name+" "+setName)]]
    .forEach(([t,u])=>{ const a=document.createElement("a"); a.href=u; a.target="_blank"; a.rel="noopener"; a.textContent=t+" ↗"; L.append(a); });
   $("dQty").textContent=qty(n);
   $("dCond").value=r.cond||"";
