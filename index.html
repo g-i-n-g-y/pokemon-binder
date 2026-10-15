@@ -156,17 +156,21 @@ dialog.cele::backdrop{background:transparent}
 .dtabs{align-self:stretch;display:flex;position:sticky;top:0;z-index:3;box-shadow:0 -14px 0 6px var(--surface)}  /* tabs stay in reach while the tab below scrolls */
 .dtabs button{flex:1}
 .tabn{margin-left:6px;font-size:12px;opacity:.75}
+.rs-h{display:none;margin:4px 0 -8px;font-size:12px;font-weight:500;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+@media (min-width:760px){ #dTabs .tab-sales{display:none} #dlg .rs-h{display:block} }
 .tabn:empty{display:none}
 .photo-row{display:grid;grid-template-columns:minmax(0,150px) 1fr;gap:14px;align-items:start}
 .photo-acts{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
 @media (min-width:760px){
-  dialog#dlg.float{width:min(940px,calc(100% - 48px));height:min(86vh,800px)}
+  /* the window is as tall as the picture side; the tabs side scrolls inside that height, so switching tabs never resizes it */
+  dialog#dlg.float{width:min(880px,calc(100% - 48px));height:fit-content;max-height:min(90vh,820px)}
   dialog#dlg.float .sheet.card-sheet{display:grid;grid-template-columns:300px minmax(0,1fr);gap:0;padding:0;overflow:hidden}
   #dlg .cs-side{padding:22px;border-right:1px solid var(--line);overflow-y:auto;overscroll-behavior:contain;align-items:stretch;text-align:left}
   #dlg .cs-side .big-art{width:100%;max-width:100%;margin:0}
   #dlg .cs-id{align-items:flex-start}
   #dlg .cs-side .links{justify-content:flex-start}
-  #dlg .cs-main{padding:18px 24px 28px;overflow-y:auto;overscroll-behavior:contain;min-height:0}
+  #dlg .cs-main{padding:18px 24px 24px;overflow-y:auto;overscroll-behavior:contain;min-height:0;height:0;min-height:100%}
+  #dlg .cs-side{min-height:0}
 }
 .rs{display:flex;flex-direction:column;gap:12px}
 .rs-cond{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--surface)}
@@ -935,12 +939,8 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
     <div class="cs-main">
     <div class="seg dtabs" id="dTabs" role="group" aria-label="Card sections">
       <button type="button" data-tab="info" aria-pressed="true">Prices</button>
-      <button type="button" data-tab="sales" aria-pressed="false">Recent sales</button>
+      <button type="button" data-tab="sales" aria-pressed="false" class="tab-sales">Recent sales</button>
       <button type="button" data-tab="mine" aria-pressed="false" class="own-only">My copy<span class="tabn" id="dTabN"></span></button>
-    </div>
-    <div class="tabpane" id="tabSales" hidden>
-      <div class="note">The newest Unlimited English sales for each condition from the last price refresh, so you can see whether a different condition is worth it. Your price options are outlined.</div>
-      <div class="rs" id="dSales"></div>
     </div>
     <div class="tabpane" id="tabInfo">
     <div class="box">
@@ -953,6 +953,11 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
       <span class="s mkt" id="dMkt" hidden></span>
       <div class="spark" id="dSpark"></div></div>
     <div class="cedit" id="dCustom" hidden><button class="btn" type="button" id="dCEdit">Edit custom card</button><button class="btn" type="button" id="dCDel">Delete custom card</button></div>
+    </div>
+    <div class="tabpane" id="tabSales" hidden>
+      <h3 class="rs-h">Recent sales</h3>
+      <div class="note">The newest Unlimited English sales for each condition from the last price refresh, so you can see whether a different condition is worth it. Your price options are outlined.</div>
+      <div class="rs" id="dSales"></div>
     </div>
     <div class="tabpane own-only" id="tabMine" hidden>
     <div class="row">
@@ -1801,9 +1806,12 @@ $("stCeleTry").onclick=()=>celebrate((state.set.name||"Your binder")+" · "+stat
 let cardTab="info";
 function setCardTab(t){
   if(t==="mine" && isPrivate()) t="info";
+  // wider screens have room for prices and recent sales together, so the Prices tab shows both
+  const wide=matchMedia("(min-width:760px)").matches;
+  if(wide && t==="sales") t="info";
   cardTab=t;
   for(const b of $("dTabs").querySelectorAll("button")) b.setAttribute("aria-pressed", b.dataset.tab===t ? "true" : "false");
-  $("tabInfo").hidden = t!=="info"; $("tabSales").hidden = t!=="sales"; $("tabMine").hidden = t!=="mine";
+  $("tabInfo").hidden = t!=="info"; $("tabSales").hidden = !(t==="sales" || (wide && t==="info")); $("tabMine").hidden = t!=="mine";
   const m=document.querySelector("#dlg .cs-main"); if(m) m.scrollTop=0;
 }
 // The short "You own 2 · LP" line under the card name, and the copy count on the My copy tab.
@@ -1813,6 +1821,7 @@ function ownLine(n){
   el.classList.toggle("have", q>0);
   $("dTabN").textContent = q>0 ? String(q) : "";
 }
+matchMedia("(min-width:760px)").addEventListener("change",()=>{ if($("dlg").open) setCardTab(cardTab); });
 $("dTabs").addEventListener("click",e=>{ const b=e.target.closest("button[data-tab]"); if(b) setCardTab(b.dataset.tab); });
 const shortDay = d => d ? new Date(d+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "";
 function salesBlock(title, avg, list, mine, emptyText){

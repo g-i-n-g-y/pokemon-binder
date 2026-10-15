@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- Card details on a computer: the window is as tall as the card picture side and no taller, so there's no big empty space, and it keeps the same size when you switch tabs. The **Prices** tab now shows the recent sales right under the prices (on phones, Recent sales stays its own tab).
+
 ## v3.7.2 (October 14, 2026)
 
 - **Reorder your binders:** in the sets menu, tap **Edit**, then drag the ⠿ handle next to a binder to move it up or down (or focus the handle and use the arrow keys). The new order is saved on the server, so it's the same on every device.
