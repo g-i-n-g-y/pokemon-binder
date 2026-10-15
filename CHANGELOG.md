@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v3.7.2 (October 14, 2026)
 
 - **Reorder your binders:** in the sets menu, tap **Edit**, then drag the ⠿ handle next to a binder to move it up or down (or focus the handle and use the arrow keys). The new order is saved on the server, so it's the same on every device.
 - **Get pictures now:** in the sets menu, tap Edit to see how many of each binder's pictures are saved on the server. **Get pictures** downloads the rest right away instead of waiting the hour a new binder waits.
