@@ -27,17 +27,29 @@ A self-hosted Pokémon TCG collection tracker. One small Python server (standard
 
 ## Screenshots
 
-**The binder.** Owned cards in color, cards you still need in greyscale, with totals at the top.
+**The binder.** Owned cards in color, cards you still need in greyscale, with totals at the top and each card's price trend.
 
 ![The binder's main page](screenshots/binder.png)
+
+**Card details.** The card, its prices from recent sales, market prices, a price chart, and the newest sales for every condition, so you can see whether a different condition is worth it.
+
+![Card details with prices and recent sales](screenshots/card-details.png)
+
+**Your copy.** Copies owned, condition, a purchase log with where you bought it and from whom, notes, and photos of your own card.
+
+![Card details, My copy tab](screenshots/my-copy.png)
+
+**All your binders.** The sets menu shows every binder with its progress and value, plus totals across all of them. (Sample binders shown.)
+
+![Sets menu with totals across binders](screenshots/sets-menu.png)
 
 **Privacy mode.** Tap the eye button: every card shows in color, Owned/Need tags disappear, and your totals blur, so nobody looking over your shoulder can tell what you own.
 
 ![Privacy mode turned on](screenshots/privacy-mode.png)
 
-**Card details.** Tap a card for its two chosen prices (LP and MP by default), copies owned, condition, purchase log with sellers, and photos of your own copy.
+**Settings.** Themes, price options, the daily price check, backups, updates and more.
 
-<img src="screenshots/card-details.png" alt="Card details panel" width="360">
+![Settings](screenshots/settings.png)
 
 ## How was this possible?
 
