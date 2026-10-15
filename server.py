@@ -24,7 +24,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "3.9.5"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
+APP_VERSION = "3.9.6"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -1089,6 +1089,7 @@ unown_lock = threading.Lock()
 DEXNO_DIR = os.path.join(DATA, "dexno")
 ART_DIR = os.path.join(DATA, "art")
 cover_lock = threading.Lock()
+_art_fail = {}
 
 
 def card_dex(gids):
@@ -1125,11 +1126,18 @@ def pokemon_art(num, shiny=False):
     num = int(num)
     if not 1 <= num <= 1025:
         raise ValueError("no such Pokémon")
-    dest = os.path.join(ART_DIR, f"{num}{'s' if shiny else ''}.png")
+    name = f"{num}{'s' if shiny else ''}"
+    dest = os.path.join(ART_DIR, name + ".png")
     with cover_lock:
         if not (os.path.exists(dest) and os.path.getsize(dest) > 0):
+            if time.time() - _art_fail.get(name, 0) < 3600:   # don't ask again for an hour after a failure
+                raise ValueError("not available right now")
             os.makedirs(ART_DIR, exist_ok=True)
-            _download(f"{SPRITES}/other/official-artwork/{'shiny/' if shiny else ''}{num}.png", dest)
+            try:
+                _download(f"{SPRITES}/other/official-artwork/{'shiny/' if shiny else ''}{num}.png", dest)
+            except Exception:
+                _art_fail[name] = time.time()
+                raise
     return dest
 
 

@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.9.6 (October 15, 2026)
+
+- **Cover fallbacks.** If a Shining Pokémon has no shiny artwork, the cover uses its usual colors. If a Pokémon's artwork can't be downloaded, its pick button shows the card's own art instead, and the card's scene shows sharp behind the logo. A failed artwork download waits an hour before trying again, so the server doesn't keep asking.
+
 ## v3.9.5 (October 15, 2026)
 
 - **Cover scene from the card.** The featured card's own painted scene now fills the cover behind the Pokémon, softened so it reads as background (the card's Pokémon would otherwise show twice). The Pokémon stands in front with a soft white glow, and the set logo sits near the bottom with a white sticker outline. The band and corner star are gone. Until the card's picture is on the server, the set's colors and rays of light stand in.

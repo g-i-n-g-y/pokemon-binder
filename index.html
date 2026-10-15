@@ -887,6 +887,9 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
 .vb-mon{position:absolute;z-index:1;left:50%;top:42%;width:84%;height:56%;transform:translate(-50%,-50%);object-fit:contain;
   filter:drop-shadow(0 0 3px rgba(255,255,255,.95)) drop-shadow(0 0 10px rgba(255,255,255,.55)) drop-shadow(0 10px 14px rgba(0,0,0,.4));-webkit-user-drag:none;user-select:none}
 .vb-mon.no-art{display:none}
+.vb-cover.no-mon .vb-scene>div{filter:none}
+.vb-pick .vb-dot.card{width:211%;height:auto;max-width:none;padding:0;margin:-36.8% 0 0 -55.7%;object-fit:initial}   /* the card's art box fills the button */
+.vb-pick button:has(.vb-dot.no-art){display:none}
 .vb-pick{position:absolute;z-index:2;left:50%;bottom:12px;transform:translateX(-50%);display:flex;gap:10px}
 .vb-pick button{width:44px;height:44px;padding:0;border-radius:50%;overflow:hidden;cursor:pointer;background:rgba(255,255,255,.7);
   border:2px solid rgba(255,255,255,.85);box-shadow:0 2px 6px rgba(0,0,0,.3);opacity:.75}
@@ -4191,8 +4194,14 @@ function logoStyle(img){
 function setCoverStyle(cv, st){ ["--v1","--v2","--v3","--v4"].forEach((k,i)=>cv.style.setProperty(k, st[i])); }
 function coverArt(c, cls){
   const d=hitDex(c), im=document.createElement("img"); im.className=cls; im.alt=c.name; im.decoding="async"; im.draggable=false;
-  if(d) im.src="art/"+d+(isShining(c) ? "s" : "")+".png"; else im.classList.add("no-art");
-  im.onerror=()=>im.classList.add("no-art"); return im;
+  if(d) im.src="art/"+d+(isShining(c) ? "s" : "")+".png"; else if(cls==="vb-mon") im.classList.add("no-art");
+  im.onerror=()=>{
+    if(/\/art\/\d+s\.png$/.test(im.src)) im.src="art/"+d+".png";   // no shiny art: use the usual colors
+    else if(cls==="vb-dot" && !/\/img\//.test(im.src)){ im.classList.add("card"); im.src=base()+"/img/"+enc(c.n)+".png"; }   // no artwork: the card's picture
+    else { im.classList.add("no-art"); const cv=im.closest(".vb-cover"); if(cv && cls==="vb-mon") cv.classList.add("no-mon"); }
+  };
+  if(!d){ if(cls==="vb-dot"){ im.classList.add("card"); im.src=base()+"/img/"+enc(c.n)+".png"; } }
+  return im;
 }
 function coverEl(){
   const cv=document.createElement("div"); cv.className="pg-side cover vb-cover";
