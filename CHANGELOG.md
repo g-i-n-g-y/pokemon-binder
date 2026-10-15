@@ -10,6 +10,12 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.12 (October 15, 2026)
+
+- **Opens with no connection:** the installed phone app (or Chrome on the https address) keeps a saved copy of every binder, its cards, prices and purchases, and the pictures you've looked at. With no signal, it opens from that copy and the dot turns red with "Offline · showing what's saved on this phone." When the connection is back, the dot turns green and everything refreshes from your server.
+  - The saved copy refreshes on its own every few hours while you're connected, and right after you reconnect.
+  - Changes still need a connection in this version; marking cards owned offline comes next.
+
 ## v3.11 (October 15, 2026)
 
 - **Connection dot:** a small dot next to "Saved on …" (and under "My binders" on the home page) shows whether the binder can reach your server: green when it can, red when it can't. It checks every 30 seconds while the page is open, and when your phone's connection changes.

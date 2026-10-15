@@ -24,7 +24,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "3.11"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
+APP_VERSION = "3.12"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -3254,8 +3254,13 @@ class Handler(BaseHTTPRequestHandler):
             man = {"name": "Pokémon Binder", "short_name": "Binder", "id": "./", "start_url": "./", "scope": "./",
                    "display": "standalone", "background_color": "#111213", "theme_color": "#111213", "icons": icons}
             return self.send(200, json.dumps(man).encode(), "application/manifest+json", "no-cache")
-        if path == "/sw.js":
-            return self.send_file(os.path.join(APP, "sw.js"), "application/javascript; charset=utf-8", "no-cache")
+        if path == "/sw.js":   # the version goes in, so each binder update refreshes the phone's saved copies
+            try:
+                with open(os.path.join(APP, "sw.js"), "rb") as f:
+                    body = f.read().replace(b"__VERSION__", APP_VERSION.encode())
+            except OSError:
+                return self.send(404, b"not found", "text/plain")
+            return self.send(200, body, "application/javascript; charset=utf-8", "no-cache")
         if path in ("/icon-192.png", "/icon-512.png"):
             return self.send_file(os.path.join(APP, path[1:]), "image/png")
         if path == "/app-icon.png":   # your own tab icon from Settings, used as the app icon too

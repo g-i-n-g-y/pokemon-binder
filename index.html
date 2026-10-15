@@ -58,6 +58,9 @@ h1 .l{color:var(--light)} h1 .d{color:var(--dark)}
 .conn.on{background:var(--good);opacity:1;box-shadow:0 0 0 2px color-mix(in srgb,var(--good) 22%,transparent)}
 .conn.off{background:var(--bad);opacity:1;box-shadow:0 0 0 2px color-mix(in srgb,var(--bad) 22%,transparent)}
 .hm-sync{justify-content:flex-start;margin-top:-6px}
+.syncline .offl{display:none}
+body.offline .syncline .offl{display:inline}
+body.offline .syncline #sync,body.offline .syncline #hmSync{display:none}
 .ui-row .conn{width:10px;height:10px}
 /* loading bars: real progress when the server knows the total, a sliding bar while it's still counting */
 .pbar{height:6px;border-radius:3px;background:var(--sleeve);overflow:hidden;width:100%;position:relative}
@@ -981,7 +984,7 @@ body.at-home > .wrap:not(.home){display:none}
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
         </button>
       </div>
-      <div class="syncline"><span class="conn" role="img" aria-label="Checking the connection" title="Checking the connection"></span><div class="sync" id="sync">Loading your collection…</div></div>
+      <div class="syncline"><span class="conn" role="img" aria-label="Checking the connection" title="Checking the connection"></span><div class="sync" id="sync">Loading your collection…</div><span class="sync offl">Offline · showing what's saved on this phone</span></div>
       <div class="pbar sync-bar" id="syncBar" role="progressbar" aria-label="Progress" hidden><i></i></div>
     </div>
   </header>
@@ -1143,7 +1146,7 @@ body.at-home > .wrap:not(.home){display:none}
     <button class="icon-btn" type="button" id="hmCog" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
         </button>
   </header>
-  <div class="syncline hm-sync"><span class="conn" role="img" aria-label="Checking the connection" title="Checking the connection"></span><span class="sync" id="hmSync">Saved on <span class="srv">the server</span></span></div>
+  <div class="syncline hm-sync"><span class="conn" role="img" aria-label="Checking the connection" title="Checking the connection"></span><span class="sync" id="hmSync">Saved on <span class="srv">the server</span></span><span class="sync offl">Offline · showing what's saved on this phone</span></div>
   <form class="hm-find" id="hmFind" role="search"><input type="search" class="field" id="hmQ" placeholder="Find a card: name, or 80/111" aria-label="Find a card" enterkeyhint="search"><button class="btn primary" type="submit">Search</button></form>
   <section aria-labelledby="hmBindersH">
     <div class="hm-h"><h2 class="eyebrow" id="hmBindersH">Your binders</h2>
@@ -4591,11 +4594,15 @@ function setSpot(text){
   b.append(t,g); b.title="Show it on the Pages view"; b.setAttribute("aria-label","In your binder: "+text+". Show it on the Pages view");
 }
 // ---------- connection to the server (green/red dot) ----------
+const standaloneApp = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone===true;
 // Asks the server "are you there?" every 30 seconds while the page is on screen, when the phone's network
 // changes, and when you tap Check connection. Green = it answered, red = it didn't.
 const conn={ok:null, at:0};
 function setConn(ok){
+  const was=conn.ok;
   conn.ok=ok; conn.at=Date.now();
+  document.body.classList.toggle("offline", !ok);
+  if(ok && was===false){ warmCache(true); }
   const tip = ok ? "Connected to "+srv() : "Can't reach "+srv();
   document.querySelectorAll(".conn").forEach(d=>{ d.classList.toggle("on",ok); d.classList.toggle("off",!ok); d.title=tip; d.setAttribute("aria-label",tip); });
   connRow();
@@ -4616,6 +4623,34 @@ function checkConn(){
     .finally(()=>{ clearTimeout(t); connBusy=null; });
   return connBusy;
 }
+// Offline copies: the service worker answers from the phone's saved copy when the server can't be reached,
+// and marks those answers. Seeing one (or a failed request) flips the dot to red right away.
+{
+  const realFetch=window.fetch.bind(window);
+  window.fetch=(input, init)=>realFetch(input, init).then(r=>{
+    if(r.headers && r.headers.get("X-Binder-Saved") && conn.ok!==false) setConn(false);
+    return r;
+  }, err=>{
+    const u=String(input && input.url || input);
+    if(/api\//.test(u) && !/api\/health/.test(u)) checkConn();
+    throw err;
+  });
+}
+// Keep a fresh saved copy of every binder on the phone (not just the ones you open), at most every 6 hours.
+function warmCache(force){
+  if(!("serviceWorker" in navigator) || !navigator.serviceWorker.controller || conn.ok===false) return;
+  let last=0; try{ last=+localStorage.getItem("nd-warm")||0; }catch(_){}
+  if(!force && Date.now()-last < 6*3600e3) return;
+  try{ localStorage.setItem("nd-warm", String(Date.now())); }catch(_){}
+  const get=u=>fetch(u,{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null);
+  Promise.all([get("api/home"), get("api/sets"), get("api/settings")]).then(([home, sets])=>{
+    const ids=new Set([...((home&&home.binders)||[]).map(b=>b.id), ...((sets&&sets.sets)||[]).map(b=>b.id)]);
+    let chain=Promise.resolve();
+    ids.forEach(id=>{ chain=chain.then(()=>get("api/set/"+encodeURIComponent(id)+"/state")); });
+  });
+}
+setTimeout(()=>warmCache(false), 15000);
+if(standaloneApp() && navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{});   // ask Android not to clear the saved copy
 setInterval(()=>{ if(!document.hidden) checkConn(); else connRow(); },30000);
 setInterval(connRow,10000);
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden) checkConn(); });
