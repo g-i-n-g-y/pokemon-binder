@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.10.1 (October 15, 2026)
+
+- Home page on phones: the privacy and Settings buttons sat flush against the top of the screen. They now have the same space above them as on a binder, so they line up when you switch between the two.
+
 ## v3.10 (October 15, 2026)
 
 - **Home page.** The binder now opens on a home page instead of a binder's card values. It shows a shelf of your binders, each as a small cover with its cover Pokémon in the set's colors, plus its name, year and card count. Tap one to open it.
