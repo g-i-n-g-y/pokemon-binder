@@ -10,6 +10,11 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.8.3 (October 15, 2026)
+
+- **Pages: inside cover art.** The inside cover shows the set's logo (from the same card database as the card pictures), with the set name, year and card count. Master sets show the Pokémon's sprite, and your own binders show their name.
+- On phones, a **Cover** button comes first in the page buttons (or swipe back from page 1) to see it.
+
 ## v3.8.2 (October 15, 2026)
 
 - **eBay sold searches read like listing titles:** year, set, card name, "Holo" for holo cards, and the number, like `2002 Neo Destiny Dark Ampharos Holo #1/105`. The old searches added `-1st` (meant to hide 1st Edition listings), which made them look odd. This applies to card details and Find a card.

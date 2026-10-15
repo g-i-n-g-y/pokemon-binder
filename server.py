@@ -24,7 +24,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "3.8.2"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
+APP_VERSION = "3.8.3"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -1042,6 +1042,26 @@ def sprite_url(num):
     if num <= 649:
         return f"{SPRITES}/versions/generation-v/black-white/{num}.png"
     return f"{SPRITES}/{num}.png"
+
+
+_logo_fail = {}
+
+
+def set_logo(sid):
+    """The set's logo from the card database, saved next to the binder the first time it's shown
+    (the Pages view puts it on the inside cover). Set binders only. Returns its path, or None."""
+    dest = sdir(sid, "logo.png")
+    if os.path.isfile(dest) and os.path.getsize(dest) > 0:
+        return dest
+    if is_multi(sid) or sid not in sets_list()["order"] or time.time() - _logo_fail.get(sid, 0) < 3600:
+        return None
+    try:
+        _download(f"https://images.pokemontcg.io/{sid}/logo.png", dest)
+        return dest
+    except Exception as e:
+        _logo_fail[sid] = time.time()
+        log(f"{sid}: set logo: {e}")
+        return None
 
 
 def fetch_sprite(sid):
@@ -3228,6 +3248,12 @@ class Handler(BaseHTTPRequestHandler):
                         "shop": read_json(sdir(sid, "shop.json"), {}),
                         "layout": read_json(sdir(sid, "layout.json"), None)}
             return self.send(200, body, cache="no-store")
+        m = re.fullmatch(rf"/set/({SID_RE})/logo\.png", path)
+        if m:
+            got = set_logo(m.group(1))
+            if not got:
+                return self.send(404, b"not found", "text/plain")
+            return self.send_file(got, "image/png")
         m = re.fullmatch(rf"/set/({SID_RE})/sprite\.png", path)
         if m:
             return self.send_file(sdir(m.group(1), "sprite.png"), "image/png")

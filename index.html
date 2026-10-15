@@ -819,6 +819,11 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
 .pg-spread .pg-side:first-child{border-radius:12px 0 0 12px;border-right-width:3px}
 .pg-spread .pg-side:last-child{border-radius:0 12px 12px 0}
 .pg-side.cover{display:grid;place-items:center;color:var(--muted);font-size:13px;background:repeating-linear-gradient(135deg,var(--bg) 0 10px,var(--surface) 10px 20px)}
+.pg-side.cover.has-art{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:24px}
+.pg-side.cover .pg-logo{max-width:78%;max-height:160px;object-fit:contain;filter:drop-shadow(0 6px 14px rgba(0,0,0,.45))}
+.pg-side.cover .pg-sprite{width:120px;height:120px;image-rendering:pixelated}
+.pg-side.cover b{font-family:var(--f-display);font-size:24px;color:var(--ink);line-height:1.15}
+.pg-side.cover span{font-size:13px}
 .pg-grid{display:grid;gap:8px}
 .pk{position:relative;aspect-ratio:63/88;border-radius:6px;background:var(--bg);border:1px solid var(--line);overflow:hidden;cursor:pointer;padding:0;font:inherit;color:inherit;min-width:0}
 .pk img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;-webkit-user-drag:none;user-select:none}
@@ -845,6 +850,8 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
 .pg-strip{display:flex;gap:6px;overflow-x:auto;padding:10px 2px 4px;scrollbar-width:none}
 .pg-strip::-webkit-scrollbar{display:none}
 .pg-strip button{flex:none;min-width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.pg-strip button.cv{padding:0 12px;font-weight:500}
+.pg-side.cover.has-art{min-height:420px}
 .pg-strip button[aria-current="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .pg-pager .icon-btn{flex:none}
 .pg-bar{position:sticky;bottom:max(10px,env(safe-area-inset-bottom));z-index:6;margin-top:14px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;padding:10px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--dark);box-shadow:0 10px 30px rgba(0,0,0,.45)}
@@ -4105,6 +4112,20 @@ function sideEl(i, L){
   f.append(a,r); box.append(g,f); return box;
 }
 const pagesWide = () => matchMedia("(min-width:760px)").matches;
+// The inside cover: the set's logo (master sets: the Pokémon's sprite), the binder's name and a short line about it.
+function coverEl(){
+  const cv=document.createElement("div"); cv.className="pg-side cover has-art";
+  const s=state.set||{}, dex=isDex(state.sid), own=isOwn(state.sid);
+  if(!own){
+    const im=document.createElement("img"); im.alt=""; im.className=dex ? "pg-sprite" : "pg-logo";
+    im.src=base()+(dex ? "/sprite.png" : "/logo.png"); im.onerror=()=>im.remove(); cv.append(im);
+  }
+  const b=document.createElement("b"); b.textContent=s.name||"";
+  const sm=document.createElement("span");
+  sm.textContent=own ? "My binder · "+state.cards.length+" cards" : dex ? "Master set · "+state.cards.length+" cards"
+    : [s.series, year(s.releaseDate), (s.printedTotal||state.cards.length)+" cards"].filter(Boolean).join(" · ");
+  cv.append(b,sm); return cv;
+}
 function drawPages(){
   const V=$("pgView"); if(!V || state.view!=="pages") return;
   const L=pageLayout(), sides=Math.max(1, Math.ceil(L.slots.length/L.pk));
@@ -4119,12 +4140,12 @@ function drawPages(){
     +(L.custom ? " You've moved some cards: new cards go at the end." : "")
     +(pg.arr ? " Tap a card, then tap where it should go"+(matchMedia("(pointer:fine)").matches ? ", or drag it there." : ".") : "");
   V.replaceChildren(); V.classList.toggle("pg-arr", pg.arr);
-  pg.at=Math.max(0, Math.min(pg.at, sides-1));
+  pg.at=Math.max(pagesWide() ? 0 : -1, Math.min(pg.at, sides-1));   // phones: -1 is the inside cover
   if(pagesWide()){
     const wrap=document.createElement("div"); wrap.className="pg-spreads";
     for(let s=-1; s<sides; s+=2){   // [inside cover | page 1 front], [page 1 back | page 2 front], ...
       const sp=document.createElement("div"); sp.className="pg-spread";
-      if(s<0){ const cv=document.createElement("div"); cv.className="pg-side cover"; cv.textContent="Inside cover"; sp.append(cv); }
+      if(s<0) sp.append(coverEl());
       else sp.append(sideEl(s, L));
       if(s+1<sides) sp.append(sideEl(s+1, L));
       else { const e=document.createElement("div"); e.className="pg-side cover"; e.textContent="Back cover"; sp.append(e); }
@@ -4132,19 +4153,22 @@ function drawPages(){
     }
     V.append(wrap);
   } else {
-    V.append(sideEl(pg.at, L));
+    V.append(pg.at<0 ? coverEl() : sideEl(pg.at, L));
     const nav=document.createElement("div"); nav.className="pg-pager";
     const prev=document.createElement("button"); prev.type="button"; prev.className="icon-btn"; prev.setAttribute("aria-label","Previous side"); prev.disabled=pg.at===0;
     prev.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>';
     const next=document.createElement("button"); next.type="button"; next.className="icon-btn"; next.setAttribute("aria-label","Next side"); next.disabled=pg.at>=sides-1;
+    prev.disabled=pg.at<0;
     next.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
     // where you are, then one button per page (tap to go to its front; tap again for the back)
     const lab=document.createElement("div"); lab.className="pg-where"; lab.setAttribute("aria-live","polite");
-    const lb=document.createElement("b"); lb.textContent=sideName(pg.at); const ls=document.createElement("span"); ls.textContent=(pg.at+1)+" of "+sides+" sides";
+    const lb=document.createElement("b"); lb.textContent=pg.at<0 ? "Inside cover" : sideName(pg.at); const ls=document.createElement("span"); ls.textContent=pg.at<0 ? sides+" sides after this" : (pg.at+1)+" of "+sides+" sides";
     lab.append(lb,ls);
     prev.onclick=()=>{ pg.at--; drawPages(); }; next.onclick=()=>{ pg.at++; drawPages(); };
     nav.append(prev,lab,next); V.append(nav);
     const strip=document.createElement("div"); strip.className="pg-strip"; strip.setAttribute("role","group"); strip.setAttribute("aria-label","Pages");
+    const cb=document.createElement("button"); cb.type="button"; cb.className="cv"; cb.textContent="Cover"; if(pg.at<0) cb.setAttribute("aria-current","true");
+    cb.onclick=()=>{ pg.at=-1; drawPages(); }; strip.append(cb);
     for(let p=0;p<Math.ceil(sides/2);p++){
       const b=document.createElement("button"); b.type="button"; b.textContent=p+1;
       const here=Math.floor(pg.at/2)===p; if(here) b.setAttribute("aria-current","true");
@@ -4241,7 +4265,7 @@ $("pgView").addEventListener("pointerdown",e=>{
     if(x0==null) return; const t=e.changedTouches[0], dx=t.clientX-x0, dy=t.clientY-y0; x0=null;
     if(Math.abs(dx)<60 || Math.abs(dx)<Math.abs(dy)*1.5) return;
     const sides=Math.max(1, Math.ceil(pageLayout().slots.length/pageLayout().pk));
-    const to=pg.at+(dx<0?1:-1); if(to<0 || to>=sides) return;
+    const to=pg.at+(dx<0?1:-1); if(to<-1 || to>=sides) return;
     pg.at=to; drawPages();
   });
 })();
