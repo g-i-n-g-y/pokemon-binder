@@ -347,7 +347,7 @@ dialog.confirm{margin:auto;height:fit-content;max-height:calc(100% - 32px);width
 :root[data-private] .sleeve.need{background:var(--surface);border-style:solid}
 :root[data-private] .sleeve.need .face{filter:none;opacity:1}
 :root[data-private] .sleeve .tag{visibility:hidden}
-:root[data-private] #fOwn,:root[data-private] #views{opacity:.35;pointer-events:none;filter:grayscale(1)}
+:root[data-private] #fOwn,:root[data-private] #views button:is([data-v=shop],[data-v=upg],[data-v=stats]){opacity:.35;pointer-events:none;filter:grayscale(1)}
 :root[data-private] .own-only,:root[data-private] #dYours{display:none!important}
 .toggle{display:flex;align-items:center;gap:10px;font-size:15px;cursor:pointer}
 .toggle input{width:20px;height:20px;accent-color:var(--dark)}
@@ -855,7 +855,7 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
 .pg-pager .icon-btn{flex:none}
 .pg-bar{position:sticky;bottom:max(10px,env(safe-area-inset-bottom));z-index:6;margin-top:14px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;padding:10px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--dark);box-shadow:0 10px 30px rgba(0,0,0,.45)}
 .pg-bar span{flex:1 1 180px;font-size:14px}
-:root[data-private] .pk.need img{filter:none;opacity:1}
+:root[data-private] .pk.need img,#pgView.all-color .pk.need img{filter:none;opacity:1}
 :root[data-private] .pk.need::after,:root[data-private] .pg-foot .cost{display:none}
 .dspot{border:0;background:none;padding:0;font:inherit;font-size:13px;color:var(--muted);cursor:pointer;text-align:left;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
 .dspot:hover{color:var(--ink)}
@@ -977,6 +977,7 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
         <option value="12">12-pocket pages</option><option value="16">16-pocket pages</option>
       </select>
       <select id="pgOrder" aria-label="Starting order"></select>
+      <button class="btn" type="button" id="pgColor" aria-pressed="false" title="Show the cards you're missing in color too">All in color</button>
       <button class="btn" type="button" id="pgArr" aria-pressed="false">Arrange</button>
     </div>
     <p class="pg-sum" id="pgSum"></p>
@@ -3378,17 +3379,18 @@ function setPrivate(on){
   $("privBtn").setAttribute("aria-pressed", on); $("stPriv").checked=on;
   $("privBtn").title = on ? "Privacy mode is on. Tap to show your collection" : "Privacy mode: hide what you own and spent";
   if(on){
-    if(state.view!=="cards") setView("cards");
+    if(PRIVATE_HIDES.includes(state.view)) setView("cards");
     if(state.filter!=="all"){ state.filter="all"; [...$("fOwn").children].forEach(x=>x.setAttribute("aria-pressed",x.dataset.v==="all")); }
   }
-  render();
+  render(); if(state.view==="pages") drawPages();
 }
 $("privBtn").onclick=()=>setPrivate(!isPrivate());
 $("stPriv").onchange=e=>setPrivate(e.target.checked);
 
 // ---------- views ----------
+const PRIVATE_HIDES=["shop","upg","stats"];   // privacy mode keeps Cards and Pages (all in color, no prices or owned counts)
 function setView(v){
-  if(isPrivate()) v="cards";
+  if(isPrivate() && PRIVATE_HIDES.includes(v)) v="cards";
   state.view=v; store("nd-view",v);
   [...$("views").children].forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===v));
   $("vCards").hidden=v!=="cards"; $("vPages").hidden=v!=="pages"; $("vShop").hidden=v!=="shop"; $("vUpg").hidden=v!=="upg"; $("vStats").hidden=v!=="stats";
@@ -4051,7 +4053,8 @@ const POCKETS=[4,9,12,16], PK_COLS={4:2,9:3,12:3,16:4};
 const RAR_RANK=["Common","Uncommon","Rare","Rare Holo","Rare Shining","Rare Holo EX","Rare Ultra","Rare Secret"];
 function pageOrders(){
   const o=[["num", isDex(state.sid) ? "Release date" : isOwn(state.sid) ? "Set and number" : "Set number"],
-           ["rarity","Rarity"],["dex","Pokédex number"],["type","Pokémon, then Trainers and Energy"],["value","Value, high to low"],["owned","Owned first"]];
+           ["rarity","Rarity"],["dex","Pokédex number"],["type","Pokémon, then Trainers and Energy"],["value","Value, high to low"]];
+  if(!isPrivate()) o.push(["owned","Owned first"]);
   if(isOwn(state.sid)) o.unshift(["added","Order added"]);
   return o;
 }
@@ -4100,7 +4103,9 @@ function cardSpot(n){
 }
 const pg={at:-1, arr:false, sel:-1, saveT:null, flash:null};
 function saveLayout(next){
-  if(!("cover" in next) && state.layout && state.layout.cover) next={...next, cover:state.layout.cover};
+  const was=state.layout||{};   // keep the cover pick and color choice through other layout saves
+  if(!("cover" in next) && was.cover) next={...next, cover:was.cover};
+  if(!("allColor" in next) && was.allColor) next={...next, allColor:true};
   state.layout=next;
   clearTimeout(pg.saveT);
   pg.saveT=setTimeout(()=>{
@@ -4115,14 +4120,14 @@ function pocket(n, i, L){
   const b=document.createElement("button"); b.type="button"; b.className="pk"; b.dataset.i=i;
   if(!c){ b.classList.add("gap"); b.setAttribute("aria-label","Empty pocket"); if(!pg.arr) b.tabIndex=-1; }
   else {
-    const own=qty(n)>0; if(!own) b.classList.add("need");
-    b.dataset.price=!own && basePrice(n) ? money0(basePrice(n)) : "";
+    const priv=isPrivate(), own=qty(n)>0; if(!own && !priv) b.classList.add("need");
+    b.dataset.price=!own && !priv && basePrice(n) ? money0(basePrice(n)) : "";
     const no=document.createElement("span"); no.className="pk-no"; no.textContent=label(c);
     const im=document.createElement("img"); im.alt=""; im.loading="lazy"; im.decoding="async"; im.draggable=false; im.src=base()+"/img/"+enc(n)+".png";
     im.onerror=()=>{ if(!im.dataset.r && c.img){ im.dataset.r=1; im.src=smallImg(c.img); } else im.remove(); };
     const nm=document.createElement("span"); nm.className="pk-nm"; nm.textContent=c.name;
     b.append(no,im,nm);
-    b.setAttribute("aria-label",c.name+" "+label(c)+", "+(own?"owned":"needed"));
+    b.setAttribute("aria-label",c.name+" "+label(c)+(priv ? "" : ", "+(own?"owned":"needed")));
   }
   if(i===pg.sel) b.classList.add("sel");
   if(n && n===pg.flash) b.classList.add("flash");
@@ -4138,7 +4143,7 @@ function sideEl(i, L){
   }
   const f=document.createElement("div"); f.className="pg-foot";
   const a=document.createElement("b"); a.textContent=sideName(i);
-  const r=document.createElement("span"); r.textContent=cards ? own+" of "+cards+" owned" : "Empty";
+  const r=document.createElement("span"); r.textContent=!cards ? "Empty" : isPrivate() ? cards+" card"+(cards===1?"":"s") : own+" of "+cards+" owned";
   if(cost>0){ const c=document.createElement("span"); c.className="cost"; c.textContent=" · "+money0(cost)+" to fill"; r.append(c); }
   f.append(a,r); box.append(g,f); return box;
 }
@@ -4242,6 +4247,8 @@ function drawPages(){
   const os=$("pgOrder"); os.replaceChildren();
   for(const [v,t] of pageOrders()){ const o=document.createElement("option"); o.value=v; o.textContent="Order: "+t; os.append(o); }
   os.value=L.order;
+  const allColor=!!(state.layout && state.layout.allColor);
+  $("pgColor").setAttribute("aria-pressed", allColor); $("pgColor").hidden=isPrivate(); V.classList.toggle("all-color", allColor);
   $("pgArr").setAttribute("aria-pressed", pg.arr); $("pgArr").textContent=pg.arr ? "Done arranging" : "Arrange";
   const pages=Math.ceil(sides/2), cards=L.slots.filter(Boolean).length;
   $("pgSum").textContent = !cards ? "No cards yet." :
@@ -4314,6 +4321,7 @@ $("pgView").addEventListener("click",e=>{
   if(pg.sel===i){ pg.sel=-1; drawPages(); return; }
   pgMove(pg.sel, i);
 });
+$("pgColor").onclick=()=>{ const P=pageLayout(); saveLayout({pockets:P.pk, order:P.order, slots:P.custom ? P.slots : null, allColor:!(state.layout && state.layout.allColor)}); drawPages(); };
 $("pgArr").onclick=()=>{ pg.arr=!pg.arr; pg.sel=-1; drawPages(); };
 $("pgDone").onclick=()=>{ pg.sel=-1; drawPages(); };
 $("pgGap").onclick=()=>{   // push this card (and everything after it) one pocket along, leaving an empty pocket

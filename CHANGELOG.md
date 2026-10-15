@@ -10,6 +10,11 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.9.7 (October 15, 2026)
+
+- **Privacy mode keeps the binder.** Cards and Pages stay open in privacy mode; only Shopping list, Upgrades and Stats are greyed out. In Pages every card shows in color, with no prices, no "owned" counts (each side just says how many cards) and no "Owned first" order.
+- **All in color.** A new button in Pages shows the cards you're missing in color too, so the binder looks full. Tap it again for the greyed-out look. The choice is saved with the binder.
+
 ## v3.9.6 (October 15, 2026)
 
 - **Cover fallbacks.** If a Shining Pokémon has no shiny artwork, the cover uses its usual colors. If a Pokémon's artwork can't be downloaded, its pick button shows the card's own art instead, and the card's scene shows sharp behind the logo. A failed artwork download waits an hour before trying again, so the server doesn't keep asking.
