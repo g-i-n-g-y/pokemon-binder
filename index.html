@@ -961,7 +961,12 @@ body.at-home > .wrap:not(.home){display:none}
 .bk.add{background:var(--surface);border-style:dashed;color:var(--muted);display:grid;place-items:center;text-align:center;font-size:14px}
 .bk.add::before{display:none}
 .bk.add svg{width:28px;height:28px;display:block;margin:0 auto 6px}
-.hm-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;scrollbar-width:thin}
+.hm-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+/* computers: the 12 newest cards share the row, so there's nothing to scroll */
+@media (min-width:1100px){.hm-row{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));align-items:start;overflow:visible;padding-bottom:0}.hm-row .hm-card{width:auto}}
+/* big screens (like 4K): use more of the width and fit every binder plus Add in one row */
+@media (min-width:1500px){.wrap.home{max-width:1560px}.hm-shelf{grid-template-columns:repeat(6,minmax(0,1fr));gap:16px}.hm-row{gap:14px}
+  .hm-row .hm-card b{font-size:13px}.hm-row .hm-card small{font-size:12px}}
 .hm-card{flex:none;width:96px;border:0;background:none;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}
 .hm-card .c{display:block;aspect-ratio:63/88;border-radius:6px;overflow:hidden;border:1px solid var(--line);background:var(--sleeve)}
 .hm-card .c img{width:100%;height:100%;object-fit:cover;display:block}
