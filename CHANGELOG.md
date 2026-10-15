@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Next (not released yet)
+## v3.7.1 (October 14, 2026)
 
 - Binder complete celebration on phones: bigger letters that fill the width, a taller swirl, and the word sits nearer the middle of the screen.
 - Tapping to close the celebration no longer flashes the screen blue on phones.
