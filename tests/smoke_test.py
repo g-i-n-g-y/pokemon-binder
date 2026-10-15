@@ -7,7 +7,7 @@ starts the binder on a spare port (nothing outside the temporary folder is touch
 and checks that the main pages answer, data moves into the database, saves stick, and backups restore.
 Prints PASS or FAIL for each check and exits with 1 if anything failed. Python standard library only.
 """
-import io, json, os, shutil, socket, subprocess, sys, tempfile, time, urllib.error, urllib.request, zipfile
+import io, json, os, re, shutil, socket, subprocess, sys, tempfile, time, urllib.error, urllib.request, zipfile
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
@@ -46,7 +46,7 @@ def sample_binder(root):
                                                                     "printedTotal": 105, "total": 3, "releaseDate": "2002/02/28"}}})
     write(root, "settings.json", {"auto": False, "time": "03:00", "tz": "America/New_York"})
     write(root, "shows.json", {"shows": {}, "areas": ["Richmond"], "auto": False})
-    write(root, "sets/neo4/cards.json", [{"n": str(i), "name": f"Card {i}", "num": str(i), "pt": "105", "rarity": "Rare"} for i in (1, 2, 3)])
+    write(root, "sets/neo4/cards.json", [{"n": str(i), "name": f"Card {i}", "num": str(i), "pt": "105", "rarity": "Rare", "type": "Pokémon"} for i in (1, 2, 3)])
     write(root, "sets/neo4/collection.json", {"1": {"qty": 1, "purchases": [{"d": "2026-10-01", "price": 20, "where": "eBay"}], "cond": "LP"}})
     write(root, "sets/neo4/prices.json", {"p": {"1": [25.0], "2": [10.0]}, "info": {"1": {"cond": {"LP": [25.0, 5, "2026-10-01"]},
                                           "recent": {"LP": [["2026-10-01", 25.0]]}, "src": "sales"}}, "updated": "2026-10-12T07:00:00Z"})
@@ -213,7 +213,18 @@ def main():
         code, _ = call(base, "PUT", "/api/set/neo4/card/2", rec)
         check("save a card", code == 200, f"got {code}")
         _, st = call(base, "GET", "/api/set/neo4/state")
-        check("saved card reads back", st["collection"].get("2") == rec)
+        saved = dict(st["collection"].get("2") or {})
+        got = saved.pop("got", None)
+        check("saved card reads back", saved == rec)
+        check("the day a card was first owned is remembered", bool(got and re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d", got)), got)
+        call(base, "PUT", "/api/set/neo4/card/2", dict(rec, qty=3))
+        _, st = call(base, "GET", "/api/set/neo4/state")
+        check("that day stays when the card is saved again", st["collection"].get("2", {}).get("got") == got, st["collection"].get("2"))
+        call(base, "PUT", "/api/set/neo4/card/2", rec)
+        code, home = call(base, "GET", "/api/home")
+        nb = next((b for b in (home or {}).get("binders", []) if b["id"] == "neo4"), None) if code == 200 else None
+        check("home page lists binders with completion and a cover", bool(nb and nb["count"] and "owned" in nb and nb.get("cover", {}).get("n")), nb)
+        check("home page lists recently added cards", code == 200 and any(r["sid"] == "neo4" and r["n"] == "2" for r in home.get("recent", [])), (home or {}).get("recent"))
         code, _ = call(base, "PUT", "/api/settings", {"time": "04:15"})
         _, sett = call(base, "GET", "/api/settings")
         check("save settings", code == 200 and sett.get("time") == "04:15")
@@ -248,7 +259,7 @@ def main():
         code, res = call(base, "POST", "/api/restore", zipped, "application/zip")
         check("backup restores", code == 200, res)
         _, st = call(base, "GET", "/api/set/neo4/state")
-        check("restore brought the card back", st["collection"].get("2") == rec)
+        check("restore brought the card back", {k: v for k, v in (st["collection"].get("2") or {}).items() if k != "got"} == rec)
 
         # Find a card, your own binders and the Pages view (v3.8)
         q = urllib.parse.quote

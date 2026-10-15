@@ -24,7 +24,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "3.9.7"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
+APP_VERSION = "3.10"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -296,9 +296,19 @@ def _tabled_ready(c, key):
     return "__raw" not in json.loads(row[0])
 
 
+def _owned(rec):
+    return isinstance(rec, dict) and isinstance(rec.get("qty"), (int, float)) and rec["qty"] > 0
+
+
 def collection_put(sid, n, rec):
-    """Save one card's record (copies, purchases, condition...) without touching the rest of the binder."""
+    """Save one card's record (copies, purchases, condition...) without touching the rest of the binder.
+    Also remembers the day a card first became owned ("got"), for Recently added on the home page."""
     key = f"sets/{sid}/collection.json"
+    if _owned(rec) and not rec.get("got"):
+        old = read_json(sdir(sid, "collection.json"), {}).get(n)
+        rec = dict(rec, got=old["got"] if _owned(old) and old.get("got") else time.strftime("%Y-%m-%dT%H:%M"))
+    elif not _owned(rec):
+        rec = {k: v for k, v in rec.items() if k != "got"}
     with tx() as c:
         if not _tabled_ready(c, key):
             coll = db_read(key)
@@ -1107,10 +1117,13 @@ def card_dex(gids):
         dest = os.path.join(DEXNO_DIR, sid + ".json")
         with cover_lock:
             nums = read_json(dest, None)
+            if nums is None and time.time() - _art_fail.get("set:" + sid, 0) < 3600:
+                continue
             if nums is None:
                 try:
                     raw = json.loads(http_get(f"{GH}/cards/en/{sid}.json"))
                 except Exception as e:
+                    _art_fail["set:" + sid] = time.time()
                     log(f"Pokédex numbers {sid}: {e}")
                     continue
                 nums = {str(c["number"]): (c.get("nationalPokedexNumbers") or [0])[0] or 0 for c in raw}
@@ -1120,6 +1133,54 @@ def card_dex(gids):
             if nums.get(num):
                 out[g] = nums[num]
     return out
+
+
+RARE_RANK = (("Shining", 4), ("Secret", 4), ("Crystal", 4), ("Gold Star", 4), ("Star", 4), ("Holo", 3), ("Rare", 2), ("Uncommon", 1))
+
+
+def rare_rank(r):
+    return next((v for k, v in RARE_RANK if k in (r or "")), 0)
+
+
+def home_data():
+    """Everything the home page shows: each binder with its completion and cover Pokémon (the card picked
+    for the inside cover, or its most valuable Pokémon card), and the cards you got most recently."""
+    sl = sets_list()
+    binders, recent, want = [], [], {}
+    for sid in sl["order"]:
+        meta = sl["meta"].get(sid, {})
+        cards = read_json(sdir(sid, "cards.json"), None)
+        cards = (cards or []) + extra_list(sid) + custom_cards(sid) if cards is not None or is_own(sid) else []
+        coll = read_json(sdir(sid, "collection.json"), {})
+        prices = (read_json(sdir(sid, "prices.json"), {}) or {}).get("p") or {}
+        names = {c["n"]: c for c in cards}
+        size = binder_size(sid)
+        b = {"id": sid, "name": meta.get("name", sid), "releaseDate": meta.get("releaseDate", ""),
+             "printedTotal": meta.get("printedTotal", 0), "count": size if size is not None else meta.get("total", 0),
+             "owned": sum(1 for n, r in coll.items() if _owned(r) and (n in names or size is None))}
+        hits = sorted((c for c in cards if not c.get("custom") and (c.get("type") == "Pokémon" or is_dex(sid))),
+                      key=lambda c: (-((prices.get(c["n"]) or [0])[0] or 0), -rare_rank(c.get("rarity"))))
+        pick = (read_json(sdir(sid, "layout.json"), {}) or {}).get("cover")
+        feat = names.get(pick) if pick in names and not names[pick].get("custom") else (hits[0] if hits else None)
+        if feat:
+            gid = feat["n"] if (is_multi(sid) or feat.get("extra")) else f"{sid}-{feat['n']}"
+            b["cover"] = {"n": feat["n"], "name": feat.get("name", ""), "shiny": "Shining" in f"{feat.get('rarity', '')} {feat.get('name', '')}",
+                          "dex": int(sid[4:]) if is_dex(sid) and sid[4:].isdigit() else 0}
+            if not b["cover"]["dex"]:
+                want[gid] = b["cover"]
+        binders.append(b)
+        for n, r in coll.items():
+            if not _owned(r) or n not in names:
+                continue
+            d = r.get("got") or max((p.get("d") or "" for p in r.get("purchases") or [] if isinstance(p, dict)), default="")
+            if d:
+                recent.append({"d": d, "sid": sid, "n": n, "name": names[n].get("name", ""), "set": meta.get("name", sid)})
+    gids = list(want)
+    for i in range(0, len(gids), 6):
+        for g, d in card_dex(gids[i:i + 6]).items():
+            want[g]["dex"] = d
+    recent.sort(key=lambda x: x["d"], reverse=True)
+    return {"binders": binders, "recent": recent[:12]}
 
 
 def pokemon_art(num, shiny=False):
@@ -3327,6 +3388,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, set_trends(m.group(1), today), cache="no-store")
             except ValueError:
                 return self.send(400, {"error": "bad date"})
+        if path == "/api/home":
+            return self.send(200, home_data(), cache="no-store")
         if path == "/api/covernums":   # Pokédex numbers for the binder covers: ?c=neo4-1,neo4-107
             q = (urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("c") or [""])[0]
             gids = [g for g in q.split(",") if re.fullmatch(NUM_RE, g)]

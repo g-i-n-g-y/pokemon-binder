@@ -10,8 +10,14 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v3.10 (October 15, 2026)
 
+- **Home page.** The binder now opens on a home page instead of a binder's card values. It shows a shelf of your binders, each as a small cover with its cover Pokémon in the set's colors, plus its name, year and card count. Tap one to open it.
+- **Completion rings** show how complete each binder is. Turn them off with the Completion switch; privacy mode always hides them, along with Recently added.
+- **Find a card** is at the top of the home page.
+- **Recently added** shows the cards you got most recently and which binder they're in; tap one to open it. The server now remembers the day a card first becomes owned (older cards use their purchase dates).
+- **Add a binder** is the last spot on the shelf, and **Edit** opens the binder list to reorder, remove or get pictures.
+- The menu button at the top of a binder is now a **home button**. The phone's back button goes from a binder back to home. A link to a binder (like /#neo4) still opens it directly.
 - **Background jobs can't stop for good:** the part of the binder that runs the nightly price check, the daily backup and cleanup now guards every step. Before, an error in one step (like the card show site changing) stopped all of it until the binder restarted, with no nightly prices or daily backups in the meantime. The nightly price check also runs on its own now, so cleanup and backups keep going while it works.
 - **Leftover temporary files are cleaned up:** if the binder is stopped partway through an update test, a restore, a backup or a picture download, the half-finished files are deleted the next time it starts, so they can't quietly fill the drive.
 - If restarting after an update ever fails, updates are no longer blocked until the container restarts.

@@ -337,10 +337,10 @@ dialog.confirm{margin:auto;height:fit-content;max-height:calc(100% - 32px);width
 #refresh.busy .ico{animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){#refresh.busy .ico{animation:none}}
-#privBtn .eye-off{display:none}
-:root[data-private] #privBtn{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-:root[data-private] #privBtn .eye-open{display:none}
-:root[data-private] #privBtn .eye-off{display:block}
+:is(#privBtn,#hmPriv) .eye-off{display:none}
+:root[data-private] :is(#privBtn,#hmPriv){background:var(--ink);color:var(--bg);border-color:var(--ink)}
+:root[data-private] :is(#privBtn,#hmPriv) .eye-open{display:none}
+:root[data-private] :is(#privBtn,#hmPriv) .eye-off{display:block}
 :root[data-private] #sOwned,:root[data-private] #sPct,:root[data-private] .stat .bar,
 :root[data-private] #sValue,:root[data-private] #sGain,:root[data-private] #sNeed,:root[data-private] #sNeedN,
 :root[data-private] .setrow .go span,:root[data-private] .setrow .mini{filter:blur(9px);user-select:none;pointer-events:none}
@@ -896,14 +896,58 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
 .vb-pick button[aria-pressed="true"]{opacity:1;border-color:var(--v4);box-shadow:0 0 0 2px #fff,0 2px 6px rgba(0,0,0,.3)}
 .vb-pick .vb-dot{display:block;width:100%;height:100%;object-fit:contain;padding:3px;box-sizing:border-box}
 @media (min-width:760px){.pg-side.cover.vb-cover{min-height:0;border-radius:12px 0 0 12px}}
+/* ---------- Home: a shelf of your binders (v3.10) ---------- */
+body.at-home > .wrap:not(.home){display:none}
+.home{gap:18px}
+.hm-top{display:flex;align-items:center;gap:10px}
+.hm-top h1{flex:1;margin:0}
+.hm-find{display:flex;gap:8px}
+.hm-find .field{flex:1;min-width:0;height:46px;border-radius:12px;background:var(--surface)}
+.hm-find .btn{height:46px;border-radius:12px;padding:0 18px}
+.hm-h{display:flex;align-items:center;gap:12px;margin:6px 0 10px}
+.hm-h h2{flex:1;margin:0}
+.hm-pct{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);cursor:pointer}
+.hm-pct .ui-switch{transform:scale(.8);margin:-4px}
+:root[data-private] .hm-pct{display:none}
+.hm-link{border:0;background:none;padding:4px 0;font:inherit;font-size:13px;color:var(--muted);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.hm-shelf{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (min-width:640px){.hm-shelf{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (min-width:900px){.hm-shelf{grid-template-columns:repeat(5,minmax(0,1fr))}}
+.bk{--v1:#e9e6dc;--v2:#a9a497;position:relative;display:block;width:100%;padding:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;aspect-ratio:3/4;isolation:isolate;cursor:pointer;
+  background:linear-gradient(115deg,var(--v2),var(--v1) 75%);font:inherit;color:#fff;text-align:left}
+.bk::before{content:"";position:absolute;inset:-30%;z-index:-1;pointer-events:none;
+  background:repeating-conic-gradient(from 8deg at 50% 50%,rgba(255,255,255,.5) 0 2deg,transparent 2deg 9deg,rgba(255,255,255,.25) 9deg 12deg,transparent 12deg 21deg);
+  -webkit-mask:radial-gradient(circle,#000 0 12%,transparent 60%);mask:radial-gradient(circle,#000 0 12%,transparent 60%)}
+.bk:focus-visible{outline:3px solid var(--dark);outline-offset:2px}
+.bk .bk-mon{position:absolute;left:50%;top:43%;width:86%;height:62%;transform:translate(-50%,-50%);object-fit:contain;
+  filter:drop-shadow(0 0 2px #fff) drop-shadow(0 6px 8px rgba(0,0,0,.35));transition:transform .2s ease}
+.bk:hover .bk-mon{transform:translate(-50%,-52%) scale(1.03)}
+.bk .bk-nm{position:absolute;left:0;right:0;bottom:0;padding:26px 10px 9px;background:linear-gradient(transparent,rgba(0,0,0,.75))}
+.bk .bk-nm b{display:block;font-family:var(--f-display);font-size:16px;line-height:1.1}
+.bk .bk-nm span{font-size:12px;opacity:.85}
+.bk .ring{position:absolute;top:8px;right:8px;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font:600 11px var(--f-mono);color:#fff;
+  background:conic-gradient(#fff calc(var(--p)*1%),rgba(255,255,255,.28) 0)}
+.bk .ring::before{content:"";position:absolute;inset:4px;border-radius:50%;background:rgba(0,0,0,.55)}
+.bk .ring i{position:relative;font-style:normal}
+.home.no-pct .bk .ring,:root[data-private] .bk .ring{display:none}
+.bk.add{background:var(--surface);border-style:dashed;color:var(--muted);display:grid;place-items:center;text-align:center;font-size:14px}
+.bk.add::before{display:none}
+.bk.add svg{width:28px;height:28px;display:block;margin:0 auto 6px}
+.hm-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;scrollbar-width:thin}
+.hm-card{flex:none;width:96px;border:0;background:none;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.hm-card .c{display:block;aspect-ratio:63/88;border-radius:6px;overflow:hidden;border:1px solid var(--line);background:var(--sleeve)}
+.hm-card .c img{width:100%;height:100%;object-fit:cover;display:block}
+.hm-card b{display:block;font-size:12px;line-height:1.25;margin-top:5px}
+.hm-card small{display:block;font-size:11px;color:var(--muted);line-height:1.25}
+:root[data-private] #hmRecentBox{display:none}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="top">
     <div class="title">
-      <button class="icon-btn" type="button" id="menuBtn" aria-label="Your sets">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      <button class="icon-btn" type="button" id="menuBtn" aria-label="Home: all your binders" title="Home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
       </button>
       <img class="sprite" id="sprite" alt="" hidden>
       <div>
@@ -1075,8 +1119,30 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
     </div>
   </section>
 
-  <footer id="foot">Prices are averages of recent Unlimited sales (pick which ones per binder in Settings) and refresh automatically once a day. Tap Need on a card to mark it owned, or tap the card to log what you paid, set its condition, or add a photo of your copy. Open the menu at the top left to switch sets or add a new one. Everything saves on <span class="srv">the server</span>.</footer>
+  <footer id="foot">Prices are averages of recent Unlimited sales (pick which ones per binder in Settings) and refresh automatically once a day. Tap Need on a card to mark it owned, or tap the card to log what you paid, set its condition, or add a photo of your copy. Tap the home button at the top left to switch binders or add a new one. Everything saves on <span class="srv">the server</span>.</footer>
 </div>
+
+<main class="wrap home" id="home" hidden aria-labelledby="hmTitle">
+  <header class="hm-top">
+    <h1 id="hmTitle">My binders</h1>
+    <button class="icon-btn" type="button" id="hmPriv" aria-pressed="false" aria-label="Privacy mode" title="Privacy mode: hide what you own and spent"><svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg class="eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.2M6.6 6.6C3.9 8.3 2 12 2 12s3.6 7 10 7a10 10 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+        </button>
+    <button class="icon-btn" type="button" id="hmCog" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        </button>
+  </header>
+  <form class="hm-find" id="hmFind" role="search"><input type="search" class="field" id="hmQ" placeholder="Find a card: name, or 80/111" aria-label="Find a card" enterkeyhint="search"><button class="btn primary" type="submit">Search</button></form>
+  <section aria-labelledby="hmBindersH">
+    <div class="hm-h"><h2 class="eyebrow" id="hmBindersH">Your binders</h2>
+      <label class="hm-pct" id="hmPctRow"><span>Completion</span><input type="checkbox" class="ui-switch" id="hmPct" checked></label>
+      <button class="hm-link" type="button" id="hmEdit">Edit</button></div>
+    <div class="hm-shelf" id="hmShelf"></div>
+  </section>
+  <section id="hmRecentBox" hidden aria-labelledby="hmRecentH">
+    <div class="hm-h"><h2 class="eyebrow" id="hmRecentH">Recently added</h2></div>
+    <div class="hm-row" id="hmRecent"></div>
+  </section>
+</main>
 
 <dialog id="dlg" class="float" aria-labelledby="dName">
   <div class="sheet card-sheet">
@@ -3269,7 +3335,7 @@ drawerEl.addEventListener("cancel",e=>{ e.preventDefault(); drawerEl.close(); })
   });
 })();
 document.addEventListener("keydown",e=>{ if(e.key==="Escape" && drawerEl.open && drawerEl.classList.contains("pushed") && !document.querySelector("dialog[open]:modal")) drawerEl.close(); });
-$("menuBtn").onclick=()=>{ if(drawerEl.open && drawerEl.classList.contains("pushed")){ drawerEl.close(); return; } showAdd(false); drawSets(); openDrawer(); loadSets().then(drawSets); };
+$("menuBtn").onclick=()=>goHome();
 $("drClose").onclick=()=>$("drawer").close();
 $("drEdit").onclick=()=>setEdit(!setEditing());
 document.addEventListener("pointerdown",e=>{
@@ -3294,8 +3360,10 @@ function loadSets(){
 }
 let loadSeq=0;
 function openSet(sid){
+  const fromHome=typeof atHome==="function" && atHome();
+  if(sid && fromHome) showBinder();
   state.sid=sid; store("nd-set",sid||undefined);
-  if(sid && location.hash!=="#"+sid) history.replaceState(null,"","#"+sid);
+  if(sid && location.hash!=="#"+sid) history[fromHome ? "pushState" : "replaceState"](null,"","#"+sid);   // from home: back returns home
   state.cards=[]; state.own={}; state.prices={}; state.info={}; state.updated=""; state.ready=false; state.layout=null; dexNumsFor=null;
   if(typeof pg!=="undefined"){ pg.at=-1; pg.sel=-1; pg.arr=false; } state.trends={}; state.histFirst=""; state.seriesCache={};
   if(!sid){ state.set={name:"Pokémon Binder"}; header(); rarityOptions(); render(); $("sync").textContent="Open the menu to add your first set."; return Promise.resolve(); }
@@ -4393,16 +4461,106 @@ $("dSpot").onclick=()=>{
   $("dlg").close(); pg.at=sp.side; pg.flash=n; setView("pages");
 };
 
+// ---------- home: a shelf of your binders ----------
+// The home page shows each binder as a small cover (its cover Pokémon in the set's colors), how complete it is
+// (switch off, and always hidden in privacy mode), Find a card, and the cards you got most recently.
+// The home button at the top of a binder comes back here; the phone's back button works too.
+const atHome = () => document.body.classList.contains("at-home");
+function showHome(){
+  document.body.classList.add("at-home"); $("home").hidden=false; document.title="My binders";
+  if(drawerEl.open) drawerEl.close();
+  window.scrollTo(0,0); drawHome(); loadHome();
+}
+function showBinder(){ if(!atHome()) return; document.body.classList.remove("at-home"); $("home").hidden=true; window.scrollTo(0,0); if(state.sid) header(); }
+function goHome(){ if(location.hash) history.pushState(null,"",location.pathname+location.search); showHome(); }
+function goBinder(sid, then){
+  if(location.hash!=="#"+sid) history.pushState(null,"","#"+sid);
+  showBinder();
+  const p = state.sid===sid && state.ready ? Promise.resolve() : openSet(sid);
+  if(then) p.then(then);
+}
+let homeData=null;
+function loadHome(){
+  return Promise.all([fetch("api/home").then(r=>r.json()), loadSets()]).then(([j])=>{ homeData=j; if(atHome()) drawHome(); }).catch(()=>{});
+}
+const homePct = () => recall("nd-homepct")!=="off";
+function homeStyle(b, el, img){   // the binder's colors: the Neo sets have their own, others come from the logo or the Pokémon
+  const st=COVER_STYLE[b.id] || coverStyleCache[b.id];
+  if(st){ el.style.setProperty("--v1",st[0]); el.style.setProperty("--v2",st[1]); return; }
+  const use=c=>{ if(c){ coverStyleCache[b.id]=c; el.style.setProperty("--v1",c[0]); el.style.setProperty("--v2",c[1]); } };
+  if(!isDex(b.id) && !isOwn(b.id)){ const lg=new Image(); lg.onload=()=>use(logoStyle(lg)); lg.src="set/"+enc(b.id)+"/logo.png"; }
+  else if(img) img.addEventListener("load",()=>{ if(!coverStyleCache[b.id]) use(logoStyle(img)); },{once:true});
+}
+function drawHome(){
+  $("home").classList.toggle("no-pct", !homePct()); $("hmPct").checked=homePct();
+  const shelf=$("hmShelf"), list=homeData ? homeData.binders : state.sets.map(s=>({id:s.id, name:s.name, releaseDate:s.releaseDate, printedTotal:s.printedTotal, count:s.count, owned:s.owned}));
+  shelf.replaceChildren();
+  for(const b of list){
+    const t=document.createElement("button"); t.type="button"; t.className="bk";
+    const pct=b.count ? Math.floor(b.owned/b.count*100) : 0;
+    const sub = isDex(b.id) ? "Master set · "+b.count+" cards" : isOwn(b.id) ? "My binder · "+b.count+" cards" : [year(b.releaseDate), (b.printedTotal||b.count)+" cards"].filter(Boolean).join(" · ");
+    let im=null;
+    const cv=b.cover;
+    if(cv && cv.dex){
+      im=document.createElement("img"); im.className="bk-mon"; im.alt=""; im.decoding="async"; im.loading="lazy";
+      im.src="art/"+cv.dex+(cv.shiny?"s":"")+".png";
+      im.onerror=()=>{ if(/s\.png$/.test(im.src)) im.src="art/"+cv.dex+".png"; else im.remove(); };
+      t.append(im);
+    }
+    homeStyle(b, t, im);
+    const ring=document.createElement("span"); ring.className="ring"; ring.style.setProperty("--p",pct); ring.setAttribute("aria-hidden","true");
+    const ri=document.createElement("i"); ri.textContent=pct+"%"; ring.append(ri);
+    const nm=document.createElement("span"); nm.className="bk-nm"; const nb=document.createElement("b"); nb.textContent=b.name; const ns=document.createElement("span"); ns.textContent=sub; nm.append(nb,ns);
+    t.append(ring,nm);
+    t.setAttribute("aria-label", b.name+", "+sub+(homePct() && !isPrivate() ? ", "+pct+"% complete" : ""));
+    t.onclick=()=>goBinder(b.id);
+    shelf.append(t);
+  }
+  const add=document.createElement("button"); add.type="button"; add.className="bk add";
+  add.innerHTML='<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add a binder</span>';
+  add.onclick=()=>{ showAdd(true); openDrawer(); };
+  shelf.append(add);
+  $("hmEdit").hidden=!list.length;
+  const rec=(homeData && homeData.recent)||[], box=$("hmRecent");
+  $("hmRecentBox").hidden=!rec.length; box.replaceChildren();
+  for(const r of rec){
+    const c=document.createElement("button"); c.type="button"; c.className="hm-card";
+    const f=document.createElement("span"); f.className="c"; const im=document.createElement("img"); im.alt=""; im.loading="lazy"; im.decoding="async";
+    im.src="set/"+enc(r.sid)+"/img/"+enc(r.n)+".png"; im.onerror=()=>im.remove(); f.append(im);
+    const b=document.createElement("b"); b.textContent=r.name; const sm=document.createElement("small"); sm.textContent=r.set+" · "+agoText(r.d);
+    c.append(f,b,sm); c.setAttribute("aria-label", r.name+", "+r.set+", added "+agoText(r.d));
+    c.onclick=()=>goBinder(r.sid, ()=>{ if(state.sid===r.sid) openCard(r.n); });
+    box.append(c);
+  }
+}
+function agoText(d){
+  const days=Math.round((new Date(todayStr())-new Date(d.slice(0,10)))/864e5);
+  return days<=0 ? "today" : days===1 ? "yesterday" : days<7 ? days+" days ago" : days<14 ? "last week" : days<60 ? Math.round(days/7)+" weeks ago" : new Date(d).toLocaleDateString(undefined,{month:"short",year:"numeric"});
+}
+$("hmPct").onchange=e=>{ store("nd-homepct", e.target.checked ? undefined : "off"); drawHome(); };
+$("hmPriv").onclick=()=>{ setPrivate(!isPrivate()); if(atHome()) drawHome(); };
+$("hmCog").onclick=()=>$("cog").click();
+$("hmEdit").onclick=()=>{ showAdd(false); drawSets(); openDrawer(); loadSets().then(drawSets).then(()=>setEdit(true)); };
+$("hmFind").onsubmit=e=>{ e.preventDefault(); openFind($("hmQ").value.trim()); };
+$("drawer").addEventListener("close",()=>{ if(atHome()) loadHome(); });
+
 // ---------- start ----------
 header(); render();
 setPrivate(isPrivate());
 { const v=recall("nd-view"); if(v==="pages"||v==="shop"||v==="upg"||v==="stats") setView(v); }
 getSlots().then(loadSets).then(()=>{
-  const want=location.hash.slice(1)||recall("nd-set");
-  const sid=state.sets.some(s=>s.id===want) ? want : (state.sets[0] ? state.sets[0].id : null);
-  return openSet(sid);
+  const want=location.hash.slice(1);
+  if(state.sets.some(s=>s.id===want)) return openSet(want);
+  if(want) history.replaceState(null,"",location.pathname+location.search);
+  if(!state.sets.length) return openSet(null);   // no binders yet: the binder screen explains how to add one
+  showHome();
 }).then(()=>fetch("api/refresh")).then(r=>r&&r.json()).then(j=>{ if(j&&j.running) showJob(j); }).catch(()=>{ $("sync").textContent="Can't reach "+srv()+". Try reloading."; });
-window.addEventListener("hashchange",()=>{ const sid=location.hash.slice(1); if(sid && sid!==state.sid && state.sets.some(s=>s.id===sid)) openSet(sid); });
+window.addEventListener("popstate",()=>{   // phone back/forward between home and a binder
+  const sid=location.hash.slice(1);
+  if(!sid){ if(state.sets.length) showHome(); return; }
+  if(state.sets.some(s=>s.id===sid)){ showBinder(); if(sid!==state.sid) openSet(sid); }
+  else if(state.sets.length){ history.replaceState(null,"",location.pathname+location.search); showHome(); }   // not one of your binders
+});
 
 </script>
 </body>
