@@ -59,6 +59,20 @@ h1 .l{color:var(--light)} h1 .d{color:var(--dark)}
 .conn.off{background:var(--bad);opacity:1;box-shadow:0 0 0 2px color-mix(in srgb,var(--bad) 22%,transparent)}
 .hm-sync{justify-content:flex-start;margin-top:-6px}
 .syncline .offl{display:none}
+.syncline .pendn:empty{display:none}
+/* offline in card details: only adding a purchase works, so the rest is greyed out */
+.offline-note{display:none;font-size:13px;color:var(--ink);background:color-mix(in srgb,var(--bad) 12%,transparent);border:1px solid color-mix(in srgb,var(--bad) 40%,transparent);border-radius:8px;padding:8px 12px}
+body.offline .offline-note{display:block}
+body.offline #dMinus,body.offline #dCond,body.offline #dNote,body.offline #dBuys button,body.offline .photos{opacity:.45;pointer-events:none}
+.pend-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.pend-list li{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.pend-list li:last-child{border-bottom:0}
+.pend-list .pl{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.pend-list .pl b{font-size:14px}
+.pend-list .pl span{font-size:13px;color:var(--muted)}
+.pend-list .px{flex:none;border:0;background:none;color:var(--muted);font-size:18px;line-height:1;padding:2px 6px;cursor:pointer;border-radius:6px}
+.pend-list .px:hover{color:var(--bad);background:var(--sleeve)}
+.waiting{display:inline-block;margin-left:6px;font-size:11px;padding:1px 6px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
 body.offline .syncline .offl{display:inline}
 body.offline .syncline #sync,body.offline .syncline #hmSync{display:none}
 .ui-row .conn{width:10px;height:10px}
@@ -984,7 +998,7 @@ body.at-home > .wrap:not(.home){display:none}
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
         </button>
       </div>
-      <div class="syncline"><span class="conn" role="img" aria-label="Checking the connection" title="Checking the connection"></span><div class="sync" id="sync">Loading your collection…</div><span class="sync offl">Offline · showing what's saved on this phone</span></div>
+      <div class="syncline"><span class="conn" role="img" aria-label="Checking the connection" title="Checking the connection"></span><div class="sync" id="sync">Loading your collection…</div><span class="sync offl">Offline · showing what's saved on this phone<span class="pendn"></span></span></div>
       <div class="pbar sync-bar" id="syncBar" role="progressbar" aria-label="Progress" hidden><i></i></div>
     </div>
   </header>
@@ -1146,7 +1160,7 @@ body.at-home > .wrap:not(.home){display:none}
     <button class="icon-btn" type="button" id="hmCog" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
         </button>
   </header>
-  <div class="syncline hm-sync"><span class="conn" role="img" aria-label="Checking the connection" title="Checking the connection"></span><span class="sync" id="hmSync">Saved on <span class="srv">the server</span></span><span class="sync offl">Offline · showing what's saved on this phone</span></div>
+  <div class="syncline hm-sync"><span class="conn" role="img" aria-label="Checking the connection" title="Checking the connection"></span><span class="sync" id="hmSync">Saved on <span class="srv">the server</span></span><span class="sync offl">Offline · showing what's saved on this phone<span class="pendn"></span></span></div>
   <form class="hm-find" id="hmFind" role="search"><input type="search" class="field" id="hmQ" placeholder="Find a card: name, or 80/111" aria-label="Find a card" enterkeyhint="search"><button class="btn primary" type="submit">Search</button></form>
   <section aria-labelledby="hmBindersH">
     <div class="hm-h"><h2 class="eyebrow" id="hmBindersH">Your binders</h2>
@@ -1198,6 +1212,7 @@ body.at-home > .wrap:not(.home){display:none}
       <div class="rs" id="dSales"></div>
     </div>
     <div class="tabpane own-only" id="tabMine" hidden>
+    <div class="offline-note">Offline: you can add a purchase (price, where, seller) or another copy. Other changes wait until you're connected to <span class="srv">the server</span>.</div>
     <div class="row">
       <label class="f">Copies owned
         <div class="step"><button type="button" id="dMinus" aria-label="One fewer">−</button><output id="dQty">0</output><button type="button" id="dPlus" aria-label="One more">+</button></div>
@@ -1489,6 +1504,8 @@ body.at-home > .wrap:not(.home){display:none}
       <h3 class="ui-h">Connection</h3>
       <div class="ui-group">
         <div class="ui-row ui-static"><span class="conn" role="img" aria-label="Connection"></span><span class="ui-l"><b id="stConnT">Checking&hellip;</b><small id="stConnS"></small></span><button class="btn" type="button" id="stConnBtn">Check connection</button></div>
+        <div class="ui-row ui-static" id="stPendRow" hidden><span class="ui-l"><b id="stPendT"></b><small>Added on this phone while offline. They're sent to <span class="srv">the server</span> after you confirm.</small></span><button class="btn primary" type="button" id="stPendBtn">Review &amp; sync</button></div>
+        <div class="ui-row ui-static" id="stUndoRow" hidden><span class="ui-l"><b>Last sync</b><small id="stUndoS"></small></span><button class="btn" type="button" id="stUndoBtn">Undo last sync</button></div>
       </div>
       <h3 class="ui-h">Phone app</h3>
       <div class="ui-group">
@@ -1876,6 +1893,7 @@ $("grid").addEventListener("keydown",e=>{
 });
 async function clearCard(n){
   const c=state.cards.find(x=>x.n===n); if(!c) return;
+  if(isOffline()){ toast("Marking a card as needed waits for a connection to "+srv()+"."); return; }
   const k=qty(n);
   const ok=await askConfirm("Mark "+c.name+" as needed?", "This removes "+(k===1?"its purchase record":"all "+k+" purchase records")+" for this card, including dates, prices and sellers.", "Remove");
   if(!ok) return;
@@ -2214,6 +2232,7 @@ $("dlg").addEventListener("click",e=>{ if(e.target===$("dlg")) $("dlg").close();
 let saveChain=Promise.resolve();
 function saveCard(n, patch, done){
   const sid=state.sid;
+  if(isOffline()){ return offlineSave(n, patch, done); }   // no connection: only "owned" + a new purchase, kept on the phone
   const next={...rec(n),...patch}; delete next.ed; delete next.cost;
   if(Array.isArray(next.purchases)) next.qty=next.purchases.length;
   const allOwned=()=>state.cards.length>0 && state.cards.every(c=>qty(c.n)>0);
@@ -2494,7 +2513,7 @@ async function saveSlots(slots){
     .catch(e=>{ drawSlots(); msg.textContent=(e&&e.message&&e.message!=="Failed to fetch") ? e.message : "Couldn't save. Check that the container is running."; });
 }
 function getSlots(){
-  return fetch("api/settings").then(r=>r.json()).then(s=>{ if(s.options) state.slotOpts=s.options; setServerName(s.serverName); if($("stHosts") && document.activeElement!==$("stHosts")) $("stHosts").value=(s.otherHosts||[]).join(", "); return s; }).catch(()=>null);
+  return fetch("api/settings").then(r=>r.json()).then(s=>{ if(s.options) state.slotOpts=s.options; setServerName(s.serverName); state.lastSync=s.lastSync||null; pendUI(); if($("stHosts") && document.activeElement!==$("stHosts")) $("stHosts").value=(s.otherHosts||[]).join(", "); return s; }).catch(()=>null);
 }
 // The server's name from Settings (like "BEN"), or "the server" when none is set.
 const srv = () => state.serverName || "the server";
@@ -3422,6 +3441,7 @@ function loadState(){
     state.set=s.set||state.set; state.cards=(s.cards||[]).slice().sort(byNum);
     state.layout=s.layout||null; dexNumsFor=null;
     state.own=s.collection||{};
+    applyPending(sid);
     const pr=s.prices||{}; state.prices={}; for(const k in (pr.p||{})) state.prices[k]=[pr.p[k][0]];
     state.info=pr.info||{}; state.updated=pr.updated||"";
     state.slots=s.slots||DEFAULT_SLOTS;
@@ -4602,7 +4622,9 @@ function setConn(ok){
   const was=conn.ok;
   conn.ok=ok; conn.at=Date.now();
   document.body.classList.toggle("offline", !ok);
-  if(ok && was===false){ warmCache(true); }
+  if(ok && was===false){ warmCache(true); syncAsked=false; }
+  if(ok && !syncAsked && pendingList().length) setTimeout(reviewSync, 600);
+  pendUI();
   const tip = ok ? "Connected to "+srv() : "Can't reach "+srv();
   document.querySelectorAll(".conn").forEach(d=>{ d.classList.toggle("on",ok); d.classList.toggle("off",!ok); d.title=tip; d.setAttribute("aria-label",tip); });
   connRow();
@@ -4618,9 +4640,11 @@ function connRow(){
 let connBusy=null;
 function checkConn(){
   if(connBusy) return connBusy;
-  const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),6000);
-  connBusy=fetch("api/health",{cache:"no-store",signal:ctl.signal}).then(r=>setConn(r.ok)).catch(()=>setConn(false))
-    .finally(()=>{ clearTimeout(t); connBusy=null; });
+  const once=()=>{ const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),6000);
+    return fetch("api/health",{cache:"no-store",signal:ctl.signal}).then(r=>r.ok,()=>false).finally(()=>clearTimeout(t)); };
+  // one missed answer while connected gets a second try 2 seconds later, so a hiccup doesn't flip to offline
+  connBusy=once().then(ok=>ok || conn.ok!==true || !navigator.onLine ? ok : new Promise(res=>setTimeout(res,2000)).then(once))
+    .then(ok=>setConn(ok)).finally(()=>{ connBusy=null; });
   return connBusy;
 }
 // Offline copies: the service worker answers from the phone's saved copy when the server can't be reached,
@@ -4658,6 +4682,119 @@ addEventListener("online",checkConn);
 addEventListener("offline",()=>setConn(false));
 $("stConnBtn").onclick=()=>{ $("stConnT").textContent="Checking…"; checkConn(); };
 checkConn();
+
+// ---------- changes made offline (the phone app) ----------
+// With no connection the phone can only ADD: mark a card owned and/or log what you paid and who from.
+// Those wait on the phone ("nd-pending"), are shown back to you when the connection returns, and are sent
+// only after you tap Sync. Each purchase gets its own id, so a repeated send never adds it twice.
+const isOffline = () => conn.ok===false;
+function pendingList(){ try{ const v=JSON.parse(localStorage.getItem("nd-pending")||"[]"); return Array.isArray(v)?v:[]; }catch(_){ return []; } }
+function setPending(list){ try{ list.length ? localStorage.setItem("nd-pending", JSON.stringify(list)) : localStorage.removeItem("nd-pending"); }catch(_){} pendUI(); }
+const newId = () => (Date.now().toString(36)+Math.random().toString(36).slice(2,10)).toLowerCase();
+function offlineSave(n, patch, done){
+  const old=buys(n), list=Array.isArray(patch.purchases) ? patch.purchases : null;
+  const key=b=>JSON.stringify({d:b.d||"",price:b.price==null?null:b.price,where:b.where||"",seller:b.seller||null});
+  let added=null;
+  if(list && Object.keys(patch).length===1 && list.length===old.length+1){
+    const left=old.map(key);
+    for(const b of list){ const i=left.indexOf(key(b)); if(i>=0) left.splice(i,1); else if(!added) added=b; else { added=null; break; } }
+    if(left.length) added=null;
+  }
+  if(!added){ toast("Offline: you can mark a card owned and add a purchase. Other changes wait for a connection to "+srv()+"."); done&&done(false); return; }
+  const c=state.cards.find(x=>x.n===n)||{};
+  const purchase={...added, id:newId()};
+  const pend=pendingList();
+  pend.push({sid:state.sid, n, name:c.name||n, set:state.set.name||state.sid, at:new Date().toISOString(), purchase});
+  setPending(pend);
+  // show it right away, as if saved
+  const next={...rec(n), purchases:[...old, purchase].sort((a,b)=>(a.d||"").localeCompare(b.d||""))}; next.qty=next.purchases.length;
+  state.own[n]=next; render();
+  if(state.open===n && $("dlg").open){ ownLine(n); drawBuys(n); condOptions(n); $("dQty").textContent=qty(n); $("dArt").classList.toggle("need",false); }
+  if(state.view==="pages") drawPages(); if(state.view==="shop") drawShop();
+  done&&done(true);
+  $("sync").textContent=(c.name||"Card")+" saved on this phone. It syncs when you're back online.";
+  if(state.open===n && $("dSaved")) $("dSaved").textContent="Saved on this phone · syncs when you're back online";
+}
+// Put waiting changes back on top of the binder after it reloads (offline, the saved copy doesn't have them).
+function applyPending(sid){
+  for(const p of pendingList()){
+    if(p.sid!==sid) continue;
+    const r=state.own[p.n]||{}, l=(r.purchases||[]).filter(b=>b && typeof b==="object");
+    if(l.some(b=>b.id===p.purchase.id)) continue;
+    const purchases=[...l, p.purchase].sort((a,b)=>(a.d||"").localeCompare(b.d||""));
+    state.own[p.n]={...r, purchases, qty:purchases.length};
+  }
+}
+function pendWords(p){
+  const b=p.purchase, bits=[];
+  if(b.price!=null) bits.push("paid "+money(b.price));
+  if(b.where) bits.push((b.price!=null?"at ":"from ")+b.where);
+  if(b.seller && b.seller.h) bits.push((PLAT[b.seller.p]||{}).label ? PLAT[b.seller.p].label+" "+b.seller.h : b.seller.h);
+  return bits.length ? bits.join(" · ") : "no price added";
+}
+function pendUI(){
+  const n=pendingList().length;
+  document.querySelectorAll(".pendn").forEach(e=>{ e.textContent = n ? " · "+n+" change"+(n===1?"":"s")+" waiting" : ""; });
+  if($("stPendRow")){ $("stPendRow").hidden=!n; $("stPendT").textContent=n+" change"+(n===1?"":"s")+" waiting to sync"; $("stPendBtn").disabled=isOffline(); }
+  const ls=state.lastSync;
+  if($("stUndoRow")){ const show=!!(ls && ls.count && !ls.undone); $("stUndoRow").hidden=!show;
+    if(show) $("stUndoS").textContent=ls.count+" purchase"+(ls.count===1?"":"s")+" added "+when(ls.at)+". Undo takes out exactly those."; }
+}
+let syncAsked=false, syncBusy=false;
+// The confirm screen: what was added on the phone, in plain words, before anything is sent.
+async function reviewSync(){
+  let pend=pendingList(); if(!pend.length || syncBusy || isOffline()) return;
+  syncBusy=true;
+  try{
+    // if the server has a newer binder version, load it first (the waiting changes stay on the phone)
+    try{ const h=await fetch("api/health",{cache:"no-store"}).then(r=>r.json()); if(state.pageVersion && h.version && h.version!==state.pageVersion){ location.reload(); return; } }catch(_){}
+    // what the server has now, so the list can say "adds another copy" when you already own one
+    const have={};
+    for(const sid of [...new Set(pend.map(p=>p.sid))]){
+      try{ const s=await fetch("api/set/"+enc(sid)+"/state",{cache:"no-store"}).then(r=>r.ok?r.json():null); have[sid]=(s&&s.collection)||{}; }catch(_){ have[sid]={}; }
+    }
+    const ul=document.createElement("ul"), dropped=new Set(); ul.className="pend-list";
+    const draw=()=>{ ul.replaceChildren(); pend.forEach((p,i)=>{
+      const li=document.createElement("li"), l=document.createElement("div"); l.className="pl";
+      const t=document.createElement("b"); t.textContent=p.name+" · "+p.set;
+      const r=(have[p.sid]||{})[p.n], got=r && Array.isArray(r.purchases) ? r.purchases.filter(b=>b&&b.id!==p.purchase.id).length : 0;
+      const d=document.createElement("span"); d.textContent=(got ? "Adds another copy (you have "+got+")" : "Now owned")+" · "+pendWords(p);
+      l.append(t,d);
+      const x=document.createElement("button"); x.type="button"; x.className="px"; x.textContent="×"; x.title="Don't send this one"; x.setAttribute("aria-label","Remove "+p.name+" from this sync");
+      x.onclick=()=>{ dropped.add(p.purchase.id); pend.splice(i,1); draw(); if(!pend.length) $("cfOk").textContent="Done"; };
+      li.append(l,x); ul.append(li); }); };
+    draw();
+    const ok=await askConfirm("Ready to sync", pend.length+" change"+(pend.length===1?"":"s")+" made on this phone while offline. Nothing is sent until you tap Sync. Prices update on their own.", "Sync", {safe:true, body:ul});
+    syncAsked=true;
+    if(!ok) return;   // "Cancel": everything stays on the phone as it was
+    if(!pend.length){ setPending(pendingList().filter(q=>!dropped.has(q.purchase.id))); if(state.sid) loadState(); return; }
+    const r=await fetch("api/sync",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({changes:pend.map(p=>({sid:p.sid,n:p.n,purchase:p.purchase}))})});
+    const j=await r.json();
+    if(!r.ok) throw new Error(j.error||"Sync failed");
+    const sent=new Set(pend.map(p=>p.purchase.id));
+    setPending(pendingList().filter(q=>!sent.has(q.purchase.id) && !dropped.has(q.purchase.id)));
+    if(j.applied) state.lastSync={at:j.at, count:j.applied, undone:""}; pendUI();
+    if(state.sid) loadState();
+    if(typeof loadHome==="function" && document.body.classList.contains("at-home")) loadHome();
+    toast("Synced "+j.applied+" change"+(j.applied===1?"":"s")+" to "+srv()+".", j.applied ? "Undo" : null, j.applied ? undoSync : null);
+  }catch(e){ toast((e&&e.message&&e.message!=="Failed to fetch") ? e.message+"." : "Couldn't sync. The changes are still saved on this phone."); }
+  finally{ syncBusy=false; }
+}
+async function undoSync(){
+  const ok=await askConfirm("Undo last sync?", "Takes out the purchases that sync added. Anything you changed since stays as it is.", "Undo sync", {safe:true});
+  if(!ok) return;
+  try{
+    const r=await fetch("api/sync/undo",{method:"POST"}); const j=await r.json(); if(!r.ok) throw new Error(j.error||"Couldn't undo");
+    if(state.lastSync) state.lastSync.undone=new Date().toISOString(); pendUI();
+    if(state.sid) loadState();
+    toast("Undid the last sync ("+j.removed+" purchase"+(j.removed===1?"":"s")+" taken out).");
+  }catch(e){ toast(e.message+"."); }
+}
+$("stPendBtn").onclick=()=>{ $("settings").close(); reviewSync(); };
+$("stUndoBtn").onclick=undoSync;
+document.querySelectorAll(".syncline").forEach(el=>el.addEventListener("click",()=>{ if(pendingList().length && !isOffline()) reviewSync(); }));
+fetch("api/version").then(r=>r.json()).then(v=>{ state.pageVersion=v.version||""; }).catch(()=>{});
+pendUI();
 
 // ---------- install as an app ----------
 // Chrome offers "Install" once the binder is opened by a secure (https) address, like its Tailscale name.

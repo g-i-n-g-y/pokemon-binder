@@ -112,6 +112,8 @@ The binder can be installed as an app on Android (Chrome). It needs a secure (ht
 
 This keeps the binder inside your Tailscale network; nothing is opened to the internet.
 
+The app keeps a saved copy of your binders on the phone, so it opens with no signal. Offline you can mark cards owned and add purchases (price, where, seller); when the connection is back, the binder lists those changes and sends them only after you tap **Sync**, with **Undo last sync** if needed.
+
 ## Updating
 
 Updates only install when you choose them: **Settings → About → Check for updates** shows what's new and asks before installing anything (no restart needed). Restarting the container never installs updates. No key or password is needed.

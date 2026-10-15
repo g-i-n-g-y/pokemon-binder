@@ -10,6 +10,14 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.13 (October 15, 2026)
+
+- **Mark cards owned with no connection:** in the phone app, with no signal you can still tap **Need** to mark a card owned, or add a purchase with the price you paid, where, and the seller. It's saved on the phone and shows right away; the offline line says how many changes are waiting. Other changes (condition, notes, photos, removing cards) wait for a connection and are greyed out while offline.
+- **Confirm before syncing:** when the connection comes back, a **Ready to sync** window lists each change in plain words ("Dark Espeon · Neo Destiny: now owned · paid $250 at Card show"), says if it adds another copy of a card you already have, and lets you take any of them out. Nothing is sent until you tap **Sync**. Prices aren't listed; they always update to the newest on their own.
+- **Undo last sync:** right after syncing (the Undo button) or later in Settings → Server, takes out exactly the purchases that sync added. A backup is also saved on the server right before every sync.
+- Settings → Server shows changes waiting to sync, with **Review & sync**.
+- A single missed answer from the server no longer flips the dot to red; it tries again first.
+
 ## v3.12 (October 15, 2026)
 
 - **Opens with no connection:** the installed phone app (or Chrome on the https address) keeps a saved copy of every binder, its cards, prices and purchases, and the pictures you've looked at. With no signal, it opens from that copy and the dot turns red with "Offline · showing what's saved on this phone." When the connection is back, the dot turns green and everything refreshes from your server.
