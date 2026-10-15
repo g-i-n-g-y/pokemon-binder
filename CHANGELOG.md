@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v3.7.3 (October 14, 2026)
 
 - Card details on a computer: the window is as tall as the card picture side and no taller, so there's no big empty space, and it keeps the same size when you switch tabs. The **Prices** tab now shows the recent sales right under the prices (on phones, Recent sales stays its own tab).
 - Card details: the store buttons are now eBay sold, PriceCharting, TCGplayer. On a computer they line up as two equal buttons with TCGplayer across the full width below.
