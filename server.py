@@ -24,7 +24,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "3.8.3"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
+APP_VERSION = "3.9"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -1081,6 +1081,38 @@ def fetch_sprite(sid):
 
 UNOWN_DIR = os.path.join(DATA, "unown")
 unown_lock = threading.Lock()
+
+
+ARTIST_DIR = os.path.join(DATA, "artists")
+artist_lock = threading.Lock()
+
+
+def card_artists(gids):
+    """Who illustrated each card (for the art credit on the binder covers). Read once per set from the
+    card database and kept on the server in data/artists/<set>.json."""
+    known = {s["id"] for s in catalog()}
+    by_set, out = {}, {}
+    for g in gids[:6]:
+        sid, _, num = g.rpartition("-")
+        if sid in known and num:
+            by_set.setdefault(sid, []).append((g, num))
+    for sid, want in by_set.items():
+        dest = os.path.join(ARTIST_DIR, sid + ".json")
+        with artist_lock:
+            names = read_json(dest, None)
+            if names is None:
+                try:
+                    raw = json.loads(http_get(f"{GH}/cards/en/{sid}.json"))
+                except Exception as e:
+                    log(f"Artists {sid}: {e}")
+                    continue
+                names = {str(c["number"]): c.get("artist") or "" for c in raw}
+                os.makedirs(ARTIST_DIR, exist_ok=True)
+                write_json(dest, names)
+        for g, num in want:
+            if names.get(num):
+                out[g] = names[num]
+    return out
 
 
 def unown_sprite(letter):
@@ -3216,6 +3248,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, set_trends(m.group(1), today), cache="no-store")
             except ValueError:
                 return self.send(400, {"error": "bad date"})
+        if path == "/api/artists":   # art credits for the binder covers: ?c=neo4-1,neo4-107
+            q = (urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("c") or [""])[0]
+            gids = [g for g in q.split(",") if re.fullmatch(NUM_RE, g)]
+            return self.send(200, {"artists": card_artists(gids)})
         m = re.fullmatch(rf"/api/set/({SID_RE})/dexnums", path)
         if m:   # Pokédex numbers for a binder's cards, for the Pages view's "Pokédex number" order
             sid = m.group(1)

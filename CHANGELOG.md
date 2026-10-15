@@ -10,6 +10,11 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.9 (October 15, 2026)
+
+- **Pages: pack-style inside cover.** The inside cover now looks like a booster pack: the set's logo over a burst of light, crimped top and bottom edges, and the pack's colors (the four Neo sets have their own; other sets take theirs from the logo).
+- **The set's hits as artwork.** The cover shows the artwork from the binder's three most valuable Pokémon cards, cut from the cards' own pictures, so the art is always period correct. It's credited to the original artists ("Art: ..."), read once per set from the card database and kept on the server.
+
 ## v3.8.3 (October 15, 2026)
 
 - **Pages: inside cover art.** The inside cover shows the set's logo (from the same card database as the card pictures), with the set name, year and card count. Master sets show the Pokémon's sprite, and your own binders show their name.
