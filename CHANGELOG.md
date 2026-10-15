@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.10.4 (October 15, 2026)
+
+- Card details: where the card goes in your binder ("Page 7, front, row 1, pocket 2") is now a button with a page icon and a **›** arrow, instead of underlined text. **›** means it opens another part of the binder (the Pages view); **↗** still means a link that leaves the binder.
+
 ## v3.10.3 (October 15, 2026)
 
 - Long binder names fit on phones: a name like "Neo Revelation" shrinks a little to fit beside the buttons, and if it's still too long it goes onto two lines instead of being cut off with "…".

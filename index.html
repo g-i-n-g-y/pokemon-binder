@@ -858,8 +858,11 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
 .pg-bar span{flex:1 1 180px;font-size:14px}
 :root[data-private] .pk.need img,#pgView.all-color .pk.need img{filter:none;opacity:1}
 :root[data-private] .pk.need::after,:root[data-private] .pg-foot .cost{display:none}
-.dspot{border:0;background:none;padding:0;font:inherit;font-size:13px;color:var(--muted);cursor:pointer;text-align:left;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
-.dspot:hover{color:var(--ink)}
+.dspot{display:inline-flex;align-items:center;gap:8px;max-width:100%;margin-top:6px;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:7px 10px;font:inherit;font-size:13px;color:var(--ink);cursor:pointer;text-align:left}
+.dspot:hover{background:var(--sleeve)}
+.dspot svg{flex:none;width:16px;height:16px;color:var(--muted)}
+.dspot .dspot-t{min-width:0}
+.dspot .dspot-go{flex:none;color:var(--muted);font-size:16px;line-height:1}   /* › = goes to another screen in the binder (↗ means it leaves the app) */
 @media (max-width:640px){
   .views button{font-size:13px;padding:10px 4px}
   .pg-side{padding:10px;border-radius:12px!important;border-right-width:1px!important}
@@ -2154,7 +2157,7 @@ function openCard(n){
   $("dName").textContent=c.name;
   $("dRar").textContent=(c.custom?"Custom card · ":"")+(c.set ? c.set+(c.rarity?" · "+c.rarity:"") : cat(c))+(isSecret(c)?" · secret rare":"");
   $("dCustom").hidden=!c.custom; $("dExtra").hidden=!c.extra;
-  { const sp=cardSpot(n); $("dSpot").hidden=!sp; if(sp){ $("dSpot").textContent="In your binder: "+sp.text; $("dSpot").title="Show it on the Pages view"; } }
+  { const sp=cardSpot(n); $("dSpot").hidden=!sp; if(sp) setSpot(sp.text); }
   $("dP").textContent=basePrice(n) ? money(basePrice(n)) : "–";
   lpmpBox(n); mktLine(n); drawSales(n); ownLine(n); setCardTab(cardTab);
   { const sd=document.querySelector("#dlg .cs-side"); if(sd) sd.scrollTop=0; }
@@ -4161,7 +4164,7 @@ function loadDexNums(){
     if(!j.ready){ dexNumsFor=null; return; }
     for(const c of state.cards) if(j.dex[c.n]) c.dex=j.dex[c.n];
     if(state.view==="pages") drawPages();
-    if(state.open && $("dlg").open){ const sp=cardSpot(state.open); if(sp) $("dSpot").textContent="In your binder: "+sp.text; }
+    if(state.open && $("dlg").open){ const sp=cardSpot(state.open); if(sp) setSpot(sp.text); }
   }).catch(()=>{ dexNumsFor=null; });
 }
 function pageLayout(){
@@ -4554,6 +4557,14 @@ $("hmEdit").onclick=()=>{ showAdd(false); drawSets(); openDrawer(); loadSets().t
 $("hmFind").onsubmit=e=>{ e.preventDefault(); openFind($("hmQ").value.trim()); };
 $("drawer").addEventListener("close",()=>{ if(atHome()) loadHome(); });
 
+// "Where it goes in your binder" button in card details: a page icon, the spot, and › (opens the Pages view).
+function setSpot(text){
+  const b=$("dSpot"); b.replaceChildren();
+  b.insertAdjacentHTML("afterbegin",'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 5.5C4.5 4 7.5 4 10 5.5v14c-2.5-1.5-5.5-1.5-8 0z"/><path d="M22 5.5c-2.5-1.5-5.5-1.5-8 0v14c2.5-1.5 5.5-1.5 8 0z"/></svg>');
+  const t=document.createElement("span"); t.className="dspot-t"; t.textContent=text;
+  const g=document.createElement("span"); g.className="dspot-go"; g.textContent="›"; g.setAttribute("aria-hidden","true");
+  b.append(t,g); b.title="Show it on the Pages view"; b.setAttribute("aria-label","In your binder: "+text+". Show it on the Pages view");
+}
 // ---------- start ----------
 header(); render();
 setPrivate(isPrivate());
