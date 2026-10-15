@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.8.2 (October 15, 2026)
+
+- **eBay sold searches read like listing titles:** year, set, card name, "Holo" for holo cards, and the number, like `2002 Neo Destiny Dark Ampharos Holo #1/105`. The old searches added `-1st` (meant to hide 1st Edition listings), which made them look odd. This applies to card details and Find a card.
+
 ## v3.8.1 (October 15, 2026)
 
 - Pages on phones: the page dropdown (which opened your phone's big full-screen list) is replaced by buttons under the page, one per page. Tap a number to go to that page's front, and tap it again for the back. The arrows still step one side at a time.

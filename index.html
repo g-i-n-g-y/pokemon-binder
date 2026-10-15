@@ -1423,7 +1423,13 @@ const isDex = id => /^dex-\d+$/.test(id||"");
 const isOwn = id => /^my-\d+$/.test(id||"");
 const isMulti = id => isDex(id) || isOwn(id);
 const padNo = (num, pt) => { const n=numVal(String(num||"")); return (n[0] ? num : String(n[1]).padStart(3,"0"))+(pt?"/"+pt:""); };
-const ebaySoldUrl = (set, name, no) => "https://www.ebay.com/sch/i.html?_nkw="+q((set||"").replace(/ Base Set$/,"")+" "+name+" "+no)+"+-1st&LH_Sold=1&LH_Complete=1";
+// eBay sold listings, searched the way listings are titled: "2002 Neo Destiny Dark Ampharos Holo #1/105".
+// eBay only shows listings with every word, so only words sellers nearly always use go in ("Holo", not "Holo Rare").
+const ebaySoldUrl = ({year, set, name, rarity, num, pt}) => {
+  const no = num ? "#"+String(num).replace(/^0+(?=\d)/,"")+(pt ? "/"+pt : "") : "";
+  const words=[String(year||"").slice(0,4), (set==="Base" ? "Base Set" : (set||"").replace(/ Base Set$/,"")), name, /Holo/.test(rarity||"") ? "Holo" : "", no].filter(Boolean).join(" ");
+  return "https://www.ebay.com/sch/i.html?_nkw="+enc(words)+"&LH_Sold=1&LH_Complete=1";
+};
 const tcgSearchUrl = (set, name) => "https://www.tcgplayer.com/search/pokemon/product?q="+q(name+" "+(set||"").replace(/ Base Set$/,""));
 const binderName = sid => (state.sets.find(s=>s.id===sid)||{}).name || sid;
 
@@ -2041,7 +2047,7 @@ function openCard(n){
   // Master set cards search with their own set and printed number, like "Expedition Totodile 134/165".
   const setName=(c.set||state.set.name).replace(/ Base Set$/,"");
   const s=q(setName+" "+c.name+" "+(c.num ? c.num+(c.pt?"/"+c.pt:"") : n));
-  [["eBay sold","https://www.ebay.com/sch/i.html?_nkw="+s+"+-1st&LH_Sold=1&LH_Complete=1"],
+  [["eBay sold",ebaySoldUrl({year:c.date||(c.set?"":state.set.releaseDate), set:setName, name:c.name, rarity:c.rarity, num:c.num||(c.custom?"":n), pt:c.num ? c.pt : (c.custom?"":printed())})],
    ["PriceCharting",(state.info[n]||{}).pc || "https://www.pricecharting.com/search-products?type=prices&q="+s],
    ["TCGplayer", c.tcg ? "https://www.tcgplayer.com/product/"+c.tcg : "https://www.tcgplayer.com/search/pokemon/product?q="+q(c.name+" "+setName)]]
    .forEach(([t,u])=>{ const a=document.createElement("a"); a.href=u; a.target="_blank"; a.rel="noopener"; a.textContent=t+" ↗"; L.append(a); });
@@ -3883,7 +3889,7 @@ function fdDrawPick(){
   const d=document.createElement("div"); const b=document.createElement("b"); b.textContent=c.name;
   const sm=document.createElement("small"); sm.textContent=[c.set, padNo(c.num,c.pt), c.rarity].filter(Boolean).join(" · ");
   const L=document.createElement("div"); L.className="links";
-  [["TCGplayer",tcgSearchUrl(c.set,c.name)],["eBay sold",ebaySoldUrl(c.set,c.name,padNo(c.num,c.pt).replace(/^0+/,""))]]
+  [["TCGplayer",tcgSearchUrl(c.set,c.name)],["eBay sold",ebaySoldUrl({year:c.date, set:c.set, name:c.name, rarity:c.rarity, num:c.num, pt:c.pt})]]
     .forEach(([t,u])=>{ const a=document.createElement("a"); a.href=u; a.target="_blank"; a.rel="noopener"; a.textContent=t+" ↗"; L.append(a); });
   d.append(b,sm);
   const x=document.createElement("button"); x.type="button"; x.className="fclose"; x.setAttribute("aria-label","Close"); x.title="Close";
