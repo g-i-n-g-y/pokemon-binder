@@ -67,6 +67,32 @@ SPRITES = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/poke
 lock = threading.Lock()
 job_lock = threading.Lock()
 job = {"running": False, "set": "", "name": "", "done": 0, "total": 0, "priced": 0, "message": ""}
+big = {"what": ""}   # an update, rollback or restore in progress (guarded by job_lock)
+
+
+class Busy(Exception):
+    """Another big job (price check, update, rollback, restore) is already running."""
+
+
+@contextlib.contextmanager
+def big_job(what):
+    """One big job at a time: updates, rollbacks and restores never overlap each other or a price check.
+    Set slot["keep"] = True inside to hold the slot until the binder restarts (after installing new program files)."""
+    with job_lock:
+        if job["running"]:
+            raise Busy(f"A price check is running ({job['done']} of {job['total']} cards). Try again when it finishes")
+        if big["what"]:
+            raise Busy(f"{big['what'].capitalize()} is already in progress. Try again in a minute")
+        big["what"] = what
+    slot = {"keep": False}
+    ok = False
+    try:
+        yield slot
+        ok = True
+    finally:
+        if not (ok and slot["keep"]):
+            with job_lock:
+                big["what"] = ""
 img_jobs = {}
 dex_job = {"running": False, "done": 0, "total": 0, "error": ""}
 shows_job = {"running": False, "error": "", "done": 0, "total": 0}
@@ -1503,7 +1529,7 @@ def daily_cards(sid, cards, day=None):
 
 def refresh_prices(sid, reason="daily", only_daily=False):
     with job_lock:
-        if job["running"]:
+        if job["running"] or big["what"]:
             return False
         name = sets_list()["meta"].get(sid, {}).get("name", sid)
         job.update(running=True, set=sid, name=name, done=0, total=0, priced=0, message="")
@@ -1650,9 +1676,10 @@ def next_run(st):
 def refresh_all(reason):
     every = bool(get_settings().get("refreshAll"))
     for sid in list(sets_list()["order"]):
-        while job["running"]:
+        for _ in range(240):   # wait (up to an hour) for another check, an update or a restore to finish
+            if sid not in sets_list()["order"] or refresh_prices(sid, reason, only_daily=not every) is not False:
+                break
             time.sleep(15)
-        refresh_prices(sid, reason, only_daily=not every)
 
 
 # ---------- price history, purchases, spending ----------
@@ -2465,26 +2492,32 @@ def restore_backup(path):
                     json.loads(z.read(n))
                 except Exception:
                     raise ValueError(f"The backup is damaged ({n} can't be read)")
-        safety = auto_backup("before-restore")
-        with lock:
-            with tx():   # all of the data goes in together, or none of it does
-                for n in names:
-                    if DOC_RE.fullmatch(n):
-                        db_write(n, json.loads(z.read(n)))
-            for sid in {n.split("/")[1] for n in names if n.startswith("sets/")}:
-                shutil.rmtree(sdir(sid, "photos"), ignore_errors=True)
-            if "favicon" not in names:
-                for f in ("favicon", "favicon.json"):
-                    if os.path.exists(os.path.join(DATA, f)):
-                        os.remove(os.path.join(DATA, f))
+        with big_job("a restore"):
+            return _restore_from(z, names)
+
+
+def _restore_from(z, names):
+    """Write a checked backup over the binder's data (restore_backup does the checks)."""
+    safety = auto_backup("before-restore")
+    with lock:
+        with tx():   # all of the data goes in together, or none of it does
             for n in names:
                 if DOC_RE.fullmatch(n):
-                    continue
-                dest = os.path.join(DATA, *n.split("/"))
-                os.makedirs(os.path.dirname(dest), exist_ok=True)
-                with z.open(n) as src, open(dest + ".tmp", "wb") as out:
-                    shutil.copyfileobj(src, out)
-                os.replace(dest + ".tmp", dest)
+                    db_write(n, json.loads(z.read(n)))
+        for sid in {n.split("/")[1] for n in names if n.startswith("sets/")}:
+            shutil.rmtree(sdir(sid, "photos"), ignore_errors=True)
+        if "favicon" not in names:
+            for f in ("favicon", "favicon.json"):
+                if os.path.exists(os.path.join(DATA, f)):
+                    os.remove(os.path.join(DATA, f))
+        for n in names:
+            if DOC_RE.fullmatch(n):
+                continue
+            dest = os.path.join(DATA, *n.split("/"))
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
+            with z.open(n) as src, open(dest + ".tmp", "wb") as out:
+                shutil.copyfileobj(src, out)
+            os.replace(dest + ".tmp", dest)
     log(f"Restored a backup ({len(names)} files). Safety copy of the old data: backups/{safety}")
     threading.Thread(target=warm_up, daemon=True).start()
     return len(names), safety
@@ -2550,6 +2583,10 @@ def gzipped(body, etag=None):
 
 
 class Handler(BaseHTTPRequestHandler):
+    # A device that connects and then goes quiet (a phone losing signal mid-load) is let go after a minute,
+    # so it can't tie up part of the server for good. Only silence counts: slow uploads keep going.
+    timeout = 60
+
     def log_message(self, fmt, *args):
         pass
 
@@ -3027,6 +3064,8 @@ class Handler(BaseHTTPRequestHandler):
                         f.write(chunk)
                         left -= len(chunk)
                 count, safety = restore_backup(tmp)
+            except Busy as e:
+                return self.send(409, {"error": str(e)})
             except ValueError as e:
                 return self.send(400, {"error": str(e)})
             except Exception as e:
@@ -3046,6 +3085,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(400, {"error": f"That backup isn't on {srv_name()} any more"})
             try:
                 count, safety = restore_backup(os.path.join(BACKUPS, name))
+            except Busy as e:
+                return self.send(409, {"error": str(e)})
             except ValueError as e:
                 return self.send(400, {"error": str(e)})
             except Exception as e:
@@ -3117,32 +3158,33 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, meta)
         if path == "/api/update":
             # install the latest version (from GitHub, or the updates folder)
-            if job["running"]:
-                return self.send(409, {"error": f"A price refresh is running ({job['done']} of {job['total']} cards). Try again when it finishes"})
+            if not GH_REPO and not os.path.isdir(UPDATES):
+                return self.send(400, {"error": "Updates aren't set up"})
             try:
-                if GH_REPO:
-                    installed = install_from_github()
-                elif os.path.isdir(UPDATES):
-                    installed = install_files(UPDATES, "update from the updates folder")
-                else:
-                    return self.send(400, {"error": "Updates aren't set up"})
+                with big_job("an update") as slot:
+                    installed = install_from_github() if GH_REPO else install_files(UPDATES, "update from the updates folder")
+                    restarting = any(n.endswith(".py") for n in installed)
+                    slot["keep"] = restarting   # keep other big jobs out until the binder restarts on the new version
+            except Busy as e:
+                return self.send(409, {"error": str(e)})
             except Exception as e:
                 return self.send(502, {"error": gh_error(e)})
-            restarting = any(n.endswith(".py") for n in installed)
             self.send(200, {"installed": installed, "restarting": restarting})
             if restarting:
                 threading.Thread(target=restart_self, args=(1,), daemon=True).start()
             return
         if path == "/api/rollback":
-            if job["running"]:
-                return self.send(409, {"error": f"A price refresh is running ({job['done']} of {job['total']} cards). Try again when it finishes"})
             raw = self.body(4096)
             try:
                 vid = json.loads(raw or b"{}").get("id", "")
-                installed = rollback(vid)
+                with big_job("a rollback") as slot:
+                    installed = rollback(vid)
+                    restarting = any(n.endswith(".py") for n in installed)
+                    slot["keep"] = restarting
+            except Busy as e:
+                return self.send(409, {"error": str(e)})
             except Exception as e:
                 return self.send(400, {"error": str(e) or "Couldn't roll back"})
-            restarting = any(n.endswith(".py") for n in installed)
             self.send(200, {"installed": installed, "restarting": restarting})
             if restarting:
                 threading.Thread(target=restart_self, args=(1,), daemon=True).start()

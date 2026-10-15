@@ -69,6 +69,33 @@ import time
 sl = server.sets_list(); sl["meta"]["neo4"]["added"] = int(time.time()); server.write_json(server.SETS_FILE, sl)
 server.start_images("neo4")
 assert "neo4" not in server.img_jobs, "a brand new binder started the big picture download"
+# one big job at a time
+with server.big_job("an update"):
+    try:
+        with server.big_job("a restore"):
+            raise AssertionError("two big jobs ran at once")
+    except server.Busy:
+        pass
+    assert server.refresh_prices("neo4", "test") is False, "a price check started during an update"
+assert server.big["what"] == "", "the big-job slot wasn't freed"
+with server.big_job("an update") as slot:
+    slot["keep"] = True
+assert server.big["what"] == "an update", "an update that restarts the binder should hold the slot"
+server.big["what"] = ""
+try:
+    with server.big_job("a restore"):
+        raise ValueError("bad file")
+except ValueError:
+    pass
+assert server.big["what"] == "", "a failed job should free the slot"
+server.job["running"] = True
+try:
+    with server.big_job("an update"):
+        raise AssertionError("an update started during a price check")
+except server.Busy as e:
+    assert "price check" in str(e)
+server.job["running"] = False
+assert server.Handler.timeout and server.Handler.timeout <= 120
 print("ok")
 """
 
