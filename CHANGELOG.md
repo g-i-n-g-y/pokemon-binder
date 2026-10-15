@@ -10,6 +10,11 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.10.3 (October 15, 2026)
+
+- Long binder names fit on phones: a name like "Neo Revelation" shrinks a little to fit beside the buttons, and if it's still too long it goes onto two lines instead of being cut off with "…".
+- Home page: the "My binders" title uses your theme's two colors, like the binder names.
+
 ## v3.10.2 (October 15, 2026)
 
 - Home page: the Completion switch is gone. The eye (privacy) button already hides the completion rings, along with everything else privacy mode hides.
