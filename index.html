@@ -667,6 +667,15 @@ dialog.float .ui-chips{display:grid;grid-template-columns:repeat(auto-fill,minma
 #drSets{gap:14px}
 .setlist{margin:0;display:block}
 .srow{display:flex;align-items:center;--ring-bg:var(--bg)}
+.srow .sgrip{flex:none;margin-left:4px;border:0;background:none;color:var(--muted);font-size:20px;line-height:1;padding:10px 6px;cursor:grab;touch-action:none;border-radius:6px}
+.srow .sgrip:hover,.srow .sgrip:focus-visible{color:var(--ink);background:var(--sleeve)}
+#setList .srow.drag-shift{transition:transform .22s cubic-bezier(.2,.8,.2,1)}
+#setList .srow.drag-slot>*{opacity:0}
+.srow.sdrag-ghost{position:fixed;z-index:80;margin:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;pointer-events:none;scale:1;box-shadow:none;transition:scale .15s ease,box-shadow .15s ease}
+.srow.sdrag-ghost.lifted{scale:1.025;box-shadow:0 18px 40px -8px rgba(0,0,0,.65),0 0 0 1.5px var(--dark)}
+.srow.sdrag-ghost.settle{transition:transform .22s cubic-bezier(.2,.8,.2,1),box-shadow .22s ease,scale .22s ease}
+.srow.sdrag-ghost .sgrip{color:var(--ink);background:var(--sleeve)}
+@media (prefers-reduced-motion:reduce){#setList .srow.drag-shift,.srow.sdrag-ghost,.srow.sdrag-ghost.settle{transition:none!important}}
 .srow+.srow{border-top:1px solid var(--line)}
 .srow .go{flex:1;min-width:0;min-height:62px}
 .srow .go:disabled{cursor:default;opacity:1}
@@ -2682,6 +2691,15 @@ function drawSets(){
     if(editing){ go.disabled=true;
       const pc=s.pics; if(pc && pc.total) sm.textContent=s.images ? "Getting pictures…" : pc.saved>=pc.total ? "All pictures saved" : "Pictures "+pc.saved+"/"+pc.total; }
     else { const c=document.createElement("span"); c.className="ui-chev"; c.setAttribute("aria-hidden","true"); go.append(c); go.onclick=()=>{ $("drawer").close(); openSet(s.id); }; }
+    if(editing && state.sets.length>1){
+      const g=document.createElement("button"); g.type="button"; g.className="sgrip"; g.textContent="⠿";
+      g.setAttribute("aria-label","Move "+s.name+" (drag, or use the arrow keys)"); g.title="Drag to reorder";
+      g.addEventListener("pointerdown",e=>startSetDrag(e,row));
+      g.addEventListener("touchstart",e=>e.stopPropagation(),{passive:true});   // not a swipe to close the menu
+      g.addEventListener("keydown",e=>setGripKey(e,row));
+      row.append(g);
+    }
+    row.dataset.sid=s.id;
     row.append(go);
     if(editing){
       const rm=document.createElement("button"); rm.type="button"; rm.className="srm"; rm.textContent="Remove"; rm.setAttribute("aria-label","Remove "+s.name);
@@ -2707,6 +2725,88 @@ function drawSets(){
     L.append(row);
   }
   drawRemoved(editing);
+}
+// ---------- reorder binders in the sets menu (Edit mode) ----------
+function setsReordered(){
+  const order=[...$("setList").querySelectorAll(".srow[data-sid]")].map(r=>r.dataset.sid);
+  const byId=new Map(state.sets.map(x=>[x.id,x]));
+  state.sets=order.map(id=>byId.get(id)).filter(Boolean);
+  fetch("api/sets/order",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({order})})
+    .then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error||"Couldn't save"); }))
+    .catch(err=>{ toast((err&&err.message&&err.message!=="Failed to fetch") ? err.message+"." : "Couldn't save the order. Check that "+srv()+" is running."); loadSets().then(drawSets); });
+}
+function setGripKey(e,row){
+  const L=$("setList");
+  const prev=row.previousElementSibling, next=row.nextElementSibling;
+  if(e.key==="ArrowUp" && prev && prev.dataset.sid) L.insertBefore(row,prev);
+  else if(e.key==="ArrowDown" && next && next.dataset.sid) L.insertBefore(next,row);
+  else return;
+  e.preventDefault(); e.currentTarget.focus(); setsReordered();
+}
+// Same feel as the shopping list: the row lifts and follows your finger, the others slide out of the way.
+function startSetDrag(e,row){
+  if(e.button!==undefined && e.button!==0) return;
+  e.preventDefault(); e.stopPropagation();
+  const L=$("setList"), rows=[...L.querySelectorAll(".srow[data-sid]")], from=rows.indexOf(row);
+  if(from<0 || rows.length<2) return;
+  const sc=L.closest(".sheet")||document.scrollingElement, dlg=L.closest("dialog");
+  const id=e.pointerId, y0=e.clientY, s0=sc.scrollTop;
+  const r0=row.getBoundingClientRect(), H=r0.height;
+  const mids=rows.map(r=>{ const b=r.getBoundingClientRect(); return b.top+sc.scrollTop+b.height/2; });
+  // the lifted copy lives inside the menu (it's on top of the page), placed where the row is
+  const ghost=row.cloneNode(true); ghost.classList.add("sdrag-ghost"); ghost.removeAttribute("aria-current"); ghost.setAttribute("aria-hidden","true");
+  const off=dlg && getComputedStyle(dlg).transform!=="none" ? dlg.getBoundingClientRect() : {left:0,top:0};
+  Object.assign(ghost.style,{left:(r0.left-off.left)+"px", top:(r0.top-off.top)+"px", width:r0.width+"px", height:H+"px"});
+  (dlg||document.body).append(ghost);
+  requestAnimationFrame(()=>ghost.classList.add("lifted"));
+  row.classList.add("drag-slot"); document.body.classList.add("drag-shop");
+  rows.forEach(r=>{ if(r!==row) r.classList.add("drag-shift"); });
+  try{ if(navigator.vibrate) navigator.vibrate(8); }catch(_){}
+  let to=from, py=y0, raf=0, done=false;
+  const place=()=>{
+    ghost.style.transform="translateY("+(py-y0)+"px)";
+    const center=mids[from]+(py-y0)+(sc.scrollTop-s0);
+    let t=from;
+    while(t+1<rows.length && center>mids[t+1]) t++;
+    while(t>0 && center<mids[t-1]) t--;
+    if(t===to) return;
+    to=t;
+    rows.forEach((r,i)=>{
+      if(r===row) return;
+      const shift = from<to && i>from && i<=to ? -H : from>to && i<from && i>=to ? H : 0;
+      r.style.transform = shift ? "translateY("+shift+"px)" : "";
+    });
+  };
+  const tick=()=>{   // scroll the menu when the finger is near its top or bottom
+    raf=0; const b=sc.getBoundingClientRect(), edge=70; let v=0;
+    if(py<b.top+edge) v=-Math.ceil((b.top+edge-py)/6); else if(py>b.bottom-edge) v=Math.ceil((py-(b.bottom-edge))/6);
+    if(v){ const before=sc.scrollTop; sc.scrollTop+=v; if(sc.scrollTop!==before) raf=requestAnimationFrame(tick); }
+    place();
+  };
+  const move=ev=>{ if(ev.pointerId!==id) return; py=ev.clientY; if(!raf) raf=requestAnimationFrame(tick); };
+  const finish=cancel=>{
+    if(done) return; done=true;
+    window.removeEventListener("pointermove",move); window.removeEventListener("pointerup",up);
+    window.removeEventListener("pointercancel",onCancel); window.removeEventListener("keydown",key,true);
+    cancelAnimationFrame(raf);
+    if(cancel){ to=from; rows.forEach(r=>{ r.style.transform=""; }); }
+    else {
+      rows.forEach(r=>{ r.style.transition="none"; r.style.transform=""; });
+      if(to!==from) L.insertBefore(row, to>from ? rows[to].nextSibling : rows[to]);
+      void L.offsetHeight; rows.forEach(r=>{ r.style.transition=""; });
+    }
+    const cleanup=()=>{ ghost.remove(); row.classList.remove("drag-slot"); rows.forEach(r=>r.classList.remove("drag-shift")); document.body.classList.remove("drag-shop"); };
+    const end=row.getBoundingClientRect();
+    ghost.classList.add("settle"); ghost.classList.remove("lifted"); ghost.style.transform="translateY("+(end.top-r0.top)+"px)";
+    if(matchMedia("(prefers-reduced-motion: reduce)").matches) cleanup();
+    else { ghost.addEventListener("transitionend",cleanup,{once:true}); setTimeout(cleanup,320); }
+    if(to!==from) setsReordered();
+  };
+  const up=ev=>{ if(ev.pointerId===id) finish(false); };
+  const onCancel=ev=>{ if(ev.pointerId===id) finish(true); };
+  const key=ev=>{ if(ev.key==="Escape"){ ev.preventDefault(); ev.stopPropagation(); finish(true); } };
+  window.addEventListener("pointermove",move); window.addEventListener("pointerup",up);
+  window.addEventListener("pointercancel",onCancel); window.addEventListener("keydown",key,true);
 }
 // While the sets menu is in Edit mode, keep the "pictures saved" counts up to date during a download.
 let picTimer=null;

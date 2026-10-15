@@ -2836,6 +2836,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.do_PUT_settings()
         if self.path == "/api/shows":
             return self.do_PUT_shows()
+        if self.path == "/api/sets/order":
+            return self.do_PUT_set_order()
         m = re.fullmatch(rf"/api/set/({SID_RE})/slots", self.path)
         if m:
             return self.do_PUT_slots(m.group(1))
@@ -2901,6 +2903,21 @@ class Handler(BaseHTTPRequestHandler):
         with lock:
             write_json(sdir(sid, "shop.json"), {"mode": mode, "order": list(dict.fromkeys(order)),
                                                 "upg": {"from": list(dict.fromkeys(upg["from"])), "to": upg["to"]}})
+        return self.send(200, {"ok": True})
+
+    def do_PUT_set_order(self):
+        """Save the order of binders in the sets menu. Must list exactly the binders you have."""
+        try:
+            new = json.loads(self.body(16 * 1024) or b"{}").get("order")
+            assert isinstance(new, list) and all(isinstance(x, str) for x in new)
+        except Exception:
+            return self.send(400, {"error": "Invalid order"})
+        with lock:
+            sl = sets_list()
+            if sorted(new) != sorted(sl["order"]) or len(set(new)) != len(new):
+                return self.send(409, {"error": "Your binders changed. Reload and try again"})
+            sl["order"] = new
+            write_json(SETS_FILE, sl)
         return self.send(200, {"ok": True})
 
     def do_PUT_slots(self, sid):
