@@ -13,6 +13,7 @@ The binder shows these in **Settings → About → Check for updates**.
 ## Next (not released yet)
 
 - Binder complete celebration on phones: bigger letters that fill the width, a taller swirl, and the word sits nearer the middle of the screen.
+- Tapping to close the celebration no longer flashes the screen blue on phones.
 
 ## v3.7 (October 14, 2026)
 
