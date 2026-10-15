@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.9.5 (October 15, 2026)
+
+- **Cover scene from the card.** The featured card's own painted scene now fills the cover behind the Pokémon, softened so it reads as background (the card's Pokémon would otherwise show twice). The Pokémon stands in front with a soft white glow, and the set logo sits near the bottom with a white sticker outline. The band and corner star are gone. Until the card's picture is on the server, the set's colors and rays of light stand in.
+
 ## v3.9.4 (October 15, 2026)
 
 - **Cover Pokémon as a full cutout.** The featured Pokémon is now Ken Sugimori's official artwork, the same style the vintage binders used, so it's a clean cutout that's never cut off at the edges. Shining cards show the Pokémon in its shiny colors (Shining Charizard is black). The artwork is downloaded once and kept on the server. The card-art window and its artist credit are gone.
