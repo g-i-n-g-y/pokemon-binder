@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.9.1 (October 15, 2026)
+
+- **Softer inside cover.** The cover's background is now the top card's own artwork, softly blurred, with just a hint of the set's colors, so the art and background blend instead of clashing. The light-burst rays are gone, and the art frames are thinner gold, like the frame around the art on the cards.
+
 ## v3.9 (October 15, 2026)
 
 - **Pages: pack-style inside cover.** The inside cover now looks like a booster pack: the set's logo over a burst of light, crimped top and bottom edges, and the pack's colors (the four Neo sets have their own; other sets take theirs from the logo).
