@@ -10,6 +10,14 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.11 (October 15, 2026)
+
+- **Connection dot:** a small dot next to "Saved on …" (and under "My binders" on the home page) shows whether the binder can reach your server: green when it can, red when it can't. It checks every 30 seconds while the page is open, and when your phone's connection changes.
+- **Settings → Server → Connection:** says whether you're connected, when it last checked, and which address you're using, with a **Check connection** button.
+- **Install as a phone app:** open the binder by a secure (https) address, like its Tailscale name ending in `.ts.net`, and Chrome offers **Install** (also in Settings → Server → Phone app). It then opens from your home screen, full screen, with its own icon (your tab icon from Settings, or the binder icon). Working offline comes in a later version.
+- **Settings → Server → Other addresses:** add a web address you set up yourself (like a port-forwarded name) so the binder answers to it, without changing the container settings.
+- The phone's top bar takes on your theme's background color.
+
 ## v3.10.4 (October 15, 2026)
 
 - Card details: where the card goes in your binder ("Page 7, front, row 1, pocket 2") is now a button with a page icon and a **›** arrow, instead of underlined text. **›** means it opens another part of the binder (the Pages view); **↗** still means a link that leaves the binder.

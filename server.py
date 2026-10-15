@@ -24,7 +24,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "3.10.4"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
+APP_VERSION = "3.11"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -3091,12 +3091,43 @@ EXTRA_HOSTS = {h.strip().lower() for h in os.environ.get("BINDER_HOSTS", "").spl
 LOCAL_SUFFIXES = (".local", ".lan", ".home", ".home.arpa", ".internal", ".ts.net")
 
 
+OTHER_HOSTS = set()   # extra addresses from Settings > Server > Other addresses (kept in step with settings.json)
+
+
+def load_other_hosts():
+    global OTHER_HOSTS
+    try:
+        OTHER_HOSTS = {h.lower() for h in (get_settings().get("otherHosts") or []) if isinstance(h, str)}
+    except Exception:
+        OTHER_HOSTS = set()
+
+
+def clean_hosts(raw):
+    """Settings > Server > Other addresses: names like binder.example.com or 203.0.113.5:8765, one per item."""
+    items = raw if isinstance(raw, list) else re.split(r"[\s,]+", str(raw or ""))
+    out = []
+    for h in items:
+        h = str(h).strip().lower()
+        h = re.sub(r"^[a-z]+://", "", h).split("/")[0]   # people paste whole web addresses
+        if not h:
+            continue
+        if not re.fullmatch(r"[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?)*(?::\d{1,5})?", h):
+            raise ValueError(f"\"{h}\" doesn't look like a web address. Use a name like binder.example.com")
+        if h not in out:
+            out.append(h)
+    if len(out) > 10:
+        raise ValueError("Up to 10 other addresses")
+    return out
+
+
 def host_ok(host_header):
     h = (host_header or "").strip().lower()
+    if h in OTHER_HOSTS:
+        return True
     if h.startswith("["):                       # IPv6 like [::1]:8765
         return True
     name = h.rsplit(":", 1)[0] if h.count(":") == 1 else h
-    if not name or name in EXTRA_HOSTS or name == "localhost" or "." not in name:
+    if not name or name in EXTRA_HOSTS or name in OTHER_HOSTS or name == "localhost" or "." not in name:
         return True
     if re.fullmatch(r"\d{1,3}(?:\.\d{1,3}){3}", name):
         return True
@@ -3214,6 +3245,21 @@ class Handler(BaseHTTPRequestHandler):
         path = self.path.split("?")[0]
         if path in ("/", "/index.html"):
             return self.send_file(os.path.join(APP, "index.html"), "text/html; charset=utf-8", "no-cache")
+        if path == "/manifest.webmanifest":   # lets Chrome install the binder as an app
+            custom = os.path.exists(ICON_FILE) and read_json(ICON_FILE + ".json", {}).get("type") == "image/png"
+            icons = ([{"src": "app-icon.png?v=" + str(int(os.path.getmtime(ICON_FILE))), "sizes": "512x512", "type": "image/png", "purpose": "any"}]
+                     if custom else
+                     [{"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+                      {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}])
+            man = {"name": "Pokémon Binder", "short_name": "Binder", "id": "./", "start_url": "./", "scope": "./",
+                   "display": "standalone", "background_color": "#111213", "theme_color": "#111213", "icons": icons}
+            return self.send(200, json.dumps(man).encode(), "application/manifest+json", "no-cache")
+        if path == "/sw.js":
+            return self.send_file(os.path.join(APP, "sw.js"), "application/javascript; charset=utf-8", "no-cache")
+        if path in ("/icon-192.png", "/icon-512.png"):
+            return self.send_file(os.path.join(APP, path[1:]), "image/png")
+        if path == "/app-icon.png":   # your own tab icon from Settings, used as the app icon too
+            return self.send_file(ICON_FILE, "image/png", "no-cache")
         if path == "/fonts.css":   # fonts kept on the server; the page asks for fonts.css?v=<n>, so a new version means a new address
             return self.send_file(os.path.join(APP, "fonts.css"), "text/css; charset=utf-8", "max-age=31536000, immutable")
         m = re.fullmatch(r"/art/(\d{1,4})(s?)\.png", path)
@@ -3359,6 +3405,7 @@ class Handler(BaseHTTPRequestHandler):
             out = {k: st[k] for k in ("auto", "time", "tz", "slots")}
             out["backup"] = bool(st.get("backup", True))
             out["serverName"] = (st.get("serverName") or "").strip()
+            out["otherHosts"] = list(st.get("otherHosts") or [])
             out["refreshAll"] = bool(st.get("refreshAll"))
             out["options"] = {"raw": RAW_CONDS, "graders": GRADERS, "grades": GRADES}
             out["next"] = next_run(st).isoformat() if st["auto"] else ""
@@ -3608,6 +3655,8 @@ class Handler(BaseHTTPRequestHandler):
                     if len(name) > 24 or not re.fullmatch(r"[\w .'\-]*", name):
                         raise ValueError("Use letters, numbers, spaces, dots or dashes for the server name (24 at most)")
                     st["serverName"] = name
+                if "otherHosts" in new:
+                    st["otherHosts"] = clean_hosts(new["otherHosts"])
                 # a new time today shouldn't be skipped just because today's run already happened earlier
                 if "time" in new:
                     merged = dict(DEFAULT_SETTINGS); merged.update(st)
@@ -3619,6 +3668,7 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             return self.send(400, {"error": str(e) if isinstance(e, ValueError) and str(e) else "Invalid settings"})
         merged = get_settings()
+        load_other_hosts()
         out = {"ok": True, "next": next_run(merged).isoformat() if merged["auto"] else ""}
         if slots_changed:
             out["needsRefresh"] = recompute_prices()
@@ -3933,7 +3983,7 @@ def test_tcgplayer(pid):
 UPDATES = os.environ.get("BINDER_UPDATES", "/updates")
 # The program files of THIS version. The updater reads this line from a new server.py to know what to download,
 # so a later version can be split into more files. Versions before v3.0 only ever had these two.
-APP_FILES = ("server.py", "index.html", "fonts.css")
+APP_FILES = ("server.py", "index.html", "fonts.css", "sw.js", "icon-192.png", "icon-512.png")
 UPDATE_FILES = APP_FILES
 APP_FILE_RE = re.compile(r"[A-Za-z0-9_\-]+(?:/[A-Za-z0-9_\-]+)*\.(?:py|html|js|css|woff2|png|svg|json|txt)")
 GH_REPO = os.environ.get("GITHUB_REPO", "g-i-n-g-y/pokemon-binder")
@@ -4368,6 +4418,7 @@ if __name__ == "__main__":
         test_card(sys.argv[2] if "-" in sys.argv[2] else f"neo4-{sys.argv[2]}")
         sys.exit(0)
     setup()
+    load_other_hosts()
     if TRIAL:   # an update test start: answer pages only (no downloads, no schedule), and only on this machine
         def _no_downloads(*args, **kwargs):
             raise urllib.error.URLError("no downloads during an update test")

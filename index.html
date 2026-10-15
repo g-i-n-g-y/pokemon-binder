@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Pokémon Binder</title>
 <link rel="icon" id="favicon" href="favicon">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" id="themeColor" content="#111213">
 <link rel="stylesheet" href="fonts.css?v=1">
 <script>try{var s=localStorage.getItem("nd-skin");if(s)document.documentElement.dataset.skin=s;if(localStorage.getItem("nd-private")==="on")document.documentElement.dataset.private="";}catch(e){}</script>
 <style>
@@ -50,6 +52,13 @@ h1 .l{color:var(--light)} h1 .d{color:var(--dark)}
 .actions{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
 .actions .row{display:flex;gap:8px;align-items:center}
 .sync{font-size:13px;color:var(--muted);text-align:right}
+/* connection dot: green = the binder can reach the server, red = it can't (sits left of "Saved on ...") */
+.syncline{display:flex;align-items:center;justify-content:flex-end;gap:6px;min-width:0}
+.conn{flex:none;width:8px;height:8px;border-radius:50%;background:var(--muted);opacity:.6;transition:background .3s}
+.conn.on{background:var(--good);opacity:1;box-shadow:0 0 0 2px color-mix(in srgb,var(--good) 22%,transparent)}
+.conn.off{background:var(--bad);opacity:1;box-shadow:0 0 0 2px color-mix(in srgb,var(--bad) 22%,transparent)}
+.hm-sync{justify-content:flex-start;margin-top:-6px}
+.ui-row .conn{width:10px;height:10px}
 /* loading bars: real progress when the server knows the total, a sliding bar while it's still counting */
 .pbar{height:6px;border-radius:3px;background:var(--sleeve);overflow:hidden;width:100%;position:relative}
 .pbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--light),var(--dark));transition:width .5s ease}
@@ -547,7 +556,8 @@ dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
   #refresh #refreshLbl{display:none}
   #refresh .ico{display:block}
   .icon-btn{width:38px;height:38px}
-  .sync{order:3;flex-basis:100%;text-align:left;font-size:12px}
+  .sync{text-align:left;font-size:12px}
+  header.top .syncline{order:3;flex-basis:100%;justify-content:flex-start}
   .stats{grid-template-columns:1fr 1fr;gap:8px}
   .stat{padding:10px 12px;gap:2px}
   .stat .k{font-size:11px}
@@ -971,7 +981,7 @@ body.at-home > .wrap:not(.home){display:none}
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
         </button>
       </div>
-      <div class="sync" id="sync">Loading your collection…</div>
+      <div class="syncline"><span class="conn" role="img" aria-label="Checking the connection" title="Checking the connection"></span><div class="sync" id="sync">Loading your collection…</div></div>
       <div class="pbar sync-bar" id="syncBar" role="progressbar" aria-label="Progress" hidden><i></i></div>
     </div>
   </header>
@@ -1133,6 +1143,7 @@ body.at-home > .wrap:not(.home){display:none}
     <button class="icon-btn" type="button" id="hmCog" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
         </button>
   </header>
+  <div class="syncline hm-sync"><span class="conn" role="img" aria-label="Checking the connection" title="Checking the connection"></span><span class="sync" id="hmSync">Saved on <span class="srv">the server</span></span></div>
   <form class="hm-find" id="hmFind" role="search"><input type="search" class="field" id="hmQ" placeholder="Find a card: name, or 80/111" aria-label="Find a card" enterkeyhint="search"><button class="btn primary" type="submit">Search</button></form>
   <section aria-labelledby="hmBindersH">
     <div class="hm-h"><h2 class="eyebrow" id="hmBindersH">Your binders</h2>
@@ -1472,6 +1483,19 @@ body.at-home > .wrap:not(.home){display:none}
         <label class="ui-row ui-static ui-stack" for="stSrv"><span class="ui-l"><b>Server name</b><small>What the binder calls the computer it runs on</small></span><input class="field" id="stSrv" maxlength="24" autocomplete="off" placeholder="the server"></label>
       </div>
       <div class="note" id="stSrvMsg">Used in messages like &ldquo;Saved on BEN&rdquo;. Leave it empty to say &ldquo;the server&rdquo;.</div>
+      <h3 class="ui-h">Connection</h3>
+      <div class="ui-group">
+        <div class="ui-row ui-static"><span class="conn" role="img" aria-label="Connection"></span><span class="ui-l"><b id="stConnT">Checking&hellip;</b><small id="stConnS"></small></span><button class="btn" type="button" id="stConnBtn">Check connection</button></div>
+      </div>
+      <h3 class="ui-h">Phone app</h3>
+      <div class="ui-group">
+        <div class="ui-row ui-static"><span class="ui-l"><b>Install the binder as an app</b><small id="stAppS">Checking&hellip;</small></span><button class="btn" type="button" id="stAppBtn" hidden>Install</button></div>
+      </div>
+      <h3 class="ui-h">Other addresses</h3>
+      <div class="ui-group">
+        <label class="ui-row ui-static ui-stack" for="stHosts"><span class="ui-l"><b>Web addresses this binder also answers to</b><small>IP addresses, Tailscale names (.ts.net) and home names already work. Only add a name you set up yourself, like a port-forwarded address.</small></span><input class="field" id="stHosts" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="binder.example.com"></label>
+      </div>
+      <div class="note" id="stHostsMsg">Separate several with commas.</div>
     </section>
 
     <section class="ui-page" data-page="about" data-title="About">
@@ -2392,6 +2416,7 @@ $("dUp").onchange=async e=>{
 // ---------- settings / themes ----------
 function applySkin(id){
   document.documentElement.dataset.skin=id; store("nd-skin",id);
+  try{ $("themeColor").content=getComputedStyle(document.body).backgroundColor||"#111213"; }catch(_){}   // phone's top bar matches the theme
   [...$("skins").children].forEach(b=>b.setAttribute("aria-pressed",b.dataset.id===id));
 }
 SKINS.forEach(([id,name,desc,cols])=>{
@@ -2466,7 +2491,7 @@ async function saveSlots(slots){
     .catch(e=>{ drawSlots(); msg.textContent=(e&&e.message&&e.message!=="Failed to fetch") ? e.message : "Couldn't save. Check that the container is running."; });
 }
 function getSlots(){
-  return fetch("api/settings").then(r=>r.json()).then(s=>{ if(s.options) state.slotOpts=s.options; setServerName(s.serverName); return s; }).catch(()=>null);
+  return fetch("api/settings").then(r=>r.json()).then(s=>{ if(s.options) state.slotOpts=s.options; setServerName(s.serverName); if($("stHosts") && document.activeElement!==$("stHosts")) $("stHosts").value=(s.otherHosts||[]).join(", "); return s; }).catch(()=>null);
 }
 // The server's name from Settings (like "BEN"), or "the server" when none is set.
 const srv = () => state.serverName || "the server";
@@ -4565,6 +4590,67 @@ function setSpot(text){
   const g=document.createElement("span"); g.className="dspot-go"; g.textContent="›"; g.setAttribute("aria-hidden","true");
   b.append(t,g); b.title="Show it on the Pages view"; b.setAttribute("aria-label","In your binder: "+text+". Show it on the Pages view");
 }
+// ---------- connection to the server (green/red dot) ----------
+// Asks the server "are you there?" every 30 seconds while the page is on screen, when the phone's network
+// changes, and when you tap Check connection. Green = it answered, red = it didn't.
+const conn={ok:null, at:0};
+function setConn(ok){
+  conn.ok=ok; conn.at=Date.now();
+  const tip = ok ? "Connected to "+srv() : "Can't reach "+srv();
+  document.querySelectorAll(".conn").forEach(d=>{ d.classList.toggle("on",ok); d.classList.toggle("off",!ok); d.title=tip; d.setAttribute("aria-label",tip); });
+  connRow();
+}
+function connRow(){
+  if(!$("stConnT")) return;
+  if(conn.ok===null){ $("stConnT").textContent="Checking…"; $("stConnS").textContent=""; return; }
+  $("stConnT").textContent = conn.ok ? "Connected to "+srv() : "Can't reach "+srv();
+  const secs=Math.round((Date.now()-conn.at)/1000);
+  $("stConnS").textContent = "Checked "+(secs<5 ? "just now" : secs<60 ? secs+" seconds ago" : Math.round(secs/60)+" min ago")+" · "+location.host
+    + (conn.ok ? "" : ". Check that "+srv()+" is on, and that Tailscale is on if you're away from home.");
+}
+let connBusy=null;
+function checkConn(){
+  if(connBusy) return connBusy;
+  const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),6000);
+  connBusy=fetch("api/health",{cache:"no-store",signal:ctl.signal}).then(r=>setConn(r.ok)).catch(()=>setConn(false))
+    .finally(()=>{ clearTimeout(t); connBusy=null; });
+  return connBusy;
+}
+setInterval(()=>{ if(!document.hidden) checkConn(); else connRow(); },30000);
+setInterval(connRow,10000);
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden) checkConn(); });
+addEventListener("online",checkConn);
+addEventListener("offline",()=>setConn(false));
+$("stConnBtn").onclick=()=>{ $("stConnT").textContent="Checking…"; checkConn(); };
+checkConn();
+
+// ---------- install as an app ----------
+// Chrome offers "Install" once the binder is opened by a secure (https) address, like its Tailscale name.
+let installPrompt=null;
+const standalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone===true;
+function appRow(){
+  const s=$("stAppS"), b=$("stAppBtn"); if(!s) return;
+  b.hidden=true;
+  if(standalone()) s.textContent="Installed: you're using the app now.";
+  else if(installPrompt){ s.textContent="Adds the binder to your home screen and opens it full screen, like any app."; b.hidden=false; }
+  else if(!isSecureContext) s.textContent="Open the binder by its https address (like its Tailscale name ending in .ts.net) to install it. This address ("+location.host+") isn't a secure one.";
+  else s.textContent="If no Install button shows here, use Chrome's ⋮ menu → Install app (or Add to Home screen).";
+}
+addEventListener("beforeinstallprompt",e=>{ e.preventDefault(); installPrompt=e; appRow(); });
+addEventListener("appinstalled",()=>{ installPrompt=null; appRow(); toast("Installed. Open the binder from your home screen."); });
+$("stAppBtn").onclick=async()=>{ if(!installPrompt) return; installPrompt.prompt(); try{ await installPrompt.userChoice; }catch(_){} installPrompt=null; appRow(); };
+if("serviceWorker" in navigator && isSecureContext) navigator.serviceWorker.register("sw.js").catch(()=>{});
+appRow();
+
+// ---------- other addresses ----------
+$("stHosts").addEventListener("change",()=>{
+  const v=$("stHosts").value;
+  fetch("api/settings",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({otherHosts:v})})
+    .then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error||"Couldn't save"); return j; }))
+    .then(()=>{ $("stHostsMsg").textContent="Saved."; getSlots(); })
+    .catch(e=>{ $("stHostsMsg").textContent=e.message+"."; });
+});
+
 // ---------- start ----------
 header(); render();
 setPrivate(isPrivate());

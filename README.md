@@ -102,6 +102,16 @@ Backups (Settings → Backup) are still a zip of plain JSON files, so they open 
 
 Without Docker: put `server.py`, `index.html` and `fonts.css` in a folder and run `python server.py` (Python 3.9 or newer), then open `http://localhost:8080`.
 
+## Phone app
+
+The binder can be installed as an app on Android (Chrome). It needs a secure (https) address, which [Tailscale](https://tailscale.com/kb/1312/serve) can provide for free inside your own Tailscale network:
+
+1. In the Tailscale admin console, under **DNS**, turn on **MagicDNS** and **HTTPS Certificates**.
+2. On the computer running the binder, run `tailscale serve --bg 8765` (use your binder's port). Tailscale prints the https address, like `https://<machine>.<your-tailnet>.ts.net`.
+3. On your phone (with Tailscale on), open that address in Chrome and tap **Install** (or Settings → Server → Phone app).
+
+This keeps the binder inside your Tailscale network; nothing is opened to the internet.
+
 ## Updating
 
 Updates only install when you choose them: **Settings → About → Check for updates** shows what's new and asks before installing anything (no restart needed). Restarting the container never installs updates. No key or password is needed.
