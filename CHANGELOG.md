@@ -10,6 +10,11 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.13.1 (October 15, 2026)
+
+- **Big screens (like 4K):** the home page uses more of the width, and all your binders plus **Add a binder** fit in one row.
+- **Recently added, no scroll bar on computers:** the 12 newest cards now share the row instead of scrolling. On phones it still swipes, with a fainter scroll bar.
+
 ## v3.13 (October 15, 2026)
 
 - **Mark cards owned with no connection:** in the phone app, with no signal you can still tap **Need** to mark a card owned, or add a purchase with the price you paid, where, and the seller. It's saved on the phone and shows right away; the offline line says how many changes are waiting. Other changes (condition, notes, photos, removing cards) wait for a connection and are greyed out while offline.
