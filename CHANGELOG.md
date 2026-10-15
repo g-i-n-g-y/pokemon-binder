@@ -10,11 +10,11 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v3.7.4 (October 14, 2026)
 
 - **Price check progress in Settings → About:** while a price check runs, Status shows a progress bar with "Checking Neo Destiny: card 16 of 113" and the percent, updating every 2 seconds.
 - **Updates wait for a price check instead of failing:** if you install an update while prices are being checked, it shows the check's progress bar and installs as soon as the check finishes. Closing Settings while it waits cancels the update.
-- **One big job at a time:** updates, rollbacks and backup restores can't overlap each other or a price check. Before, tapping Install twice (or on two devices) could run two updates at once and leave the saved copy for rolling back unusable. A second tap now says an update is already in progress. A restore now waits for a running price check, so the check can't write old prices over the restored ones. The nightly check waits for an update or restore to finish instead of skipping a binder.
+- **One big job at a time:** updates, rollbacks and backup restores can't overlap each other or a price check. Before, tapping Install twice (or on two devices) could run two updates at once and leave the saved copy for rolling back unusable. A second tap now says an update is already in progress (and doesn't keep retrying). A restore now waits for a running price check, so the check can't write old prices over the restored ones. The nightly check waits for an update or restore to finish instead of skipping a binder.
 - **Stuck connections are let go:** a device that connects and goes quiet (like a phone losing signal mid-load) is dropped after a minute instead of tying up part of the server for good.
 
 ## v3.7.3 (October 14, 2026)
