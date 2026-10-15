@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.9.3 (October 15, 2026)
+
+- **Pages open on the inside cover** on phones, like opening a real binder. Swipe or tap page 1 to go on.
+
 ## v3.9.2 (October 15, 2026)
 
 - **Inside cover in the style of the vintage set binders.** The pack look is gone (no crimped edges). The cover now has the set's logo in the corner, rays of light, a band across the middle and one featured Pokémon, like the binders made for each set back then. The Neo sets get their binder colors (Destiny is pink, yellow and orange); other sets take theirs from the logo.

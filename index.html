@@ -3298,7 +3298,7 @@ function openSet(sid){
   state.sid=sid; store("nd-set",sid||undefined);
   if(sid && location.hash!=="#"+sid) history.replaceState(null,"","#"+sid);
   state.cards=[]; state.own={}; state.prices={}; state.info={}; state.updated=""; state.ready=false; state.layout=null; dexNumsFor=null;
-  if(typeof pg!=="undefined"){ pg.at=0; pg.sel=-1; pg.arr=false; } state.trends={}; state.histFirst=""; state.seriesCache={};
+  if(typeof pg!=="undefined"){ pg.at=-1; pg.sel=-1; pg.arr=false; } state.trends={}; state.histFirst=""; state.seriesCache={};
   if(!sid){ state.set={name:"Pokémon Binder"}; header(); rarityOptions(); render(); $("sync").textContent="Open the menu to add your first set."; return Promise.resolve(); }
   state.set=(state.sets.find(s=>s.id===sid))||{name:sid}; header(); render();
   return loadState();
@@ -4100,7 +4100,7 @@ function cardSpot(n){
   const side=Math.floor(i/L.pk), k=i%L.pk, cols=PK_COLS[L.pk];
   return {side, text:sideName(side)+", row "+(Math.floor(k/cols)+1)+", pocket "+(k%cols+1)};
 }
-const pg={at:0, arr:false, sel:-1, saveT:null, flash:null};
+const pg={at:-1, arr:false, sel:-1, saveT:null, flash:null};
 function saveLayout(next){
   if(!("cover" in next) && state.layout && state.layout.cover) next={...next, cover:state.layout.cover};
   state.layout=next;
