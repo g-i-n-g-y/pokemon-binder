@@ -865,36 +865,39 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
   .pg-grid{gap:6px}
   .pg-tools select{flex:1 1 140px}
 }
-/* ---------- Pages: pack-style inside cover (v3.9) ---------- */
-.pg-side.cover.pk-cover{--c1:#2a2340;--c2:#46406a;position:relative;overflow:hidden;isolation:isolate;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:10px;
-  min-height:480px;padding:28px 16px 22px;color:#fff;background:linear-gradient(165deg,var(--c1),var(--c2));box-shadow:inset 0 0 60px rgba(0,0,0,.35)}
-.pk-cover::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
-  background:radial-gradient(ellipse at 50% 55%,rgba(255,255,255,.14),transparent 60%),linear-gradient(165deg,var(--c1),var(--c2));opacity:.55}
-.pk-cover:not(.has-bg)::before{opacity:1}
-.pk-cover::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;box-shadow:inset 0 0 70px rgba(0,0,0,.45)}
-/* The top hit's artwork, blurred, fills the cover behind everything */
-.pk-bg{position:absolute;inset:0;z-index:-2;overflow:hidden;background:var(--c1)}
-.pk-bg>div{position:absolute;left:50%;top:50%;height:120%;aspect-ratio:1.645;transform:translate(-50%,-50%);overflow:hidden;filter:blur(18px) saturate(1.15) brightness(.85)}
-.pk-bg img{display:block;width:128.2%;max-width:none;margin:-22.4% 0 0 -14.1%}
-.pk-cover .crimp{position:absolute;left:0;right:0;height:12px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.22) 0 3px,rgba(0,0,0,.18) 3px 6px);opacity:.7}
-.pk-cover .crimp.t{top:0} .pk-cover .crimp.b{bottom:0}
-.pk-cover .pk-logo{max-width:80%;max-height:120px;object-fit:contain;filter:drop-shadow(0 6px 12px rgba(0,0,0,.5))}
-.pk-cover .pk-name{font-family:var(--f-display);font-weight:800;font-size:34px;line-height:1;text-align:center;text-shadow:0 3px 0 rgba(0,0,0,.35),0 8px 18px rgba(0,0,0,.45)}
-.pk-hits{position:relative;width:100%;flex:1;min-height:210px;display:grid;place-items:center}
-/* Each hit is a window onto its card's own artwork: the card picture is enlarged and shifted so only the art box shows. */
-.pk-art{position:absolute;aspect-ratio:1.645;overflow:hidden;border-radius:3px;background:#111;
-  border:3px solid #d9b54a;box-shadow:inset 0 0 0 1px rgba(0,0,0,.35),0 0 0 1px rgba(255,240,180,.35),0 10px 22px rgba(0,0,0,.4)}
-.pk-art img{display:block;width:128.2%;max-width:none;margin:-22.4% 0 0 -14.1%;-webkit-user-drag:none;user-select:none}
-.pk-art.h1{width:70%;max-width:300px;z-index:2}
-.pk-art.h2,.pk-art.h3{width:46%;max-width:190px;z-index:1}
-.pk-hits.n3 .h1{transform:translateY(12%)}
-.pk-hits.n3 .h2{transform:translate(-50%,-62%) rotate(-7deg)}
-.pk-hits.n3 .h3{transform:translate(50%,-62%) rotate(7deg)}
-.pk-hits.n2 .h1{transform:translate(-14%,14%) rotate(-3deg)} .pk-hits.n2 .h2{transform:translate(42%,-46%) rotate(6deg)}
-.pk-cover .pk-credit{font-size:11px;letter-spacing:.02em;opacity:.85;text-align:center;text-shadow:0 1px 3px rgba(0,0,0,.6)}
-.pk-cover .pk-band{width:100%;text-align:center;padding:8px 10px;border-radius:8px;background:rgba(0,0,0,.32);backdrop-filter:blur(4px);font-size:13px;letter-spacing:.03em}
-.pk-cover .pk-band b{font-family:var(--f-display);font-size:15px;letter-spacing:0}
-@media (min-width:760px){.pg-side.cover.pk-cover{min-height:0;border-radius:12px 0 0 12px}}
+/* ---------- Pages: inside cover in the style of the vintage set binders (v3.9.2) ---------- */
+.pg-side.cover.vb-cover{--v1:#f3eedf;--v2:#b9b2a0;--v3:#8f8878;--v4:#4a4538;position:relative;overflow:hidden;isolation:isolate;display:block;
+  min-height:480px;padding:0;color:#1d1a24;background:linear-gradient(115deg,var(--v2) 0%,var(--v1) 70%)}
+.vb-cover::before{content:"";position:absolute;inset:-30%;z-index:-1;pointer-events:none;
+  background:repeating-conic-gradient(from 8deg at 50% 50%,rgba(255,255,255,.55) 0deg 2deg,transparent 2deg 9deg,rgba(255,255,255,.3) 9deg 12deg,transparent 12deg 21deg);
+  -webkit-mask:radial-gradient(circle at 50% 50%,#000 0 12%,rgba(0,0,0,.5) 34%,transparent 60%);mask:radial-gradient(circle at 50% 50%,#000 0 12%,rgba(0,0,0,.5) 34%,transparent 60%);transform:translateY(8%)}
+.vb-cover::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(circle at 50% 58%,rgba(255,255,255,.7) 0,rgba(255,255,255,.15) 18%,transparent 40%),
+    radial-gradient(circle at 18% 70%,rgba(255,255,255,.5) 0 2px,transparent 3px),radial-gradient(circle at 80% 30%,rgba(255,255,255,.5) 0 2px,transparent 3px),
+    radial-gradient(circle at 70% 84%,rgba(255,255,255,.45) 0 1.5px,transparent 2.5px),radial-gradient(circle at 30% 22%,rgba(255,255,255,.45) 0 1.5px,transparent 2.5px)}
+.vb-band{position:absolute;left:0;right:0;top:45%;height:26%;z-index:-1;background:var(--v3);
+  border-top:4px solid var(--v4);border-bottom:4px solid var(--v4);
+  box-shadow:inset 0 6px 0 rgba(255,255,255,.18),inset 0 -6px 0 rgba(0,0,0,.08);
+  background-image:repeating-linear-gradient(180deg,transparent 0 9px,rgba(255,255,255,.12) 9px 11px)}
+.vb-logo{position:absolute;top:16px;left:14px;max-width:58%;max-height:84px;object-fit:contain;filter:drop-shadow(0 3px 4px rgba(0,0,0,.3))}
+.vb-name{position:absolute;top:16px;left:16px;right:16px;font-family:var(--f-display);font-weight:800;font-size:30px;line-height:1;color:var(--v4);
+  text-shadow:0 2px 0 rgba(255,255,255,.6)}
+.vb-mid{position:absolute;left:0;right:0;top:58%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:6px}
+.vb-feat,.vb-dot{position:relative;aspect-ratio:1.645;overflow:hidden;background:var(--v3)}
+.vb-feat{width:72%;max-width:330px;border-radius:3px;border:3px solid #e2c25a;
+  box-shadow:0 0 0 1px rgba(0,0,0,.35),0 10px 22px rgba(0,0,0,.35)}
+.vb-feat img,.vb-dot img{display:block;width:128.2%;max-width:none;margin:-22.4% 0 0 -14.1%;-webkit-user-drag:none;user-select:none}
+.vb-feat.no-art{visibility:hidden}
+.vb-pick button:has(.no-art){display:none}
+.vb-credit{font-size:11px;color:#1d1a24;background:rgba(255,255,255,.6);padding:1px 8px;border-radius:999px}
+.vb-credit:empty{display:none}
+.vb-pick{position:absolute;left:12px;bottom:12px;display:flex;gap:8px}
+.vb-pick button{width:44px;height:44px;padding:0;border-radius:50%;overflow:hidden;cursor:pointer;background:var(--v3);
+  border:2px solid rgba(255,255,255,.85);box-shadow:0 2px 6px rgba(0,0,0,.3);opacity:.75}
+.vb-pick button[aria-pressed="true"]{opacity:1;border-color:var(--v4);box-shadow:0 0 0 2px #fff,0 2px 6px rgba(0,0,0,.3)}
+.vb-pick .vb-dot{width:auto;height:100%;aspect-ratio:1.645;transform:translateX(-20%)}
+.vb-star{position:absolute;right:14px;bottom:12px;width:44px;height:44px;fill:var(--v4);opacity:.8;filter:drop-shadow(2px 2px 0 rgba(255,255,255,.7))}
+@media (min-width:760px){.pg-side.cover.vb-cover{min-height:0;border-radius:12px 0 0 12px}}
 </style>
 </head>
 <body>
@@ -4099,6 +4102,7 @@ function cardSpot(n){
 }
 const pg={at:0, arr:false, sel:-1, saveT:null, flash:null};
 function saveLayout(next){
+  if(!("cover" in next) && state.layout && state.layout.cover) next={...next, cover:state.layout.cover};
   state.layout=next;
   clearTimeout(pg.saveT);
   pg.saveT=setTimeout(()=>{
@@ -4141,29 +4145,27 @@ function sideEl(i, L){
   f.append(a,r); box.append(g,f); return box;
 }
 const pagesWide = () => matchMedia("(min-width:760px)").matches;
-// The inside cover, styled like a booster pack: the set's logo, a burst of light, and the binder's hits
-// (its most valuable Pokémon cards) shown as their own card artwork, credited to the original artists.
-// Colors: the four Neo sets have their own; other sets take theirs from the logo.
-const PACK_COLORS={neo1:["#1d3f86","#7fa7cf"], neo2:["#2c5a2a","#8f2f2a"], neo3:["#9b2c12","#e3a325"], neo4:["#5b2a86","#2f7a3d"]};
-const packColorCache={}, artistCache={};
+// The inside cover, styled like the vintage binders made for each set: the set's logo in the corner, rays of
+// light, a band across the middle and one featured Pokémon. The featured Pokémon is one of the binder's hits
+// (its most valuable Pokémon cards), shown as the card's own artwork and credited to the original artist.
+// The small round buttons switch between the hits; the pick is saved with the binder's pages.
+// Colors [light, deep, band, band edge]: the four Neo sets have their own; other sets take theirs from the logo.
+const COVER_STYLE={neo1:["#f6f7fa","#bfc5d0","#a3a9b4","#5c626d"], neo2:["#ecf7dc","#7fc06a","#3f8a4a","#1f4d2a"],
+  neo3:["#ffe27a","#ee6a2c","#c63c1f","#6e1a10"], neo4:["#ffe24d","#e8407a","#f39a4c","#6a2a6e"]};
+const coverStyleCache={}, artistCache={};
 const RARE_RANK = r => /Shining|Secret|Crystal|Gold Star|Star/.test(r) ? 4 : /Holo/.test(r) ? 3 : /Rare/.test(r) ? 2 : /Uncommon/.test(r) ? 1 : 0;
 function coverHits(){
   return state.cards.filter(c=>!c.custom && (c.type==="Pokémon" || isDex(state.sid)))
     .sort((a,b)=>(basePrice(b.n)-basePrice(a.n)) || (RARE_RANK(b.rarity||"")-RARE_RANK(a.rarity||""))).slice(0,3);
 }
 const cardGid = c => (isMulti(state.sid) || c.extra) ? c.n : state.sid+"-"+c.n;
-// "Art: ..." under the artwork; the names are asked for once and remembered.
-function coverCredit(el, hits){
-  const gids=hits.map(cardGid), show=()=>{ const names=[...new Set(gids.map(g=>artistCache[g]).filter(Boolean))];
-    el.textContent=names.length ? "Art: "+names.join(", ") : ""; el.hidden=!names.length; };
-  const need=gids.filter(g=>!(g in artistCache));
-  if(!need.length) return show();
-  fetch("api/artists?c="+enc(need.join(","))).then(r=>r.json()).then(j=>{
-    for(const g of need) artistCache[g]=(j.artists||{})[g]||""; show();
-  }).catch(()=>{});
+function coverCredit(el, c){
+  const g=cardGid(c), show=()=>{ el.textContent=artistCache[g] ? "Art: "+artistCache[g] : ""; };
+  if(g in artistCache) return show();
+  fetch("api/artists?c="+enc(g)).then(r=>r.json()).then(j=>{ artistCache[g]=(j.artists||{})[g]||""; show(); }).catch(()=>{});
 }
-// Two colors from the logo: its strongest hue, darkened for the top, and the next different hue for the bottom.
-function logoColors(img){
+// The logo's two strongest hues, turned into cover colors.
+function logoStyle(img){
   try{
     const w=48, h=Math.max(8,Math.round(48*img.naturalHeight/Math.max(1,img.naturalWidth)));
     const cv=document.createElement("canvas"); cv.width=w; cv.height=h; const g=cv.getContext("2d"); g.drawImage(img,0,0,w,h);
@@ -4177,40 +4179,46 @@ function logoColors(img){
     }
     const top=Object.entries(bins).sort((a,b)=>b[1]-a[1]).map(x=>+x[0]*30);
     if(!top.length) return null;
-    const h2=top.find(x=>Math.min(Math.abs(x-top[0]),360-Math.abs(x-top[0]))>=60);
-    return ["hsl("+top[0]+" 55% 30%)", "hsl("+(h2==null?(top[0]+40)%360:h2)+" 50% 38%)"];
+    const h1=top[0], h2=top.find(x=>Math.min(Math.abs(x-h1),360-Math.abs(x-h1))>=60) ?? (h1+40)%360;
+    return ["hsl("+h1+" 80% 88%)", "hsl("+h2+" 60% 62%)", "hsl("+h1+" 60% 58%)", "hsl("+h1+" 50% 26%)"];
   }catch(_){ return null; }
 }
+function setCoverStyle(cv, st){ ["--v1","--v2","--v3","--v4"].forEach((k,i)=>cv.style.setProperty(k, st[i])); }
+function coverArt(c, cls){
+  const f=document.createElement("div"); f.className=cls;
+  const im=document.createElement("img"); im.alt=c.name; im.decoding="async"; im.draggable=false;
+  im.src=base()+"/img/"+enc(c.n)+".png?full=1"; im.onerror=()=>f.classList.add("no-art"); f.append(im); return f;
+}
 function coverEl(){
-  const cv=document.createElement("div"); cv.className="pg-side cover pk-cover";
+  const cv=document.createElement("div"); cv.className="pg-side cover vb-cover";
   const s=state.set||{}, sid=state.sid, dex=isDex(sid), own=isOwn(sid);
-  const col=PACK_COLORS[sid] || packColorCache[sid];
-  if(col){ cv.style.setProperty("--c1",col[0]); cv.style.setProperty("--c2",col[1]); }
-  cv.innerHTML='<span class="crimp t"></span><span class="crimp b"></span>';
+  const st=COVER_STYLE[sid] || coverStyleCache[sid]; if(st) setCoverStyle(cv, st);
+  cv.innerHTML='<span class="vb-band"></span>';
   if(!dex && !own){
-    const im=document.createElement("img"); im.alt=s.name||""; im.className="pk-logo"; im.decoding="async";
-    im.onload=()=>{ if(!PACK_COLORS[sid] && !packColorCache[sid]){ const c=logoColors(im); if(c){ packColorCache[sid]=c; cv.style.setProperty("--c1",c[0]); cv.style.setProperty("--c2",c[1]); } } };
-    im.onerror=()=>{ const t=document.createElement("div"); t.className="pk-name"; t.textContent=s.name||""; im.replaceWith(t); };
+    const im=document.createElement("img"); im.alt=s.name||""; im.className="vb-logo"; im.decoding="async";
+    im.onload=()=>{ if(!COVER_STYLE[sid] && !coverStyleCache[sid]){ const c=logoStyle(im); if(c){ coverStyleCache[sid]=c; setCoverStyle(cv, c); } } };
+    im.onerror=()=>{ const t=document.createElement("div"); t.className="vb-name"; t.textContent=s.name||""; im.replaceWith(t); };
     im.src=base()+"/logo.png"; cv.append(im);
-  } else { const t=document.createElement("div"); t.className="pk-name"; t.textContent=s.name||""; cv.append(t); }
-  const hits=coverHits(), box=document.createElement("div"); box.className="pk-hits n"+hits.length;
-  if(hits.length){   // backdrop: the top hit's own artwork, softly blurred, so the cover takes its colors from the art
-    const bg=document.createElement("div"); bg.className="pk-bg"; bg.setAttribute("aria-hidden","true");
-    const w=document.createElement("div"), im=document.createElement("img"); im.alt=""; im.decoding="async"; im.draggable=false;
-    im.src=base()+"/img/"+enc(hits[0].n)+".png?full=1"; im.onerror=()=>bg.remove(); w.append(im); bg.append(w); cv.prepend(bg); cv.classList.add("has-bg");
+  } else { const t=document.createElement("div"); t.className="vb-name"; t.textContent=s.name||""; cv.append(t); }
+  const hits=coverHits(), L=state.layout||{};
+  const feat=state.cards.find(c=>c.n===L.cover && !c.custom) || hits[0];
+  if(feat){
+    const mid=document.createElement("div"); mid.className="vb-mid";
+    const cr=document.createElement("div"); cr.className="vb-credit";
+    mid.append(coverArt(feat,"vb-feat"), cr); cv.append(mid); coverCredit(cr, feat);
   }
-  hits.forEach((c,i)=>{
-    const f=document.createElement("div"); f.className="pk-art h"+(i+1); f.title=c.name;
-    const im=document.createElement("img"); im.alt=c.name; im.decoding="async"; im.draggable=false;
-    im.src=base()+"/img/"+enc(c.n)+".png?full=1"; im.onerror=()=>f.remove(); f.append(im); box.append(f);
-  });
-  const cr=document.createElement("div"); cr.className="pk-credit"; cr.hidden=true;
-  cv.append(box, cr); if(hits.length) coverCredit(cr, hits);
-  const band=document.createElement("div"); band.className="pk-band";
-  const b=document.createElement("b"); b.textContent=s.name||"";
-  band.append(b, " "+(own ? "My binder · "+state.cards.length+" cards" : dex ? "Master set · "+state.cards.length+" cards"
-    : [year(s.releaseDate), (s.printedTotal||state.cards.length)+" cards"].filter(Boolean).join(" · ")));
-  cv.append(band); return cv;
+  if(hits.length>1){
+    const pick=document.createElement("div"); pick.className="vb-pick"; pick.setAttribute("role","group"); pick.setAttribute("aria-label","Cover Pokémon");
+    for(const c of hits){
+      const b=document.createElement("button"); b.type="button"; b.title=b.ariaLabel="Show "+c.name+" on the cover";
+      b.setAttribute("aria-pressed", String(c===feat)); b.append(coverArt(c,"vb-dot"));
+      b.onclick=()=>{ const P=pageLayout(); saveLayout({pockets:P.pk, order:P.order, slots:P.custom ? P.slots : null, cover:c.n}); drawPages(); };
+      pick.append(b);
+    }
+    cv.append(pick);
+  }
+  cv.insertAdjacentHTML("beforeend",'<svg class="vb-star" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 2 L24 16 L38 20 L24 24 L20 38 L16 24 L2 20 L16 16Z"/></svg>');
+  return cv;
 }
 function drawPages(){
   const V=$("pgView"); if(!V || state.view!=="pages") return;

@@ -10,6 +10,11 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.9.2 (October 15, 2026)
+
+- **Inside cover in the style of the vintage set binders.** The pack look is gone (no crimped edges). The cover now has the set's logo in the corner, rays of light, a band across the middle and one featured Pokémon, like the binders made for each set back then. The Neo sets get their binder colors (Destiny is pink, yellow and orange); other sets take theirs from the logo.
+- **Pick the cover Pokémon.** Round buttons in the corner switch between the binder's three hits. Your pick is saved with the binder's pages.
+
 ## v3.9.1 (October 15, 2026)
 
 - **Softer inside cover.** The cover's background is now the top card's own artwork, softly blurred, with just a hint of the set's colors, so the art and background blend instead of clashing. The light-burst rays are gone, and the art frames are thinner gold, like the frame around the art on the cards.

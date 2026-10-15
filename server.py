@@ -24,7 +24,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "3.9.1"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
+APP_VERSION = "3.9.2"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -1030,6 +1030,9 @@ def save_layout(sid, raw):
         slots = clean
     order = raw.get("order") if raw.get("order") in LAYOUT_ORDERS else "num"
     out = {"pockets": pockets, "order": order, "slots": slots}
+    cover = raw.get("cover")   # the card picked for the inside cover
+    if isinstance(cover, str) and cover in {c["n"] for c in set_cards(sid)}:
+        out["cover"] = cover
     with lock:
         write_json(sdir(sid, "layout.json"), out)
     return out
