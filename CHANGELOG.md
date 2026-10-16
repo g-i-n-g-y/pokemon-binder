@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.15.1 (October 16, 2026)
+
+- Pages on big computer screens: the two-page spread was stuck to the left with an empty gap on the right. It's now centered and a little bigger, while still fitting the window's height.
+
 ## v3.15 (October 16, 2026)
 
 - **Menu button on My binders:** a menu button at the top left of the home page opens your binders list (the same list as in a binder), without going through Edit.
