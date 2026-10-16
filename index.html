@@ -350,6 +350,9 @@ dialog.confirm{margin:auto;height:fit-content;max-height:calc(100% - 32px);width
 .ver .s{font-size:13px;color:var(--muted)}
 .sha.vtag{color:var(--ink);border-color:var(--dark)}
 .sha{font-family:var(--f-mono);font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 5px}
+a.sha{text-decoration:none;cursor:pointer;display:inline-block;padding:3px 8px;margin:-3px 0}
+a.sha:hover,a.sha:focus-visible{background:var(--dark-soft);color:var(--ink);outline:none}
+a.sha::after{content:" \2197";font-size:10px;opacity:.7}
 .prev{display:flex;flex-direction:column;gap:6px}
 .prevlist,.changes{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .prevlist li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
@@ -2780,7 +2783,23 @@ $("cog").addEventListener("click",()=>{ $("stPeriod").value=String(state.period)
 const shortDate = d => d ? new Date(d).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "";
 const verTitle = v => v.subject || (v.version ? "Version "+v.version : v.commit ? "Version "+v.commit.slice(0,7) : "Older version");
 // Version pill: "v1.2" when the version is numbered, otherwise the short code.
-function shaTag(sha, ver){ const s=document.createElement("span"); s.className="sha"+(ver?" vtag":""); s.textContent=ver?"v"+ver:(sha?sha.slice(0,7):"local"); if(ver&&sha) s.title="Code "+sha.slice(0,7); return s; }
+// Version pill: "v1.2" when the version is numbered, otherwise the short code. A numbered version links to its
+// release notes on GitHub (the CHANGELOG heading for that version) when updates come from GitHub.
+const ghVer = {repo:"", dates:{}};
+function verLink(ver){
+  if(!ghVer.repo || !ver) return "";
+  const base="https://github.com/"+ghVer.repo+"/blob/main/CHANGELOG.md", d=ghVer.dates[ver];
+  if(!d) return base+"#:~:text="+encodeURIComponent("v"+ver+" (");
+  // GitHub's heading anchor: lower case, punctuation dropped, spaces become dashes
+  return base+"#"+("v"+ver+" ("+d+")").toLowerCase().replace(/[^a-z0-9 _-]/g,"").replace(/ /g,"-");
+}
+function shaTag(sha, ver){
+  const url=verLink(ver), s=document.createElement(url?"a":"span");
+  s.className="sha"+(ver?" vtag":""); s.textContent=ver?"v"+ver:(sha?sha.slice(0,7):"local");
+  if(url){ s.href=url; s.target="_blank"; s.rel="noopener"; s.title="What's in v"+ver+" (opens GitHub)"; s.setAttribute("aria-label","v"+ver+", release notes on GitHub"); }
+  else if(ver&&sha) s.title="Code "+sha.slice(0,7);
+  return s;
+}
 const fmtSize = b => b==null ? "unknown" : b<1048576 ? Math.max(1,Math.round(b/1024))+" KB" : b<1073741824 ? (b/1048576).toFixed(1)+" MB" : (b/1073741824).toFixed(1)+" GB";
 function agoText(t){
   if(!t) return "never";
@@ -2838,7 +2857,10 @@ function watchStatusJob(){
 }
 function loadVersion(){
   loadStatus();
-  fetch("api/version").then(r=>r.json()).then(v=>{
+  const notes=fetch("api/changelog").then(r=>r.json()).then(c=>{ for(const e of c.entries||[]) ghVer.dates[e.v]=e.date; }).catch(()=>{});
+  fetch("api/version").then(r=>r.json()).then(async v=>{
+    ghVer.repo = v.github && /^[\w.-]+\/[\w.-]+$/.test(v.repo||"") ? v.repo : "";
+    await notes;
     const box=$("stVersion"); box.replaceChildren();
     const k=document.createElement("span"); k.className="k"; k.textContent="Installed version";
     const t=document.createElement("b"); t.textContent=verTitle(v);

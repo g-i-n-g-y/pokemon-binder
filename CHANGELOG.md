@@ -10,6 +10,11 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.19.2 (October 16, 2026)
+
+- **Version links to GitHub:** in Settings → About, tap the version pill (like v3.19.2 ↗) to open that version's notes on GitHub. Previous versions link to theirs too. Shown only when updates come from GitHub.
+- Settings → About → Status no longer lists missed set logo or Pokémon artwork downloads as problems. They're retried by themselves (some sets simply have no logo), the same as card pictures.
+
 ## v3.19.1 (October 16, 2026)
 
 - **Status works again:** Settings → About → Status said "Couldn't reach the server" even when everything was fine. A newer part of the page (the dates on recently added cards) had reused the name of the one Status relies on and replaced it. They now have separate names, and the automatic tests catch any repeat of this.

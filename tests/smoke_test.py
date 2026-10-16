@@ -122,6 +122,10 @@ open(os.path.join(server.APP, "fresh.tmp"), "w").write("x")
 assert server.clean_leftovers() == 5
 assert os.path.exists(os.path.join(server.APP, "fresh.tmp")) and os.path.exists(os.path.join(server.APP, "server.py"))
 os.remove(os.path.join(server.APP, "fresh.tmp"))
+# picture download misses aren't Status problems, real problems are
+for m in ("image neo4-1: timed out", "Pokémon art 158: timed out", "neo3: set logo: HTTP Error 404"):
+    assert server.PICTURE_MISS_RE.search(m), m
+assert not server.PICTURE_MISS_RE.search("neo4: price refresh failed: timed out")
 print("ok")
 """
 

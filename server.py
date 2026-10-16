@@ -24,7 +24,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "3.19.1"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
+APP_VERSION = "3.19.2"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -2355,6 +2355,11 @@ STARTED = time.time()
 PROBLEM_RE = re.compile(r"failed|error|couldn't|can't|refused|timed out|unreachable", re.I)
 
 
+# Picture downloads that missed (card pictures, set logos, Pokémon artwork) are retried later by themselves
+# and some sets simply have no logo, so they aren't listed as problems in Status.
+PICTURE_MISS_RE = re.compile(r"^(image |Pokémon art |[\w-]+: set logo: )")
+
+
 def health():
     """Quick self-check: the web server answers and the database can be read."""
     try:
@@ -2394,7 +2399,7 @@ def status():
     except OSError:
         free = None
     day_ago = time.time() - DAY
-    problems = [{"at": int(t), "msg": m[:200]} for t, m in LOG_TAIL if t > day_ago and PROBLEM_RE.search(m) and not m.startswith("image ")][-5:]
+    problems = [{"at": int(t), "msg": m[:200]} for t, m in LOG_TAIL if t > day_ago and PROBLEM_RE.search(m) and not PICTURE_MISS_RE.search(m)][-5:]
     return {"version": APP_VERSION, "uptime": int(time.time() - STARTED), "lastRefresh": int(last),
             "refreshing": bool(job["running"]), "lastBackup": backups[0] if backups else None,
             "dbSize": size, "pictures": pics, "freeSpace": free, "problems": problems,
