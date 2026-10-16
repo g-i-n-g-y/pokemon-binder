@@ -963,6 +963,10 @@ body.at-home > .wrap:not(.home){display:none}
 .bk .bk-nm{position:absolute;left:0;right:0;bottom:0;padding:26px 10px 9px;background:linear-gradient(transparent,rgba(0,0,0,.75))}
 .bk .bk-nm b{display:block;font-family:var(--f-display);font-size:16px;line-height:1.1}
 .bk .bk-nm span{font-size:12px;opacity:.85}
+.bk .bk-logo{display:block;max-width:82%;max-height:46px;object-fit:contain;object-position:left bottom;margin-bottom:3px;
+  filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff) drop-shadow(0 3px 6px rgba(0,0,0,.45))}
+.bk .bk-nm.has-logo{padding-top:34px}
+@media (min-width:900px){.bk .bk-logo{max-height:54px}}
 .bk .ring{position:absolute;top:8px;right:8px;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font:600 11px var(--f-mono);color:#fff;
   background:conic-gradient(#fff calc(var(--p)*1%),rgba(255,255,255,.28) 0)}
 .bk .ring::before{content:"";position:absolute;inset:4px;border-radius:50%;background:rgba(0,0,0,.55)}
@@ -4648,6 +4652,10 @@ function drawHome(){
     const ring=document.createElement("span"); ring.className="ring"; ring.style.setProperty("--p",pct); ring.setAttribute("aria-hidden","true");
     const ri=document.createElement("i"); ri.textContent=pct+"%"; ring.append(ri);
     const nm=document.createElement("span"); nm.className="bk-nm"; const nb=document.createElement("b"); nb.textContent=b.name; const ns=document.createElement("span"); ns.textContent=sub; nm.append(nb,ns);
+    if(!isDex(b.id) && !isOwn(b.id)){   // set binders show the set's logo (the same one as the inside cover); the name stays if there's none
+      const lg=document.createElement("img"); lg.className="bk-logo"; lg.alt=""; lg.decoding="async";
+      lg.onload=()=>{ nb.replaceWith(lg); nm.classList.add("has-logo"); }; lg.onerror=()=>lg.remove(); lg.src="set/"+enc(b.id)+"/logo.png";
+    }
     t.append(ring,nm);
     t.setAttribute("aria-label", b.name+", "+sub+(!isPrivate() ? ", "+pct+"% complete" : ""));
     t.onclick=()=>goBinder(b.id);

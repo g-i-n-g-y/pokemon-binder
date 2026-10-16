@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.15.4 (October 16, 2026)
+
+- **Set logos on My binders.** Each set binder's tile now shows the set's logo (the same one as its inside cover) above the year and card count, instead of the name in plain text. Master sets, your own binders, and any set whose logo isn't available keep the name.
+
 ## v3.15.3 (October 16, 2026)
 
 - **Smoother launch screen.** The icon is now the same size and in the same spot as Android's own launch screen, so the hand-over between the two no longer looks like a zoom. It stays up for 1.5 seconds so you can see it, then fades into the home page. The thin scroll bar that showed on its right edge is gone.
