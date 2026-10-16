@@ -10,10 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v3.19.1 (October 16, 2026)
 
-- **Cleanup pass (nothing looks different):** removed leftover code from older designs that nothing used any more: 24 unused style rules (the old sets menu rows, the first cover style and others), an unused page helper, and 4 unused server pieces from an older way of collecting prices. The automatic tests now also catch two page elements sharing an id and two server functions sharing a name, and a new cleanup check lists leftovers after each feature release.
 - **Status works again:** Settings → About → Status said "Couldn't reach the server" even when everything was fine. A newer part of the page (the dates on recently added cards) had reused the name of the one Status relies on and replaced it. They now have separate names, and the automatic tests catch any repeat of this.
+- **Cleanup pass (nothing looks different):** removed leftover code from older designs that nothing used any more: 24 unused style rules (the old sets menu rows, the first cover style and others), an unused page helper, and 4 unused server pieces from an older way of collecting prices. The automatic tests now also catch two page elements sharing an id and two server functions sharing a name, and a new cleanup check lists leftovers after each feature release.
 
 ## v3.19 (October 16, 2026)
 
