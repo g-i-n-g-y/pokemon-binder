@@ -10,6 +10,11 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.18 (October 16, 2026)
+
+- **Tab bar at the bottom on phones.** Inside a binder, Cards, Pages, Shopping, Upgrades and Stats now sit in a bar at the bottom of the screen with icons, in easy thumb reach. My binders and computers look the same as before.
+- **Pages is roomier.** The money summary (cards owned, value, cost to finish) is hidden on the Pages tab; it's still on the other tabs, and each page still shows what it costs to fill. On phones, the pocket size and order sit side by side, and the page flip arrows stay just above the tab bar, fading in over the binder, so you can flip without scrolling.
+
 ## v3.17 (October 16, 2026)
 
 - **Download your whole collection as a spreadsheet.** Settings → Backup and import → **Download spreadsheet** gives one Excel file with an "All binders" tab and a tab for each binder: every card, owned or needed, copies, condition, what you paid, today's price, value, the day you got it, and your notes.
