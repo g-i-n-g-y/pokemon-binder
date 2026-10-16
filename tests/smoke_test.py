@@ -337,6 +337,13 @@ def main():
         names = re.findall(r"^\s*(?:async\s+)?function\s+(\w+)\s*\(", page, re.M)
         twice = sorted({n for n in names if names.count(n) > 1})
         check("no two page functions share a name (the later one would replace the first)", not twice, twice)
+        ids = re.findall(r'\sid="([^"]+)"', page.split("<script>")[0])
+        twice_ids = sorted({i for i in ids if ids.count(i) > 1})
+        check("no two page elements share an id (the code would only find the first)", not twice_ids, twice_ids)
+        srv = open(os.path.join(REPO, "server.py"), encoding="utf-8").read()
+        defs = re.findall(r"^def (\w+)\(", srv, re.M)
+        twice_defs = sorted({d for d in defs if defs.count(d) > 1})
+        check("no two server functions share a name", not twice_defs, twice_defs)
 
         log.seek(0)
         text = log.read()

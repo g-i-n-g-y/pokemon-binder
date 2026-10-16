@@ -77,6 +77,7 @@ Your collection, purchases, photos, and prices are stored only on the machine ru
 | `fonts-OFL.txt` | The fonts' free license (not installed on your server) |
 | `seed_prices.json` | Starting Neo Destiny prices, only used on a brand-new install |
 | `tests/smoke_test.py` | Checks the binder before a release: `python3 tests/smoke_test.py` (not installed on your server) |
+| `tests/cleanup_check.py` | Lists leftover code nothing uses and names used twice, after each feature release: `python3 tests/cleanup_check.py` (not installed on your server) |
 
 ## Your data (never in this repository)
 

@@ -332,14 +332,6 @@ def history_put_day(sid, d, snap):
                   (sid, d, json.dumps(snap)))
 
 
-def card_history(sid, n, since=""):
-    """[(date, price)] for one card, read straight from the database (no need to load every card's history)."""
-    with db_lock:
-        return [(d, v) for d, v in db().execute(
-            "SELECT d, json_extract(snap, ?) FROM history WHERE sid = ? AND d >= ? ORDER BY d", (f'$."{n}"', sid, since))
-            if v is not None]
-
-
 def read_json(path, default):
     key = doc_key(path)
     if key is None:
@@ -1575,7 +1567,6 @@ def _product_id(card_id, ua):
 LP_MP_IDS = [2, 3]  # TCGplayer condition ids: 1 NM, 2 LP, 3 MP, 4 HP, 5 DMG (updated from the price slots)
 COND_IDS = {"NM": 1, "LP": 2, "MP": 3, "HP": 4, "DMG": 5}
 COND_LONG = {"NM": "Near Mint", "LP": "Lightly Played", "MP": "Moderately Played", "HP": "Heavily Played", "DMG": "Damaged"}
-MAX_PAGES = 8
 
 
 def latest_sales(pid, offset=0, conditions=None):
@@ -1592,28 +1583,6 @@ def latest_sales(pid, offset=0, conditions=None):
 def is_match(s):
     return (s.get("condition") in WANT_COND and "1st" not in str(s.get("variant", ""))
             and isinstance(s.get("purchasePrice"), (int, float)))
-
-
-def collect_sales(pid, conditions, verbose=False):
-    """Page through recent sales until we have enough LP/MP Unlimited ones."""
-    found, seen, offset = [], set(), 0
-    for page in range(MAX_PAGES):
-        batch = latest_sales(pid, offset, conditions)
-        new = 0
-        for x in batch:
-            key = (x.get("orderDate"), x.get("purchasePrice"), x.get("condition"), x.get("variant"), x.get("title"))
-            if key not in seen:
-                seen.add(key)
-                found.append(x)
-                new += 1
-        if verbose:
-            print(f"  page {page + 1}: {len(batch)} sales ({new} new): " +
-                  ", ".join(f"{x.get('condition')} ${x.get('purchasePrice')}" for x in batch))
-        if not batch or not new or sum(map(is_match, found)) >= SALES_TO_AVERAGE:
-            break
-        offset += len(batch)
-        time.sleep(0.3)
-    return found
 
 
 COND_SHORT = {"Near Mint": "NM", "Lightly Played": "LP", "Moderately Played": "MP",
@@ -1653,22 +1622,6 @@ def condition_sales(pid, verbose=False):
             time.sleep(0.3)
         time.sleep(0.3)
     return found
-
-
-def lp_mp_sales(pid, verbose=False):
-    """All recent sales (for per-condition prices), topped up with LP/MP-only sales if there are too few."""
-    if verbose:
-        print("All conditions:")
-    sales = collect_sales(pid, None, verbose)
-    if sum(map(is_match, sales)) < SALES_TO_AVERAGE:
-        if verbose:
-            print("Topping up with LP/MP-only sales:")
-        seen = {sale_key(x) for x in sales}
-        for x in collect_sales(pid, LP_MP_IDS, verbose):
-            if sale_key(x) not in seen:
-                seen.add(sale_key(x))
-                sales.append(x)
-    return sales
 
 
 def recent_by_condition(sales, keep=5):

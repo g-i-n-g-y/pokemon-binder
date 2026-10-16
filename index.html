@@ -150,11 +150,8 @@ dialog::backdrop{background:rgba(5,4,8,.6)}
 .lpmp .half+.half{border-left:1px solid var(--line);padding-left:14px}
 .lpmp .v{font-size:22px}
 .lpmp.one{grid-template-columns:1fr}
-.iconrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.iconrow img{width:40px;height:40px;border-radius:8px;background:var(--bg);border:1px solid var(--line);object-fit:contain;padding:3px}
 .allsum{border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:12px 14px;margin-bottom:12px}
 .allsum h3{margin:0 0 8px;font-size:12px;font-weight:500;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
-.allsum .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
 .allsum .k{display:block;font-size:12px;color:var(--muted)}
 .allsum .v{display:block;font-family:var(--f-display);font-size:19px;font-weight:700;font-variant-numeric:tabular-nums}
 .allsum .s{display:block;font-size:12px;color:var(--muted)}
@@ -353,7 +350,6 @@ dialog.confirm{margin:auto;height:fit-content;max-height:calc(100% - 32px);width
 .ver .s{font-size:13px;color:var(--muted)}
 .sha.vtag{color:var(--ink);border-color:var(--dark)}
 .sha{font-family:var(--f-mono);font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 5px}
-.paused{font-size:13px;color:var(--ink);background:color-mix(in srgb,var(--light) 18%,transparent);border:1px solid color-mix(in srgb,var(--light) 45%,transparent);border-radius:8px;padding:8px 10px}
 .prev{display:flex;flex-direction:column;gap:6px}
 .prevlist,.changes{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .prevlist li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
@@ -378,7 +374,6 @@ dialog.confirm{margin:auto;height:fit-content;max-height:calc(100% - 32px);width
 :root[data-private] :is(#privBtn,#hmPriv) .eye-off{display:block}
 :root[data-private] #sOwned,:root[data-private] #sPct,:root[data-private] .stat .bar,
 :root[data-private] #sValue,:root[data-private] #sGain,:root[data-private] #sNeed,:root[data-private] #sNeedN,
-:root[data-private] .setrow .go span,:root[data-private] .setrow .mini{filter:blur(9px);user-select:none;pointer-events:none}
 :root[data-private] .sleeve.need{background:var(--surface);border-style:solid}
 :root[data-private] .sleeve.need .face{filter:none;opacity:1}
 :root[data-private] .sleeve .tag{visibility:hidden}
@@ -393,15 +388,6 @@ dialog.left{margin:0 auto 0 0}
 .btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink);justify-content:center}
 .close.back{align-self:flex-start;padding:0}
 .setlist{display:flex;flex-direction:column;gap:8px;margin-block:14px}
-.setrow{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
-.setrow[aria-current="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
-.setrow .go{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;border:0;background:none;color:var(--ink);font:inherit;text-align:left;padding:12px;cursor:pointer}
-.setrow .go b{font-family:var(--f-display);font-size:17px}
-.setrow .go span{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
-.setrow .rm{border:0;background:none;color:var(--muted);font:inherit;font-size:13px;padding:8px 12px;cursor:pointer;white-space:nowrap}
-.setrow .rm.confirm{color:var(--bad)}
-.mini{height:4px;border-radius:2px;background:var(--sleeve);overflow:hidden}
-.mini i{display:block;height:100%;background:linear-gradient(90deg,var(--light),var(--dark))}
 .field{font:inherit;font-size:15px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;width:100%}
 .catalog{display:flex;flex-direction:column;gap:4px}
 .catalog h3{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:14px 0 4px;font-weight:500}
@@ -412,9 +398,7 @@ dialog.left{margin:0 auto 0 0}
 .catrow .btn{padding:6px 12px}
 .catrow em{font-style:normal;font-size:13px;color:var(--muted)}
 .sprite{width:64px;height:64px;image-rendering:pixelated;flex:none;margin-bottom:-6px}
-.catrow .sprite,.setrow .sprite{width:40px;height:40px;margin:0}
-.setrow .go b{display:flex;align-items:center;gap:6px}
-.setrow .go b .sprite{width:32px;height:32px;margin:-6px 0}
+.catrow .sprite{width:40px;height:40px;margin:0}
 /* ---------- custom cards ---------- */
 .cbadge{display:inline-flex;align-items:center;gap:3px;font-family:var(--f-mono);font-size:11px;font-weight:500;letter-spacing:.04em;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 7px 1px 5px;white-space:nowrap}
 .cbadge svg{width:12px;height:12px}
@@ -602,7 +586,6 @@ dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
   .sheet{padding:16px 16px 32px;gap:16px}
   .step button{width:52px;height:46px}
   .links a,.btn{padding:10px 14px}
-  .setrow .go{padding:14px 12px}
   .catrow{padding:10px 2px}
   .views{align-self:stretch}
   .views button{flex:1;padding:10px 8px}
@@ -734,15 +717,12 @@ dialog.float .ui-chips{display:grid;grid-template-columns:repeat(auto-fill,minma
 .ring{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink);
   background:radial-gradient(closest-side,var(--ring-bg) 76%,transparent 78% 100%),
     conic-gradient(var(--light) 0,var(--dark) calc(var(--p)*1%),var(--line) calc(var(--p)*1%) 100%)}
-.allsum .as-bar{height:5px;margin:5px 0 3px;max-width:150px}
-:root[data-private] .allsum .as-bar{filter:blur(6px)}
 .srm{flex:none;margin:0 12px 0 4px;border:1px solid var(--bad);background:none;color:var(--bad);border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
 .srm.sget{margin-right:0;border-color:var(--line);color:var(--ink)}
 .srm.confirm{background:var(--bad);color:var(--bg)}
 :root[data-private] .srow small,:root[data-private] .srow .ring,:root[data-private] .allsum .stat .bar{filter:blur(8px);user-select:none}
 .allsum{padding:12px 14px;margin:0}
 .allsum h3{margin:0 0 8px;font-size:14px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--ink)}
-.allsum .grid2{gap:10px 16px}
 .allsum .v{font-size:18px}
 #drSets .verline{margin-top:0}
 /* the menu covers the whole phone screen (the browser otherwise keeps popups a little narrower than the screen) */
@@ -850,7 +830,6 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
 .pg-tools{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
 .pg-tools select{font:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
 .pg-tools .btn[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.pg-tools .grow{flex:1}
 .pg-sum{font-size:13px;color:var(--muted);margin:10px 0 0;line-height:1.45}
 .pg-spreads{display:flex;flex-direction:column;gap:26px;margin-top:16px}
 .pg-spread{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;max-width:980px;width:100%;margin-inline:auto}
@@ -859,9 +838,6 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
 .pg-spread .pg-side:first-child{border-radius:12px 0 0 12px;border-right-width:3px}
 .pg-spread .pg-side:last-child{border-radius:0 12px 12px 0}
 .pg-side.cover{display:grid;place-items:center;color:var(--muted);font-size:13px;background:repeating-linear-gradient(135deg,var(--bg) 0 10px,var(--surface) 10px 20px)}
-.pg-side.cover.has-art{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:24px}
-.pg-side.cover .pg-logo{max-width:78%;max-height:160px;object-fit:contain;filter:drop-shadow(0 6px 14px rgba(0,0,0,.45))}
-.pg-side.cover .pg-sprite{width:120px;height:120px;image-rendering:pixelated}
 .pg-side.cover b{font-family:var(--f-display);font-size:24px;color:var(--ink);line-height:1.15}
 .pg-side.cover span{font-size:13px}
 .pg-grid{display:grid;gap:8px}
@@ -1715,7 +1691,6 @@ const isPrivate = () => document.documentElement.hasAttribute("data-private");
 const priceOf = n => (!isPrivate() && qty(n)>0 && rec(n).cond && condPrice(n,rec(n).cond)) || basePrice(n);
 const base = () => "set/"+enc(state.sid);
 const todayStr = () => { const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
-const daysAgo = k => { const d=new Date(); d.setDate(d.getDate()-k); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
 const buys = n => {
   const l=(rec(n).purchases||[]).filter(b=>b && typeof b==="object");
   const q=Number(rec(n).qty)||0;
