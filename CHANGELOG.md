@@ -10,6 +10,11 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.15.2 (October 16, 2026)
+
+- **Launch screen for the installed app.** When you open the binder from your home screen, it shows the app icon (your own, if you set one in Settings) on the theme's background while your binders load, then fades into the home page. It shows for at least a moment and never more than 3 seconds. Opening the binder in a regular browser tab skips it.
+- The phone app is marked **Android** in Settings and on the project page. It's made for Chrome on Android and isn't set up for iPhone.
+
 ## v3.15.1 (October 16, 2026)
 
 - Pages on big computer screens: the two-page spread was stuck to the left with an empty gap on the right. It's now centered and a little bigger, while still fitting the window's height.

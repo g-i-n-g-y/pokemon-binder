@@ -984,9 +984,19 @@ body.at-home > .wrap:not(.home){display:none}
 .hm-card small{display:block;font-size:11px;color:var(--muted);line-height:1.25}
 :root[data-private] #hmRecentBox{display:none}
 @media (max-width:640px){.home .hm-top{padding-top:10px}}   /* phones: the binder header has its own top spacing; match it */
+/* Launch screen for the installed app: the app icon until the binder is ready (v3.15.2) */
+#splash{display:none}
+@media (display-mode: standalone){
+  #splash{display:grid;place-items:center;position:fixed;inset:0;z-index:1000;background:var(--bg);transition:opacity .35s ease}
+  #splash img{width:min(38vw,168px);height:auto;aspect-ratio:1;object-fit:contain;border-radius:22%;animation:splashIn .5s ease both}
+}
+#splash.out{opacity:0;pointer-events:none}
+@keyframes splashIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){#splash img{animation:none}#splash{transition:none}}
 </style>
 </head>
 <body>
+<div id="splash" aria-hidden="true"><img src="favicon" alt=""></div>
 <div class="wrap">
   <header class="top">
     <div class="title">
@@ -1525,7 +1535,7 @@ body.at-home > .wrap:not(.home){display:none}
         <div class="ui-row ui-static" id="stPendRow" hidden><span class="ui-l"><b id="stPendT"></b><small>Added on this phone while offline. They're sent to <span class="srv">the server</span> after you confirm.</small></span><button class="btn primary" type="button" id="stPendBtn">Review &amp; sync</button></div>
         <div class="ui-row ui-static" id="stUndoRow" hidden><span class="ui-l"><b>Last sync</b><small id="stUndoS"></small></span><button class="btn" type="button" id="stUndoBtn">Undo last sync</button></div>
       </div>
-      <h3 class="ui-h">Phone app</h3>
+      <h3 class="ui-h">Phone app (Android)</h3>
       <div class="ui-group">
         <div class="ui-row ui-static"><span class="ui-l"><b>Install the binder as an app</b><small id="stAppS">Checking&hellip;</small></span><button class="btn" type="button" id="stAppBtn" hidden>Install</button></div>
       </div>
@@ -4887,6 +4897,13 @@ $("stHosts").addEventListener("change",()=>{
 });
 
 // ---------- start ----------
+// The installed app opens on a launch screen with its icon, shown for at least 0.7 s and until the first screen is ready.
+const splashAt=Date.now();
+function hideSplash(){
+  const el=$("splash"); if(!el || el.dataset.out) return; el.dataset.out="1";
+  setTimeout(()=>{ el.classList.add("out"); setTimeout(()=>el.remove(),400); }, Math.max(0,700-(Date.now()-splashAt)));
+}
+setTimeout(hideSplash,3000);   // never longer than 3 s, even if the server is slow
 header(); render();
 setPrivate(isPrivate());
 { const v=recall("nd-view"); if(v==="pages"||v==="shop"||v==="upg"||v==="stats") setView(v); }
@@ -4896,7 +4913,7 @@ getSlots().then(loadSets).then(()=>{
   if(want) history.replaceState(null,"",location.pathname+location.search);
   if(!state.sets.length) return openSet(null);   // no binders yet: the binder screen explains how to add one
   showHome();
-}).then(()=>fetch("api/refresh")).then(r=>r&&r.json()).then(j=>{ if(j&&j.running) showJob(j); }).catch(()=>{ $("sync").textContent="Can't reach "+srv()+". Try reloading."; });
+}).finally(hideSplash).then(()=>fetch("api/refresh")).then(r=>r&&r.json()).then(j=>{ if(j&&j.running) showJob(j); }).catch(()=>{ $("sync").textContent="Can't reach "+srv()+". Try reloading."; });
 window.addEventListener("popstate",()=>{   // phone back/forward between home and a binder
   const sid=location.hash.slice(1);
   if(!sid){ if(state.sets.length) showHome(); return; }
