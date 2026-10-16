@@ -675,6 +675,8 @@ dialog.float .ui-chips{display:grid;grid-template-columns:repeat(auto-fill,minma
 .ui-chips .skin[aria-pressed="true"]{border-color:var(--dark);box-shadow:inset 0 0 0 1px var(--dark)}
 /* windows with a section list */
 .ui-split .ui-nav{display:flex;flex-direction:column;gap:14px}
+.ui-split .ui-nav .ui-navh{margin:6px 0 -6px}
+.ui-split .ui-nav .ui-navh:first-child{margin-top:0}
 .ui-split .ui-page{display:none}
 .ui-split .ui-page.on{display:flex;flex-direction:column;gap:14px}
 .ui-split .ui-page.on>*{flex-shrink:0}   /* scroll instead of squashing a section to fit */
@@ -1506,17 +1508,23 @@ html,body{overscroll-behavior-y:none}
     <button class="close" type="button" id="sClose">Close ✕</button>
     <h2 id="stTitle">Settings</h2>
     <nav class="ui-nav" aria-label="Settings sections">
+      <h3 class="ui-h ui-navh">This device</h3>
       <div class="ui-group">
         <button class="ui-row" type="button" data-go="look"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-.9-.7-1.3-.7-2.2 0-.9.7-1.6 1.6-1.6H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3Z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10.5" cy="7.5" r="1"/><circle cx="15" cy="7.5" r="1"/></svg></span><span class="ui-l"><b>Appearance</b></span><span class="ui-v" id="sumLook"></span><span class="ui-chev" aria-hidden="true"></span></button>
         <label class="ui-row" for="stPriv"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 6.2A9.6 9.6 0 0 1 12 6c5 0 8.5 4.5 9.5 6a17 17 0 0 1-2.7 3.4M6.6 6.7C4.4 8 3 10 2.5 12c1 1.5 4.5 6 9.5 6 1.6 0 3-.4 4.3-1"/><path d="M9.9 10a3 3 0 0 0 4.1 4.1"/></svg></span><span class="ui-l"><b>Privacy mode</b><small>Hides values and purchases on this device</small></span><input type="checkbox" class="ui-switch" id="stPriv"></label>
+        <button class="ui-row" type="button" data-go="phone"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M11 18h2"/></svg></span><span class="ui-l"><b>Phone</b></span><span class="ui-v" id="sumPhone"></span><span class="ui-chev" aria-hidden="true"></span></button>
       </div>
+      <h3 class="ui-h ui-navh">Pricing</h3>
       <div class="ui-group">
         <button class="ui-row" type="button" data-go="prices"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg></span><span class="ui-l"><b>Prices</b></span><span class="ui-v" id="sumPrices"></span><span class="ui-chev" aria-hidden="true"></span></button>
         <button class="ui-row" type="button" data-go="refresh"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="ui-l"><b>Daily refresh</b></span><span class="ui-v" id="sumRefresh"></span><span class="ui-chev" aria-hidden="true"></span></button>
       </div>
+      <h3 class="ui-h ui-navh">Data</h3>
       <div class="ui-group">
         <button class="ui-row" type="button" data-go="backup"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/></svg></span><span class="ui-l"><b>Backup and import</b></span><span class="ui-v" id="sumBackup"></span><span class="ui-chev" aria-hidden="true"></span></button>
         <button class="ui-row" type="button" data-go="server"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg></span><span class="ui-l"><b>Server</b></span><span class="ui-v" id="sumSrv"></span><span class="ui-chev" aria-hidden="true"></span></button>
+      </div>
+      <div class="ui-group">
         <button class="ui-row" type="button" data-go="about"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg></span><span class="ui-l"><b>About</b></span><span class="ui-v" id="sumAbout"></span><span class="ui-chev" aria-hidden="true"></span></button>
       </div>
     </nav>
@@ -1533,10 +1541,6 @@ html,body{overscroll-behavior-y:none}
         <label class="ui-row" for="stCele"><span class="ui-l"><b>Celebrate when a binder is finished</b><small>Unown swirl in and spell CONGRATS when you own every card. Only affects this device.</small></span><input type="checkbox" class="ui-switch" id="stCele" checked></label>
         <div class="ui-row ui-static"><span class="ui-l"><b>Try it</b><small>Plays the celebration now</small></span><button class="btn" type="button" id="stCeleTry">Play</button></div>
       </div>
-      <h3 class="ui-h">Long press a card</h3>
-      <div class="ui-group">
-        <label class="ui-row ui-static" for="stLp"><span class="ui-l"><b>Press and hold a card to open</b><small>Phones only. Works on Cards, Pages and Find a card. A quick tap still opens the card details. Only affects this device.</small></span><select id="stLp" class="ui-ctl"><option value="ebay">eBay sold</option><option value="tcg">TCGplayer</option><option value="pc">PriceCharting</option><option value="off">Nothing</option></select></label>
-      </div>
       <h3 class="ui-h">Tab icon</h3>
       <div class="ui-group"><div class="ui-row ui-static">
         <img id="icPrev" src="favicon" alt="Current tab icon" width="36" height="36">
@@ -1545,6 +1549,18 @@ html,body{overscroll-behavior-y:none}
         <input id="icUp" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/x-icon" hidden>
         <button class="btn" type="button" id="icReset" hidden>Default</button>
       </div></div>
+    </section>
+
+    <section class="ui-page" data-page="phone" data-title="Phone">
+      <h3 class="ui-h">App</h3>
+      <div class="ui-group">
+        <div class="ui-row ui-static"><span class="ui-l"><b>Install the binder as an app</b><small id="stAppS">Checking&hellip;</small></span><button class="btn" type="button" id="stAppBtn" hidden>Install</button></div>
+      </div>
+      <h3 class="ui-h">Long press a card</h3>
+      <div class="ui-group">
+        <label class="ui-row ui-static" for="stLp"><span class="ui-l"><b>Press and hold a card to open</b><small>Works on Cards, Pages and Find a card. A quick tap still opens the card details.</small></span><select id="stLp" class="ui-ctl"><option value="ebay">eBay sold</option><option value="tcg">TCGplayer</option><option value="pc">PriceCharting</option><option value="off">Nothing</option></select></label>
+      </div>
+      <div class="note">These only change this phone.</div>
     </section>
 
     <section class="ui-page" data-page="prices" data-title="Prices">
@@ -1606,10 +1622,6 @@ html,body{overscroll-behavior-y:none}
         <div class="ui-row ui-static"><span class="ui-l"><b>Reload the app</b><small>If something looks stuck. Nothing you've saved is lost, including changes waiting to sync.</small></span><button class="btn" type="button" id="stReload">Reload</button></div>
         <div class="ui-row ui-static" id="stPendRow" hidden><span class="ui-l"><b id="stPendT"></b><small>Added on this phone while offline. They're sent to <span class="srv">the server</span> after you confirm.</small></span><button class="btn primary" type="button" id="stPendBtn">Review &amp; sync</button></div>
         <div class="ui-row ui-static" id="stUndoRow" hidden><span class="ui-l"><b>Last sync</b><small id="stUndoS"></small></span><button class="btn" type="button" id="stUndoBtn">Undo last sync</button></div>
-      </div>
-      <h3 class="ui-h">Phone app (Android)</h3>
-      <div class="ui-group">
-        <div class="ui-row ui-static"><span class="ui-l"><b>Install the binder as an app</b><small id="stAppS">Checking&hellip;</small></span><button class="btn" type="button" id="stAppBtn" hidden>Install</button></div>
       </div>
       <h3 class="ui-h">Other addresses</h3>
       <div class="ui-group">
@@ -2238,7 +2250,7 @@ setTimeout(()=>{ if(celeOn()) for(const ch of new Set(CELE_WORD.toLowerCase())){
 $("stCele").checked=celeOn();
 $("stCele").onchange=e=>store("nd-cele", e.target.checked ? undefined : "off");
 $("stLp").value=lpMode();
-$("stLp").onchange=e=>store("nd-lp", e.target.value==="ebay" ? undefined : e.target.value);
+$("stLp").onchange=e=>{ store("nd-lp", e.target.value==="ebay" ? undefined : e.target.value); $("sumPhone").textContent=e.target.value==="off" ? "" : "Hold: "+e.target.selectedOptions[0].textContent; };
 $("stCeleTry").onclick=()=>celebrate((state.set.name||"Your binder")+" · "+state.cards.length+" of "+state.cards.length+" cards");
 
 // ---------- recent sales tab ----------
@@ -3012,6 +3024,7 @@ function settingsSummary(){
   const t=$("stTime").value||"03:00", [h,m]=t.split(":").map(Number);
   $("sumRefresh").textContent=$("stAuto").checked ? new Date(2000,0,1,h,m).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"}) : "Off";
   $("sumSrv").textContent=state.serverName||"Not named";
+  { const o=$("stLp").selectedOptions[0]; $("sumPhone").textContent=lpMode()==="off" ? "" : "Hold: "+(o?o.textContent:""); }
   if(!$("sumAbout").textContent) $("sumAbout").textContent=($("verNum").textContent||"").split(" ")[0];
   $("sumBackup").textContent="";
 }
@@ -5032,7 +5045,7 @@ document.addEventListener("contextmenu",e=>{
   if(matchMedia("(pointer:coarse)").matches && e.target.closest("img, canvas, svg, .face, .pk, .bk, .vb-cover, .hm-card")) e.preventDefault();
 },{capture:true});
 
-// Press and hold a card (phones) to jump straight to a price site. Settings > Appearance picks which one, or Nothing.
+// Press and hold a card (phones) to jump straight to a price site. Settings > Phone picks which one, or Nothing.
 function lpMode(){ const v=recall("nd-lp"); return ["tcg","pc","off"].includes(v) ? v : "ebay"; }
 (()=>{
   // Phones only let a page open a new tab right after a finger lifts, so holding arms it (with a short buzz)

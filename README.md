@@ -112,7 +112,7 @@ The binder can be installed as an app on Android phones with Chrome. It isn't se
 
 1. In the Tailscale admin console, under **DNS**, turn on **MagicDNS** and **HTTPS Certificates**.
 2. On the computer running the binder, run `tailscale serve --bg 8765` (use your binder's port). Tailscale prints the https address, like `https://<machine>.<your-tailnet>.ts.net`.
-3. On your phone (with Tailscale on), open that address in Chrome and tap **Install** (or Settings → Server → Phone app).
+3. On your phone (with Tailscale on), open that address in Chrome and tap **Install** (or Settings → Phone → Install).
 
 This keeps the binder inside your Tailscale network; nothing is opened to the internet.
 

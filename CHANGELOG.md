@@ -10,6 +10,12 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.19 (October 16, 2026)
+
+- **Settings are easier to find.** The menu is now in three labeled groups: This device (Appearance, Privacy mode, Phone), Pricing (Prices, Daily refresh) and Data (Backup and import, Server), with About at the bottom.
+- **New Phone page** in Settings. It holds Install the binder as an app (moved from Server) and Long press a card (moved from Appearance), and its menu row shows what a long press opens.
+- Appearance now only has looks (theme, the Unlimited label, the celebration, tab icon), and Server only has connection settings. Every setting works the same as before.
+
 ## v3.18.2 (October 16, 2026)
 
 - **Press and hold a card to check its price.** On phones, holding a card for half a second gives a short buzz, and lifting your finger opens its eBay sold listings. Works on Cards, Pages (not while arranging) and Find a card. A quick tap still opens the card details. Pick eBay sold, TCGplayer, PriceCharting or Nothing in **Settings → Appearance → Long press a card**.
