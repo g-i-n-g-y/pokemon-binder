@@ -1533,6 +1533,10 @@ html,body{overscroll-behavior-y:none}
         <label class="ui-row" for="stCele"><span class="ui-l"><b>Celebrate when a binder is finished</b><small>Unown swirl in and spell CONGRATS when you own every card. Only affects this device.</small></span><input type="checkbox" class="ui-switch" id="stCele" checked></label>
         <div class="ui-row ui-static"><span class="ui-l"><b>Try it</b><small>Plays the celebration now</small></span><button class="btn" type="button" id="stCeleTry">Play</button></div>
       </div>
+      <h3 class="ui-h">Long press a card</h3>
+      <div class="ui-group">
+        <label class="ui-row ui-static" for="stLp"><span class="ui-l"><b>Press and hold a card to open</b><small>Phones only. Works on Cards, Pages and Find a card. A quick tap still opens the card details. Only affects this device.</small></span><select id="stLp" class="ui-ctl"><option value="ebay">eBay sold</option><option value="tcg">TCGplayer</option><option value="pc">PriceCharting</option><option value="off">Nothing</option></select></label>
+      </div>
       <h3 class="ui-h">Tab icon</h3>
       <div class="ui-group"><div class="ui-row ui-static">
         <img id="icPrev" src="favicon" alt="Current tab icon" width="36" height="36">
@@ -2233,6 +2237,8 @@ async function celebrate(sub){
 setTimeout(()=>{ if(celeOn()) for(const ch of new Set(CELE_WORD.toLowerCase())){ const im=new Image(); im.src="unown/"+ch+".png"; } }, 8000);
 $("stCele").checked=celeOn();
 $("stCele").onchange=e=>store("nd-cele", e.target.checked ? undefined : "off");
+$("stLp").value=lpMode();
+$("stLp").onchange=e=>store("nd-lp", e.target.value==="ebay" ? undefined : e.target.value);
 $("stCeleTry").onclick=()=>celebrate((state.set.name||"Your binder")+" · "+state.cards.length+" of "+state.cards.length+" cards");
 
 // ---------- recent sales tab ----------
@@ -2301,6 +2307,26 @@ function condOptions(n){
   else if(qty(n)>0 && cur){ yours.hidden=false; yours.textContent="No recent "+cur+" sales, so your copy counts at the "+mainLabel().replace(/^Combined /,"")+" average."; }
   else yours.hidden=true;
 }
+// Price-check links for a card in the open binder. Master set cards search with their own set and printed number, like "Expedition Totodile 134/165".
+function cardLinks(n){
+  const c=state.cards.find(x=>x.n===n); if(!c) return null;
+  const setName=(c.set||state.set.name).replace(/ Base Set$/,"");
+  const s=q(setName+" "+c.name+" "+(c.num ? c.num+(c.pt?"/"+c.pt:"") : n));
+  return {
+    ebay: ebaySoldUrl({year:c.date||(c.set?"":state.set.releaseDate), set:setName, name:c.name, rarity:c.rarity, num:c.num||(c.custom?"":n), pt:c.num ? c.pt : (c.custom?"":printed())}),
+    pc: (state.info[n]||{}).pc || "https://www.pricecharting.com/search-products?type=prices&q="+s,
+    tcg: c.tcg ? "https://www.tcgplayer.com/product/"+c.tcg : "https://www.tcgplayer.com/search/pokemon/product?q="+q(c.name+" "+setName)
+  };
+}
+// Same links for a card from Find a card (any set).
+function findLinks(c){
+  const setName=(c.set||"").replace(/ Base Set$/,"");
+  return {
+    ebay: ebaySoldUrl({year:c.date, set:c.set, name:c.name, rarity:c.rarity, num:c.num, pt:c.pt}),
+    pc: "https://www.pricecharting.com/search-products?type=prices&q="+q(setName+" "+c.name+" "+(c.num ? c.num+(c.pt?"/"+c.pt:"") : "")),
+    tcg: tcgSearchUrl(c.set,c.name)
+  };
+}
 function openCard(n){
   const c=state.cards.find(x=>x.n===n); if(!c) return; state.open=n;
   const r=rec(n);
@@ -2317,13 +2343,8 @@ function openCard(n){
   { const sd=document.querySelector("#dlg .cs-side"); if(sd) sd.scrollTop=0; }
   $("dPsrc").textContent=priceSource(n);
   condOptions(n);
-  const L=$("dLinks"); L.replaceChildren();
-  // Master set cards search with their own set and printed number, like "Expedition Totodile 134/165".
-  const setName=(c.set||state.set.name).replace(/ Base Set$/,"");
-  const s=q(setName+" "+c.name+" "+(c.num ? c.num+(c.pt?"/"+c.pt:"") : n));
-  [["eBay sold",ebaySoldUrl({year:c.date||(c.set?"":state.set.releaseDate), set:setName, name:c.name, rarity:c.rarity, num:c.num||(c.custom?"":n), pt:c.num ? c.pt : (c.custom?"":printed())})],
-   ["PriceCharting",(state.info[n]||{}).pc || "https://www.pricecharting.com/search-products?type=prices&q="+s],
-   ["TCGplayer", c.tcg ? "https://www.tcgplayer.com/product/"+c.tcg : "https://www.tcgplayer.com/search/pokemon/product?q="+q(c.name+" "+setName)]]
+  const L=$("dLinks"); L.replaceChildren(); const k=cardLinks(n);
+  [["eBay sold",k.ebay],["PriceCharting",k.pc],["TCGplayer",k.tcg]]
    .forEach(([t,u])=>{ const a=document.createElement("a"); a.href=u; a.target="_blank"; a.rel="noopener"; a.textContent=t+" ↗"; L.append(a); });
   $("dQty").textContent=qty(n);
   $("dCond").value=r.cond||"";
@@ -4133,7 +4154,7 @@ function fdRow(c){
   const d=document.createElement("span"); const b=document.createElement("b"); b.textContent=c.name;
   const sm=document.createElement("small"); sm.textContent=[c.set, padNo(c.num,c.pt), c.rarity].filter(Boolean).join(" · ");
   d.append(b,sm); if(c.in && c.in.length) d.append(fdTags(c));
-  row.append(fdImg(c), d); row.onclick=()=>fdOpenPick(c); return row;
+  row.append(fdImg(c), d); row._c=c; row.onclick=()=>fdOpenPick(c); return row;
 }
 async function fdOpenSet(id){
   fd.scroll=$("fdSheet").scrollTop; fd.view="set"; fd.set=null; fd.setQ="";
@@ -4182,7 +4203,7 @@ function fdDrawSet(){
       const no=document.createElement("span"); no.className="no"; no.textContent=padNo(c.num,c.pt);
       const own=!isPrivate() && (c.in||[]).some(w=>w.qty>0);
       if(c.in && c.in.length){ const tg=document.createElement("span"); tg.className="fd-tag"+(own?" own":""); tg.textContent=own?"Owned":"In binder"; no.append(tg); }
-      b.append(fdImg(c), nm, no); b.onclick=()=>fdOpenPick(c); grid.append(b);
+      b.append(fdImg(c), nm, no); b._c=c; b.onclick=()=>fdOpenPick(c); grid.append(b);
     }
     if(!list.length) grid.append(fdNote("No card in this set matches that."));
   };
@@ -5010,6 +5031,38 @@ $("stHosts").addEventListener("change",()=>{
 document.addEventListener("contextmenu",e=>{
   if(matchMedia("(pointer:coarse)").matches && e.target.closest("img, canvas, svg, .face, .pk, .bk, .vb-cover, .hm-card")) e.preventDefault();
 },{capture:true});
+
+// Press and hold a card (phones) to jump straight to a price site. Settings > Appearance picks which one, or Nothing.
+function lpMode(){ const v=recall("nd-lp"); return ["tcg","pc","off"].includes(v) ? v : "ebay"; }
+(()=>{
+  // Phones only let a page open a new tab right after a finger lifts, so holding arms it (with a short buzz)
+  // and lifting the finger opens the site.
+  let t=0, x0=0, y0=0, armed=null, swallow=false;
+  const target=el=>{
+    const f=el.closest("#grid .face"); if(f){ const b=f.closest(".sleeve"); return b && cardLinks(b.dataset.n); }
+    const p=el.closest("#pgView .pk"); if(p){ if(pg.arr) return null; const n=pageLayout().slots[+p.dataset.i]; return n ? cardLinks(n) : null; }
+    const r=el.closest("#fdBody button"); if(r && r._c) return findLinks(r._c);
+    return null;
+  };
+  const stop=()=>{ clearTimeout(t); t=0; };
+  document.addEventListener("pointerdown",e=>{
+    stop(); armed=null; swallow=false;
+    if(e.pointerType!=="touch" || lpMode()==="off" || !e.target.closest) return;
+    const el=e.target; if(!target(el)) return;
+    x0=e.clientX; y0=e.clientY;
+    t=setTimeout(()=>{
+      t=0; const k=target(el), u=k && k[lpMode()]; if(!u) return;
+      armed=u; swallow=true; if(navigator.vibrate) navigator.vibrate(15);
+    },500);
+  },{passive:true});
+  document.addEventListener("pointermove",e=>{ if(t && Math.hypot(e.clientX-x0,e.clientY-y0)>10) stop(); },{passive:true});
+  const lift=()=>{ stop(); if(armed){ const u=armed; armed=null; window.open(u,"_blank","noopener"); } };
+  document.addEventListener("pointerup",lift,{capture:true});
+  document.addEventListener("touchend",lift,{capture:true});
+  ["pointercancel","scroll"].forEach(ev=>document.addEventListener(ev,()=>{ stop(); },{passive:true,capture:true}));
+  // The finger lifting after a long press would also count as a tap, so swallow that one click.
+  document.addEventListener("click",e=>{ if(swallow){ swallow=false; e.preventDefault(); e.stopPropagation(); } },{capture:true});
+})();
 
 // ---------- start ----------
 // The installed app opens on a launch screen with its icon, shown for at least 1.5 s and until the first screen is ready.
