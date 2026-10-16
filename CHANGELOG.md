@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Status works again:** Settings → About → Status said "Couldn't reach the server" even when everything was fine. A newer part of the page (the dates on recently added cards) had reused the name of the one Status relies on and replaced it. They now have separate names, and the automatic tests catch any repeat of this.
+
 ## v3.19 (October 16, 2026)
 
 - **Settings are easier to find.** The menu is now in three labeled groups: This device (Appearance, Privacy mode, Phone), Pricing (Prices, Daily refresh) and Data (Backup and import, Server), with About at the bottom.

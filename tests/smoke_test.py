@@ -333,6 +333,11 @@ def main():
             blocked = e.code == 403
         check("other websites can't add cards", blocked)
 
+        page = open(os.path.join(REPO, "index.html"), encoding="utf-8").read()
+        names = re.findall(r"^\s*(?:async\s+)?function\s+(\w+)\s*\(", page, re.M)
+        twice = sorted({n for n in names if names.count(n) > 1})
+        check("no two page functions share a name (the later one would replace the first)", not twice, twice)
+
         log.seek(0)
         text = log.read()
         check("no unexpected errors in the log", "Traceback" not in text, text[-800:])

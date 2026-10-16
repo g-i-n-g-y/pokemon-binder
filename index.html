@@ -4801,13 +4801,14 @@ function drawHome(){
     const c=document.createElement("button"); c.type="button"; c.className="hm-card";
     const f=document.createElement("span"); f.className="c"; const im=document.createElement("img"); im.alt=""; im.loading="lazy"; im.decoding="async";
     im.src="set/"+enc(r.sid)+"/img/"+enc(r.n)+".png"; im.onerror=()=>im.remove(); f.append(im);
-    const b=document.createElement("b"); b.textContent=r.name; const sm=document.createElement("small"); sm.textContent=r.set+" · "+agoText(r.d);
-    c.append(f,b,sm); c.setAttribute("aria-label", r.name+", "+r.set+", added "+agoText(r.d));
+    const b=document.createElement("b"); b.textContent=r.name; const sm=document.createElement("small"); sm.textContent=r.set+" · "+addedAgo(r.d);
+    c.append(f,b,sm); c.setAttribute("aria-label", r.name+", "+r.set+", added "+addedAgo(r.d));
     c.onclick=()=>goBinder(r.sid, ()=>{ if(state.sid===r.sid) openCard(r.n); });
     box.append(c);
   }
 }
-function agoText(d){
+// "today", "3 days ago", "last week" for a date (recently added cards). Status uses agoText for exact times.
+function addedAgo(d){
   const days=Math.round((new Date(todayStr())-new Date(d.slice(0,10)))/864e5);
   return days<=0 ? "today" : days===1 ? "yesterday" : days<7 ? days+" days ago" : days<14 ? "last week" : days<60 ? Math.round(days/7)+" weeks ago" : new Date(d).toLocaleDateString(undefined,{month:"short",year:"numeric"});
 }
