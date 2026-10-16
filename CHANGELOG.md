@@ -10,8 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v3.15.5 (October 16, 2026)
 
+- **Card shows on My binders:** the calendar button (local card shows) is now at the top of the home page too, next to privacy and Settings.
+- **Binders open on Cards:** opening a binder always starts on its Cards tab, instead of whichever tab you used last (Pages, Shopping list...).
 - **No more pull-to-refresh:** pulling down at the top of the page no longer reloads it, so scrolling back to the top is safe. If something looks stuck, use **Settings → Server → Reload the app**. Nothing saved is lost, including changes waiting to sync.
 - **Launch screen:** the icon now lines up with Android's own launch screen so it doesn't jump at the hand-over, and the scroll bar no longer flashes on the right edge while it shows.
 
