@@ -1055,6 +1055,8 @@ html,body{overscroll-behavior-y:none}
   .pg-pager{position:sticky;bottom:calc(66px + env(safe-area-inset-bottom));z-index:30;margin:14px -16px 0;padding:22px 16px 8px;
     background:linear-gradient(to top,var(--bg) 62%,transparent)}
 }
+/* Phones: long-pressing a picture doesn't open the browser's copy / save / share menu (v3.18.1) */
+@media (pointer:coarse){img,canvas,svg{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}}
 </style>
 </head>
 <body>
@@ -5002,6 +5004,12 @@ $("stHosts").addEventListener("change",()=>{
     .then(()=>{ $("stHostsMsg").textContent="Saved."; getSlots(); })
     .catch(e=>{ $("stHostsMsg").textContent=e.message+"."; });
 });
+
+// Long-pressing a picture on a phone shouldn't open the browser's image menu (copy, save, share).
+// Computers keep the normal right-click menu.
+document.addEventListener("contextmenu",e=>{
+  if(matchMedia("(pointer:coarse)").matches && e.target.closest("img, canvas, svg, .face, .pk, .bk, .vb-cover, .hm-card")) e.preventDefault();
+},{capture:true});
 
 // ---------- start ----------
 // The installed app opens on a launch screen with its icon, shown for at least 1.5 s and until the first screen is ready.

@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.18.1 (October 16, 2026)
+
+- On phones, long-pressing a card picture, a Pokémon or a binder cover no longer opens the browser's image menu (copy, save, share). Right-clicking on a computer works as before.
+
 ## v3.18 (October 16, 2026)
 
 - **Tab bar at the bottom on phones.** Inside a binder, Cards, Pages, Shopping, Upgrades and Stats now sit in a bar at the bottom of the screen with icons, in easy thumb reach. My binders and computers look the same as before.
