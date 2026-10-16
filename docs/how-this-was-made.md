@@ -32,7 +32,7 @@ You never have to understand the code. You only have to understand what you want
 
 | Piece | What it does | What I used | Easiest choice for you |
 | --- | --- | --- | --- |
-| An AI assistant | Writes the code and walks you through every step | Claude | Claude. Free to try; a paid plan helps once the project gets bigger. |
+| An AI assistant | Writes the code and walks you through every step | Claude | Any well-known AI chat assistant. Most are free to try. |
 | A computer | Runs your app | A home server that's always on | The laptop or desktop you already have, Windows or Mac |
 | Python | The free program that runs the code the AI writes | Python | Python from python.org (the AI will walk you through it) |
 | A private connection (later) | Lets your phone open the app when you're away from home | Tailscale | Tailscale, free for personal use |
@@ -45,9 +45,11 @@ Optional later: **GitHub**, a free website that stores your code and every past 
 
 ### Step 1: Set up the AI with a project
 
-Make a free account at **claude.ai**. Then create a **Project**. A project is like a folder for one idea: it remembers your instructions every time you start a new chat inside it, so you don't have to explain yourself over and over.
+Sign up for an AI chat assistant. I used Claude, but the steps in this guide work much the same in others.
 
-Every project has a box for **instructions**. Paste in the project instructions from the [prompt setup](#the-prompt-setup) section below, filled in with your own details. This was the single most useful thing I did. It's how the AI knew I don't code, how I like things explained, and what rules my app follows.
+If your assistant lets you create a **project** (some call it a workspace or something similar), make one for your app. A project is like a folder for one idea: it remembers your instructions every time you start a new chat inside it, so you don't have to explain yourself over and over.
+
+A project has a place for **instructions**. Paste in the project instructions from the [prompt setup](#the-prompt-setup) section below, filled in with your own details. If your assistant has no projects, paste the instructions at the start of each new chat instead. Either way, this was the single most useful thing I did. It's how the AI knew I don't code, how I like things explained, and what rules my app follows.
 
 ### Step 2: Describe your idea
 
