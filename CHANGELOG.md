@@ -10,6 +10,12 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.16 (October 16, 2026)
+
+- **Smoother screen changes.** Opening a binder slides it in from the right, and going back to My binders (home button or the phone's back gesture) slides it back. Switching tabs (Cards, Pages, Shopping list...) fades, and card details and other windows rise in gently. If your phone is set to reduce motion, everything switches instantly like before.
+- **Number on the app icon.** When the binder is installed as an app on a Windows or Mac computer, its icon shows how many offline changes are waiting to sync. Android doesn't support numbers on web app icons, so phones are unchanged.
+- Opening the binder you just left from My binders now also starts on its Cards tab.
+
 ## v3.15.5 (October 16, 2026)
 
 - **Card shows on My binders:** the calendar button (local card shows) is now at the top of the home page too, next to privacy and Settings.
