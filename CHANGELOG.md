@@ -10,6 +10,11 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **No more pull-to-refresh:** pulling down at the top of the page no longer reloads it, so scrolling back to the top is safe. If something looks stuck, use **Settings → Server → Reload the app**. Nothing saved is lost, including changes waiting to sync.
+- **Launch screen:** the icon now lines up with Android's own launch screen so it doesn't jump at the hand-over, and the scroll bar no longer flashes on the right edge while it shows.
+
 ## v3.15.4 (October 16, 2026)
 
 - **Set logos on My binders.** Each set binder's tile now shows the set's logo (the same one as its inside cover) above the year and card count, instead of the name in plain text. Master sets, your own binders, and any set whose logo isn't available keep the name.

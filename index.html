@@ -990,12 +990,15 @@ body.at-home > .wrap:not(.home){display:none}
 @media (max-width:640px){.home .hm-top{padding-top:10px}}   /* phones: the binder header has its own top spacing; match it */
 /* Launch screen for the installed app: the app icon until the binder is ready (v3.15.2) */
 #splash{display:none}
+/* pulling down at the top of the page doesn't reload it (use Settings > Server > Reload the app instead) */
+html,body{overscroll-behavior-y:none}
 @media (display-mode: standalone){
   #splash{display:grid;place-items:center;position:fixed;inset:0;z-index:1000;background:var(--bg);transition:opacity .35s ease}
   /* same size and spot as Android's own launch screen (240 points, centered on the whole screen incl. the status bar),
      so the hand-over from Android's screen to this one doesn't jump */
-  #splash img{width:min(240px,58vw);height:auto;aspect-ratio:1;object-fit:contain;margin-top:-14px}
-  html.splashing{overflow:hidden}
+  #splash img{width:min(241px,58.7vw);height:auto;aspect-ratio:1;object-fit:contain;margin-top:-40px}   /* measured against Android's screen on a phone recording */
+  html.splashing,html.splashing body{overflow:hidden;scrollbar-width:none}   /* no scroll bar flashing on the right while it shows */
+  html.splashing ::-webkit-scrollbar{display:none}
 }
 #splash.out{opacity:0;pointer-events:none}
 @media (prefers-reduced-motion:reduce){#splash{transition:none}}
@@ -1539,6 +1542,7 @@ body.at-home > .wrap:not(.home){display:none}
       <h3 class="ui-h">Connection</h3>
       <div class="ui-group">
         <div class="ui-row ui-static"><span class="conn" role="img" aria-label="Connection"></span><span class="ui-l"><b id="stConnT">Checking&hellip;</b><small id="stConnS"></small></span><button class="btn" type="button" id="stConnBtn">Check connection</button></div>
+        <div class="ui-row ui-static"><span class="ui-l"><b>Reload the app</b><small>If something looks stuck. Nothing you've saved is lost, including changes waiting to sync.</small></span><button class="btn" type="button" id="stReload">Reload</button></div>
         <div class="ui-row ui-static" id="stPendRow" hidden><span class="ui-l"><b id="stPendT"></b><small>Added on this phone while offline. They're sent to <span class="srv">the server</span> after you confirm.</small></span><button class="btn primary" type="button" id="stPendBtn">Review &amp; sync</button></div>
         <div class="ui-row ui-static" id="stUndoRow" hidden><span class="ui-l"><b>Last sync</b><small id="stUndoS"></small></span><button class="btn" type="button" id="stUndoBtn">Undo last sync</button></div>
       </div>
@@ -4592,7 +4596,8 @@ const atHome = () => document.body.classList.contains("at-home");
 function showHome(){
   document.body.classList.add("at-home"); $("home").hidden=false; document.title="My binders";
   if(drawerEl.open) drawerEl.close();
-  window.scrollTo(0,0); drawHome(); loadHome(); homeJob();
+  if(window.scrollY) window.scrollTo(0,0);   // only when needed: on phones this flashes the scroll bar
+  drawHome(); loadHome(); homeJob();
 }
 // Price check progress on the home page, same as at the top of a binder. Checks every 3 seconds while one runs,
 // otherwise every 30 seconds in case the daily refresh starts while you're here.
@@ -4614,7 +4619,7 @@ function homeJob(){
     homeTimer=setTimeout(homeJob, homeRunning?3000:30000);
   }).catch(()=>{ homeTimer=setTimeout(homeJob, 30000); });
 }
-function showBinder(){ if(!atHome()) return; document.body.classList.remove("at-home"); $("home").hidden=true; window.scrollTo(0,0); if(state.sid) header(); }
+function showBinder(){ if(!atHome()) return; document.body.classList.remove("at-home"); $("home").hidden=true; if(window.scrollY) window.scrollTo(0,0); if(state.sid) header(); }
 function goHome(){ if(location.hash) history.pushState(null,"",location.pathname+location.search); showHome(); }
 function goBinder(sid, then){
   if(location.hash!=="#"+sid) history.pushState(null,"","#"+sid);
@@ -4684,6 +4689,7 @@ function agoText(d){
 }
 $("hmPriv").onclick=()=>{ setPrivate(!isPrivate()); if(atHome()) drawHome(); };
 $("hmCog").onclick=()=>$("cog").click();
+$("stReload").onclick=()=>location.reload();
 $("hmMenu").onclick=()=>{ showAdd(false); drawSets(); openDrawer(); loadSets().then(drawSets); };
 $("hmEdit").onclick=()=>{ showAdd(false); drawSets(); openDrawer(); loadSets().then(drawSets).then(()=>setEdit(true)); };
 $("hmFind").onsubmit=e=>{ e.preventDefault(); openFind($("hmQ").value.trim()); };
