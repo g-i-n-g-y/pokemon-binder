@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.19.3 (October 16, 2026)
+
+- **Set logos on the home page are now the same size.** Squarer logos, like Neo Revelation's, looked much smaller than wide ones. Empty space around each logo is now trimmed, and every logo gets about the same amount of space: wide ones a little shorter, square ones taller.
+
 ## v3.19.2 (October 16, 2026)
 
 - **Version links to GitHub:** in Settings → About, tap the version pill (like v3.19.2 ↗) to open that version's notes on GitHub. Previous versions link to theirs too. Shown only when updates come from GitHub.

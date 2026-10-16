@@ -945,9 +945,13 @@ body.at-home > .wrap:not(.home){display:none}
 .bk .bk-nm b{display:block;font-family:var(--f-display);font-size:16px;line-height:1.1}
 .bk .bk-nm span{font-size:12px;opacity:.85}
 .bk .bk-logo{display:block;max-width:82%;max-height:46px;object-fit:contain;object-position:left bottom;margin-bottom:3px;
+  --logo-a:84px;width:auto}
+/* fitLogo() trims empty space around a logo and sizes it by area, so square and wide logos look equally big */
+.bk .bk-logo.fit{height:calc(var(--logo-a) * var(--lr));max-height:none}
+.bk .bk-logo{
   filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff) drop-shadow(0 3px 6px rgba(0,0,0,.45))}
 .bk .bk-nm.has-logo{padding-top:34px}
-@media (min-width:900px){.bk .bk-logo{max-height:54px}}
+@media (min-width:900px){.bk .bk-logo{max-height:54px;--logo-a:98px}}
 .bk .ring{position:absolute;top:8px;right:8px;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font:600 11px var(--f-mono);color:#fff;
   background:conic-gradient(#fff calc(var(--p)*1%),rgba(255,255,255,.28) 0)}
 .bk .ring::before{content:"";position:absolute;inset:4px;border-radius:50%;background:rgba(0,0,0,.55)}
@@ -4752,6 +4756,22 @@ let homeData=null;
 function loadHome(){
   return Promise.all([fetch("api/home").then(r=>r.json()), loadSets()]).then(([j])=>{ homeData=j; if(atHome()) drawHome(); }).catch(()=>{});
 }
+// Set logos come in different shapes, and some have empty space around them, so with one fixed height
+// a squarer logo (like Neo Revelation's) looked much smaller than a wide one. This trims the empty edges and
+// gives every logo about the same area: wide ones get shorter, square ones taller. Leaves it as is if anything fails.
+function fitLogo(img){
+  try{
+    const W=img.naturalWidth, H=img.naturalHeight; if(!W || !H) return;
+    const cv=document.createElement("canvas"); cv.width=W; cv.height=H; const g=cv.getContext("2d"); g.drawImage(img,0,0);
+    const d=g.getImageData(0,0,W,H).data; let x0=W, y0=H, x1=-1, y1=-1;
+    for(let y=0;y<H;y++) for(let x=0;x<W;x++) if(d[(y*W+x)*4+3]>16){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; }
+    if(x1<0) return;
+    const w=x1-x0+1, h=y1-y0+1;
+    img.dataset.fit="1";
+    if(w<W || h<H){ const c2=document.createElement("canvas"); c2.width=w; c2.height=h; c2.getContext("2d").drawImage(cv,x0,y0,w,h,0,0,w,h); img.src=c2.toDataURL("image/png"); }
+    img.style.setProperty("--lr", Math.min(1.15, 1/Math.sqrt(w/h)).toFixed(3)); img.classList.add("fit");
+  }catch(_){}
+}
 function homeStyle(b, el, img){   // the binder's colors: the Neo sets have their own, others come from the logo or the Pokémon
   const st=COVER_STYLE[b.id] || coverStyleCache[b.id];
   if(st){ el.style.setProperty("--v1",st[0]); el.style.setProperty("--v2",st[1]); return; }
@@ -4780,7 +4800,7 @@ function drawHome(){
     const nm=document.createElement("span"); nm.className="bk-nm"; const nb=document.createElement("b"); nb.textContent=b.name; const ns=document.createElement("span"); ns.textContent=sub; nm.append(nb,ns);
     if(!isDex(b.id) && !isOwn(b.id)){   // set binders show the set's logo (the same one as the inside cover); the name stays if there's none
       const lg=document.createElement("img"); lg.className="bk-logo"; lg.alt=""; lg.decoding="async";
-      lg.onload=()=>{ nb.replaceWith(lg); nm.classList.add("has-logo"); }; lg.onerror=()=>lg.remove(); lg.src="set/"+enc(b.id)+"/logo.png";
+      lg.onload=()=>{ if(lg.dataset.fit) return; fitLogo(lg); nb.replaceWith(lg); nm.classList.add("has-logo"); }; lg.onerror=()=>lg.remove(); lg.src="set/"+enc(b.id)+"/logo.png";
     }
     t.append(ring,nm);
     t.setAttribute("aria-label", b.name+", "+sub+(!isPrivate() ? ", "+pct+"% complete" : ""));
