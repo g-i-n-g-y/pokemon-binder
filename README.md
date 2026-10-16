@@ -3,31 +3,16 @@
 > [!WARNING]
 > **This is a fully vibe-coded project.** I'm not a programmer. I had an idea for tracking my own card collection and built this with an AI assistant, for personal use on my home server. It works for me, but it hasn't been reviewed by an experienced developer, and it comes with no support or guarantees. Use it at your own risk, and don't expose it to the open internet.
 
-A self-hosted Pokémon TCG collection tracker. One small Python server (standard library only) and one web page.
+A self-hosted Pokémon TCG collection tracker: one small Python server (standard library only) and one web page, for your home server and your phone.
 
-- Any English set: card lists from [PokemonTCG/pokemon-tcg-data](https://github.com/PokemonTCG/pokemon-tcg-data), card images downloaded locally
-- Pokémon master set binders: every English card of one Pokémon (like all the Totodile cards) across every set, with its game sprite from [PokeAPI](https://github.com/PokeAPI/sprites)
-- Your own binders, filled with cards from any set (like Favorites or Trade pile)
-- Find a card: search every English card and set by name, number (like `80/111`) or set, see which binders have it, and add it to any binder
-- Pages: lay out a binder like a real one (4, 9, 12 or 16 pockets), arrange cards by tapping or dragging, and see where each card goes
-- Owned cards in color, needed cards in greyscale; tap **Need** to mark a card owned
-- Search by name or by the number on the card (like `1/105`)
-- Recent sales tab on each card: the last 5 sales for every condition, side by side
-- Prices from recent sales, Unlimited English only: pick any two per binder in Settings, raw conditions (NM to Damaged, from TCGplayer) or graded (PSA, BGS, CGC, SGC, TAG, ACE, from eBay sales on PriceCharting). LP and MP by default.
-- Custom cards for anything the card database is missing, priced from a TCGplayer link or a price you type
-- Spreadsheet import and a template to fill in (Excel or CSV), and automatic backups on the server before every update and import
-- Market prices as a backup and second opinion: TCGplayer's market price and Cardmarket's 30-day average (converted to US dollars) from [TCGdex](https://tcgdex.dev) (free, no key). Used when a card has no recent sales for your price options (can be turned off in Settings).
-- Daily automatic price refresh at a time you choose, plus a manual refresh button
-- Price history, biggest movers, shopping list with a budget and your own drag-to-reorder priority
-- Upgrades list: worn copies you own and what a better one costs
-- A home page with a shelf of your binders (cover Pokémon, completion that privacy mode hides), Find a card and recently added cards
-- All-binders totals in the sets menu (Edit on the home page)
-- Card shows: upcoming shows in your towns from [TreasureHunter.show](https://www.treasurehunter.show), checked weekly or on demand
-- One-file backup and restore, plus a spreadsheet of your whole collection (a tab per binder)
-- Purchase log with date, price, place, and seller handle (Instagram, TikTok, Whatnot, eBay, and more)
-- Front and back photos of your own copies
-- Privacy mode (eye button): shows every card in color with no Owned/Need tags, blurs cards owned and money totals, hides purchases
-- Five dark themes and your own browser tab icon; works on phones
+- **Binders your way:** any English set, a Pokémon master set (every card of one Pokémon, like all the Totodile cards), or your own mix (Favorites, Trade pile). Owned cards in color, needed ones in greyscale.
+- **Real binder pages:** lay cards out 4, 9, 12 or 16 to a page, with a cover. **Find a card** searches every English card by name, number (like `80/111`) or set.
+- **Prices from recent sales:** TCGplayer's newest sales for each condition (LP and MP by default), with TCGdex market prices as a backup. Daily refresh, price history, biggest movers, a shopping list with a budget, and an upgrades list.
+- **Your copies:** condition, notes, front and back photos, and a purchase log (price, place, seller).
+- **Phone app (Android):** install it, open it with no signal, mark cards owned offline, sync when you're back.
+- **Safe and private:** privacy mode (eye button), automatic backups, one-file backup and restore, spreadsheet import and export, and updates only when you choose.
+
+Also: custom cards for anything the card database is missing, upcoming card shows in your towns, and five dark themes.
 
 ## Screenshots
 
@@ -74,6 +59,8 @@ Your collection, purchases, photos, and prices are stored only on the machine ru
 | `server.py` | The web server |
 | `index.html` | The binder page |
 | `fonts.css` | The page's fonts, built in so the binder doesn't ask Google for them (since v3.5) |
+| `sw.js` | Keeps a saved copy of the binder on your phone so the app opens offline |
+| `icon-192.png`, `icon-512.png` | The phone app's icons |
 | `fonts-OFL.txt` | The fonts' free license (not installed on your server) |
 | `seed_prices.json` | Starting Neo Destiny prices, only used on a brand-new install |
 | `tests/smoke_test.py` | Checks the binder before a release: `python3 tests/smoke_test.py` (not installed on your server) |
@@ -87,12 +74,14 @@ Stored in `data/` next to `server.py`:
 |---|---|
 | `binder.db` | Everything you enter and every price: binders, settings, copies owned, condition, purchases, sellers, notes, latest prices, one saved price per card per day, price options, shopping lists, card shows. One SQLite database file (since v3.0) |
 | `favicon` | Your tab icon, if you picked one |
-| `catalog.json`, `dex_index.json`, `fx.json` | Downloaded lists (all English sets, the Pokédex index, the euro rate). They download again by themselves |
+| `catalog.json`, `dex_index.json`, `card_index.json`, `fx.json` | Downloaded lists (all English sets, the Pokédex index, every English card for Find a card, the euro rate). They download again by themselves |
+| `unown/`, `art/`, `dexno/` | Downloaded pictures and Pokédex numbers for binder covers and master sets. They download again by themselves |
 | `sets/<set id>/images/` | Card pictures: `s/` holds the small ones for the grid, full-size scans are saved when you open a card. Pictures download as you look at them; a binder kept for an hour fills in the rest in the background |
 | `sets/<set id>/photos/` | Your photos (front = `<number>`, back = `<number>_back`) |
+| `sets/<set id>/layout.json`, `logo.png` | Your Pages layout and cover pick, and the set's logo |
 | `pre-sqlite-<date>/` | Your old JSON files from before v3.0, set aside (not used any more) |
 
-Backups (Settings → Backup) are still a zip of plain JSON files, so they open in any text editor and restore in both older and newer versions. To look inside `binder.db` itself, use a viewer like DB Browser for SQLite.
+Backups live in `backups/` and old versions in `previous/`, both next to `server.py`. Backups (Settings → Backup) are a zip of plain JSON files, so they open in any text editor and restore in both older and newer versions. To look inside `binder.db` itself, use a viewer like DB Browser for SQLite.
 
 ## Running it with Docker (Unraid example)
 
@@ -100,19 +89,19 @@ Backups (Settings → Backup) are still a zip of plain JSON files, so they open 
 |---|---|
 | Image | `python:3.12-alpine` |
 | Port | any free port on the host → `8080` in the container |
-| App data | a folder on the host → `/app` (put `server.py`, `index.html` and `fonts.css` in it) |
+| App data | a folder on the host → `/app` (put the program files from the table above in it) |
 | Extra parameters | `-w /app` |
 | Post arguments | `python -u server.py` |
 | Variable (optional) | `BINDER_HOSTS`: extra names the binder answers to, like a reverse proxy name (IP addresses, one-word names and Tailscale names already work) |
 
-Without Docker: put `server.py`, `index.html` and `fonts.css` in a folder and run `python server.py` (Python 3.9 or newer), then open `http://localhost:8080`.
+Without Docker: put the program files in a folder and run `python server.py` (Python 3.9 or newer), then open `http://localhost:8080`.
 
 ## Phone app (Android)
 
 The binder can be installed as an app on Android phones with Chrome. It isn't set up for iPhone. When it opens, it shows its icon on a launch screen while your binders load (your own icon, if you set one in Settings). It needs a secure (https) address, which [Tailscale](https://tailscale.com/kb/1312/serve) can provide for free inside your own Tailscale network:
 
 1. In the Tailscale admin console, under **DNS**, turn on **MagicDNS** and **HTTPS Certificates**.
-2. On the computer running the binder, run `tailscale serve --bg 8765` (use your binder's port). Tailscale prints the https address, like `https://<machine>.<your-tailnet>.ts.net`.
+2. On the computer running the binder, run `tailscale serve --bg 8765` (use your binder's port). Tailscale prints the https address, like `https://<machine>.<your-tailnet>.ts.net`. If that machine already uses https for something else (Unraid's own Tailscale setting does), use `tailscale serve --bg --https=8443 8765` and add `:8443` to the address.
 3. On your phone (with Tailscale on), open that address in Chrome and tap **Install** (or Settings → Phone → Install).
 
 This keeps the binder inside your Tailscale network; nothing is opened to the internet.
@@ -130,7 +119,7 @@ Safety nets:
 - A backup of your data is saved first (Settings → Backup → Saved on the server). A daily backup is also saved every day and the last 7 are kept.
 - The binder checks itself every 2 minutes and restarts if it stops answering for about 6 minutes. **Settings → About → Status** shows the last price check, last backup, storage used, free space and any problems in the last day. `/api/health` answers for outside uptime monitors.
 - The last 3 versions are kept in `previous/` next to `server.py`. Rolling back to a version from before v3.0 writes your data back out as the files it uses.
-- The files a version needs are listed in its `server.py` (`APP_FILES`), so versions can have more than two files.
+- Each version lists the files it needs in its `server.py` (`APP_FILES`), so new files arrive with the update.
 
 Optional environment variables:
 
@@ -149,10 +138,13 @@ docker exec <container name> python server.py --test neo4-1
 
 ## Credits and inspiration
 
-- **[Tracearr](https://github.com/connorgallopo/Tracearr)** by Connor Gallopo inspired several design ideas: the What's new window (versions grouped with Installed and Latest tags, opened from the version number), the update notice, and the sets menu that slides out and pushes the page over. I showed screenshots and a screen recording of Tracearr to Claude (the AI assistant this app is built with) as a reference, and it wrote this app's own versions of those features. None of Tracearr's code was used.
-- Card lists and images: [PokemonTCG/pokemon-tcg-data](https://github.com/PokemonTCG/pokemon-tcg-data)
-- Pokémon sprites: [PokeAPI/sprites](https://github.com/PokeAPI/sprites)
+- **[Tracearr](https://github.com/connorgallopo/Tracearr)** by Connor Gallopo inspired the What's new window (versions grouped with Installed and Latest tags, opened from the version number), the update notice, and the sets menu that slides out and pushes the page over. I showed Claude (the AI assistant this app is built with) screenshots and a screen recording of Tracearr, and it wrote this app's own versions. None of Tracearr's code was used.
+- Card lists: [PokemonTCG/pokemon-tcg-data](https://github.com/PokemonTCG/pokemon-tcg-data); card images and set logos from the [Pokémon TCG API](https://pokemontcg.io)
+- Pokémon sprites and artwork (covers, master sets, Unown letters): [PokeAPI/sprites](https://github.com/PokeAPI/sprites)
+- Prices: TCGplayer recent sales, market prices from [TCGdex](https://tcgdex.dev) (TCGplayer and Cardmarket), and graded sales from PriceCharting (when it lets the server in; it often blocks home servers)
+- Euro to US dollar rate: [Frankfurter](https://frankfurter.dev)
 - Card show listings: [TreasureHunter.show](https://www.treasurehunter.show)
-- Prices: TCGplayer recent sales and PriceCharting, plus market prices from [TCGdex](https://tcgdex.dev)
+- Master set checklists linked from Pokémon binders: [PokéCottage](https://pokecottage.com)
+- Fonts: [Bricolage Grotesque](https://github.com/ateliertriay/bricolage) and [IBM Plex](https://github.com/IBM/plex), free under the SIL Open Font License (see `fonts-OFL.txt`)
 
 Pokémon and all related names and images are trademarks of Nintendo, Creatures and GAME FREAK. This is a personal, unofficial project.
