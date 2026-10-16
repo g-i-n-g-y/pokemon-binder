@@ -24,7 +24,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "3.16"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
+APP_VERSION = "3.17"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -2961,6 +2961,104 @@ def import_template(sid):
     return ("\ufeff" + buf.getvalue()).encode("utf-8")   # the mark helps Excel read accents like Pokémon
 
 
+def _xlsx(sheets):
+    """A small Excel file (standard library only): sheets = [(name, header, rows)], first row bold and frozen."""
+    from xml.sax.saxutils import escape
+    def col(i):
+        s = ""
+        i += 1
+        while i:
+            i, r = divmod(i - 1, 26)
+            s = chr(65 + r) + s
+        return s
+    def cell(ref, v, style=0):
+        st = f' s="{style}"' if style else ""
+        if isinstance(v, bool) or v is None or v == "":
+            return f'<c r="{ref}"{st}/>' if style else ""
+        if isinstance(v, (int, float)):
+            return f'<c r="{ref}"{st}><v>{v}</v></c>'
+        return f'<c r="{ref}"{st} t="inlineStr"><is><t xml:space="preserve">{escape(str(v))}</t></is></c>'
+    files, used = {}, set()
+    names = []
+    for k, (name, header, rows, money) in enumerate(sheets, 1):
+        nm = re.sub(r"[\\/?*\[\]:]", "", name)[:31] or f"Sheet{k}"
+        base, n = nm, 2
+        while nm.lower() in used:
+            nm = (base[:28] + f" {n}"); n += 1
+        used.add(nm.lower()); names.append(nm)
+        widths = [max(len(str(h)), *(len(str(r[i])) for r in rows[:500]) if rows else [0]) for i, h in enumerate(header)]
+        cols = "".join(f'<col min="{i+1}" max="{i+1}" width="{min(48, max(8, w + 2))}" customWidth="1"/>' for i, w in enumerate(widths))
+        body = ['<row r="1">' + "".join(cell(f"{col(i)}1", h, 1) for i, h in enumerate(header)) + "</row>"]
+        for j, r in enumerate(rows, 2):
+            body.append(f'<row r="{j}">' + "".join(cell(f"{col(i)}{j}", v, 2 if i in money and isinstance(v, (int, float)) else 0) for i, v in enumerate(r)) + "</row>")
+        files[f"xl/worksheets/sheet{k}.xml"] = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'
+            f'<cols>{cols}</cols><sheetData>{"".join(body)}</sheetData></worksheet>')
+    n = len(names)
+    files["[Content_Types].xml"] = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>'
+        '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+        '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+        + "".join(f'<Override PartName="/xl/worksheets/sheet{k}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' for k in range(1, n + 1))
+        + "</Types>")
+    files["_rels/.rels"] = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>')
+    files["xl/workbook.xml"] = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+        'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'
+        + "".join(f'<sheet name="{escape(nm, {chr(34): "&quot;"})}" sheetId="{k}" r:id="rId{k}"/>' for k, nm in enumerate(names, 1)) + "</sheets></workbook>")
+    files["xl/_rels/workbook.xml.rels"] = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        + "".join(f'<Relationship Id="rId{k}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet{k}.xml"/>' for k in range(1, n + 1))
+        + f'<Relationship Id="rId{n + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>')
+    files["xl/styles.xml"] = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+        '<numFmts count="1"><numFmt numFmtId="164" formatCode="&quot;$&quot;#,##0.00"/></numFmts>'
+        '<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>'
+        '<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>'
+        '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
+        '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+        '<cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+        '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
+        '<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs>'
+        '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>')
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
+        for name in ("[Content_Types].xml", "_rels/.rels", "xl/workbook.xml", "xl/_rels/workbook.xml.rels", "xl/styles.xml"):
+            z.writestr(name, files[name])
+        for k in range(1, n + 1):
+            z.writestr(f"xl/worksheets/sheet{k}.xml", files[f"xl/worksheets/sheet{k}.xml"])
+    return out.getvalue()
+
+
+def export_collection():
+    """Every binder in one Excel file: an "All binders" sheet plus one sheet per binder."""
+    sl = sets_list()
+    header = ["Binder", "Set", "Number", "Card", "Rarity", "Status", "Copies", "Condition", "Paid", "Price each", "Value", "First owned", "Notes"]
+    money = {8, 9, 10}
+    every, per = [], []
+    for sid in sl["order"]:
+        meta = sl["meta"].get(sid, {})
+        bname = meta.get("name", sid)
+        coll = read_json(sdir(sid, "collection.json"), {})
+        prices = (read_json(sdir(sid, "prices.json"), {}) or {}).get("p") or {}
+        rows = []
+        cards = read_json(sdir(sid, "cards.json"), None)
+        cards = (cards or []) + extra_list(sid) + custom_cards(sid)
+        for c in cards:
+            rec = coll.get(c["n"]) or {}
+            qty = int(rec.get("qty") or 0) if isinstance(rec.get("qty"), (int, float)) else 0
+            paid = round(sum(b.get("price") or 0 for b in rec.get("purchases") or [] if isinstance(b, dict) and isinstance(b.get("price"), (int, float))), 2)
+            each = (prices.get(c["n"]) or [0])[0] or 0
+            first = (rec.get("got") or "")[:10] or min((b.get("d") or "" for b in rec.get("purchases") or [] if isinstance(b, dict) and b.get("d")), default="")
+            setname = c.get("set") or (bname if not (is_multi(sid) or c.get("extra")) else "")
+            num = c.get("num") or c["n"]
+            rows.append([bname, setname, num, c.get("name", ""), c.get("rarity", ""), "Owned" if qty > 0 else "Need", qty,
+                         rec.get("cond") or "", paid or "", round(each, 2) if each else "", round(each * qty, 2) if each and qty else "",
+                         first if qty > 0 else "", rec.get("note") or ""])
+        every += rows
+        per.append((bname, header, rows, money))
+    return _xlsx([("All binders", header, every, money)] + per)
+
+
 def apply_import(sid, plan):
     """Make the changes from import_plan. Saves a backup first. Returns the backup's file name."""
     if not plan["changes"]:
@@ -3434,6 +3532,16 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, {"custom": os.path.exists(ICON_FILE)}, cache="no-store")
         if path == "/api/backups":
             return self.send(200, {"backups": list_auto_backups()}, cache="no-store")
+        if path == "/api/export.xlsx":   # every binder in one spreadsheet
+            body = export_collection()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Content-Disposition", f'attachment; filename="pokemon-binder-{time.strftime("%Y-%m-%d")}.xlsx"')
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(body)
+            return
         m_tp = re.fullmatch(rf"/api/set/({SID_RE})/template\.csv", path)
         if m_tp:
             sid = m_tp.group(1)

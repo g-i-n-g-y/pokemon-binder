@@ -23,7 +23,7 @@ A self-hosted Pokémon TCG collection tracker. One small Python server (standard
 - A home page with a shelf of your binders (cover Pokémon, completion that privacy mode hides), Find a card and recently added cards
 - All-binders totals in the sets menu (Edit on the home page)
 - Card shows: upcoming shows in your towns from [TreasureHunter.show](https://www.treasurehunter.show), checked weekly or on demand
-- One-file backup and restore
+- One-file backup and restore, plus a spreadsheet of your whole collection (a tab per binder)
 - Purchase log with date, price, place, and seller handle (Instagram, TikTok, Whatnot, eBay, and more)
 - Front and back photos of your own copies
 - Privacy mode (eye button): shows every card in color with no Owned/Need tags, blurs cards owned and money totals, hides purchases

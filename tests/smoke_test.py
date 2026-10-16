@@ -227,6 +227,11 @@ def main():
         nb = next((b for b in (home or {}).get("binders", []) if b["id"] == "neo4"), None) if code == 200 else None
         check("home page lists binders with completion and a cover", bool(nb and nb["count"] and "owned" in nb and nb.get("cover", {}).get("n")), nb)
         check("home page lists recently added cards", code == 200 and any(r["sid"] == "neo4" and r["n"] == "2" for r in home.get("recent", [])), (home or {}).get("recent"))
+        req = urllib.request.Request(base + "/api/export.xlsx")
+        with urllib.request.urlopen(req, timeout=20) as r:
+            xz = zipfile.ZipFile(io.BytesIO(r.read()))
+        sheet = xz.read("xl/worksheets/sheet1.xml").decode()
+        check("spreadsheet export has every binder and the saved card", "xl/workbook.xml" in xz.namelist() and "Owned" in sheet and "Card 2" in sheet, xz.namelist())
         code, _ = call(base, "PUT", "/api/settings", {"time": "04:15"})
         _, sett = call(base, "GET", "/api/settings")
         check("save settings", code == 200 and sett.get("time") == "04:15")

@@ -1019,12 +1019,25 @@ html,body{overscroll-behavior-y:none}
 @keyframes vtOutR{to{opacity:0;transform:translateX(28px)}}
 @keyframes dlgIn{from{opacity:0;transform:translateY(16px) scale(.985)}}
 @keyframes bdIn{from{opacity:0}}
+/* Loading placeholders (v3.17) */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.sleeve.skel{cursor:default;pointer-events:none}
+.skel .sk-art{display:block;aspect-ratio:63/88;border-radius:8px;background:var(--sleeve)}
+.skel .sk-line{display:block;height:12px;border-radius:6px;background:var(--sleeve);width:70%}
+.skel .sk-line.short{width:40%}
+@media (prefers-reduced-motion:no-preference){
+  .skel .sk-art,.skel .sk-line{background:linear-gradient(100deg,var(--sleeve) 30%,color-mix(in srgb,var(--sleeve) 70%,var(--ink) 8%) 50%,var(--sleeve) 70%) var(--sleeve);background-size:250% 100%;animation:skshine 1.4s linear infinite}
+}
+@keyframes skshine{from{background-position:120% 0}to{background-position:-120% 0}}
+.note.retry{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.note.retry .btn{flex:none}
+#grid .note.retry{grid-column:1/-1;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
 </style>
 </head>
 <body>
 <div id="splash" aria-hidden="true"><img src="favicon" alt=""></div>
 <script>document.documentElement.classList.add("splashing")</script>
-<div class="wrap">
+<main class="wrap" id="binderMain">
   <header class="top">
     <div class="title">
       <button class="icon-btn" type="button" id="menuBtn" aria-label="Home: all your binders" title="Home">
@@ -1092,7 +1105,7 @@ html,body{overscroll-behavior-y:none}
   <div id="fSum" aria-live="polite"></div>
   <p class="gap-note" id="gapNote" hidden></p>
 
-  <main class="grid" id="grid"></main>
+  <div class="grid" id="grid" role="region" aria-label="Cards"></div>
   </div>
 
   <section id="vPages" hidden aria-label="Binder pages">
@@ -1201,7 +1214,7 @@ html,body{overscroll-behavior-y:none}
   </section>
 
   <footer id="foot">Prices are averages of recent Unlimited sales (pick which ones per binder in Settings) and refresh automatically once a day. Tap Need on a card to mark it owned, or tap the card to log what you paid, set its condition, or add a photo of your copy. Tap the home button at the top left to switch binders or add a new one. Everything saves on <span class="srv">the server</span>.</footer>
-</div>
+</main>
 
 <main class="wrap home" id="home" hidden aria-labelledby="hmTitle">
   <header class="hm-top">
@@ -1534,10 +1547,11 @@ html,body{overscroll-behavior-y:none}
       <h3 class="ui-h">Backup</h3>
       <div class="btnrow">
         <a class="btn" href="api/backup" download id="bkDown">Download backup</a>
+        <a class="btn" href="api/export.xlsx" download id="bkXlsx">Download spreadsheet</a>
         <label class="btn" for="bkUp">Restore from backup</label>
         <input id="bkUp" type="file" accept=".zip,application/zip" hidden>
       </div>
-      <div class="note" id="bkMsg">One file with everything, for every binder. Keep a copy somewhere other than <span class="srv">the server</span>.</div>
+      <div class="note" id="bkMsg">One file with everything, for every binder. Keep a copy somewhere other than <span class="srv">the server</span>. <b>Download spreadsheet</b> gives you your whole collection as an Excel file (a tab for every binder) to open anywhere.</div>
       <div class="prev" id="bkAutoWrap" hidden>
         <h3 class="ui-h">Saved on <span class="srv">the server</span></h3>
         <div class="note">Made automatically before each update, import, restore and phone sync, and before a binder starts fresh.</div>
@@ -1856,11 +1870,19 @@ function render(){
     list.sort((a,b)=>{ const x=pc.get(a.n), y=pc.get(b.n); if(x==null&&y==null) return 0; if(x==null) return 1; if(y==null) return -1; return dir*(x-y); });
   }
   const g=$("grid"); g.replaceChildren();
-  if(!list.length){ const e=document.createElement("div"); e.className="empty"; e.textContent=state.cards.length ? "No cards match these filters." : (state.ready ? (isOwn(state.sid) ? "This binder is empty. Add cards with Find a card." : "This set has no cards yet.") : "Loading cards…"); g.append(e); }
+  g.removeAttribute("aria-busy");
+  if(!list.length && !state.ready && state.sid && state.loadErr){ g.append(retryNote("Couldn't open this binder. "+state.loadErr, ()=>{ state.loadErr=""; render(); loadState(); })); }
+  else if(!list.length && !state.ready && state.sid){   // still loading: grey card outlines where the cards will be
+    g.setAttribute("aria-busy","true");
+    const sr=document.createElement("p"); sr.className="sr-only"; sr.textContent="Loading cards…"; g.append(sr);
+    for(let i=0;i<12;i++){ const k=document.createElement("div"); k.className="sleeve skel"; k.setAttribute("aria-hidden","true"); k.innerHTML='<span class="sk-art"></span><span class="sk-line"></span><span class="sk-line short"></span>'; g.append(k); }
+  }
+  else if(!list.length){ const e=document.createElement("div"); e.className="empty"; e.textContent=state.cards.length ? "No cards match these filters." : (state.ready ? (isOwn(state.sid) ? "This binder is empty. Add cards with Find a card." : "This set has no cards yet.") : "Loading cards…"); g.append(e); }
   for(const c of list){
-    const b=document.createElement("div"); b.setAttribute("role","button"); b.tabIndex=0;
-    b.className="sleeve"+(qty(c.n)>0?"":" need"); b.dataset.n=c.n; b.setAttribute("aria-label",c.name+" details");
+    const b=document.createElement("div");
+    b.className="sleeve"+(qty(c.n)>0?"":" need"); b.dataset.n=c.n;
     const f=document.createElement("div"); f.className="face "+(c.custom?"custom":tint(c));
+    f.setAttribute("role","button"); f.tabIndex=0; f.setAttribute("aria-label",c.name+" "+label(c)+" details");
     if(c.custom){ const ct=document.createElement("span"); ct.className="ctag"; ct.textContent="Custom"; f.append(ct); }
     const no=document.createElement("div"); no.className="no"; no.textContent=label(c);
     const nm=document.createElement("div"); nm.className="nm"; nm.textContent=c.name;
@@ -1951,7 +1973,7 @@ $("grid").addEventListener("click",e=>{
   openCard(b.dataset.n);
 });
 $("grid").addEventListener("keydown",e=>{
-  if((e.key==="Enter"||e.key===" ") && e.target.classList.contains("sleeve")){ e.preventDefault(); openCard(e.target.dataset.n); }
+  if((e.key==="Enter"||e.key===" ") && e.target.classList.contains("face")){ const b=e.target.closest(".sleeve"); if(b){ e.preventDefault(); openCard(b.dataset.n); } }
 });
 async function clearCard(n){
   const c=state.cards.find(x=>x.n===n); if(!c) return;
@@ -1959,7 +1981,7 @@ async function clearCard(n){
   const k=qty(n);
   const ok=await askConfirm("Mark "+c.name+" as needed?", "This removes "+(k===1?"its purchase record":"all "+k+" purchase records")+" for this card, including dates, prices and sellers.", "Remove");
   if(!ok) return;
-  saveCard(n,{purchases:[]}, done=>{ $("sync").textContent = done ? c.name+" marked as needed" : "Couldn't save. Check that the container is running."; });
+  saveCard(n,{purchases:[]}, done=>{ $("sync").textContent = done ? c.name+" marked as needed" : "Couldn't save. Check that "+srv()+" is online."; });
   if(state.open===n && $("dlg").open){ $("dQty").textContent=0; drawBuys(n); condOptions(n); $("dArt").classList.toggle("need",true); }
 }
 function quickToggle(n){
@@ -1968,7 +1990,7 @@ function quickToggle(n){
   const owned=qty(n)>0;
   if(owned){ clearCard(n); return; }
   const list=[{d:todayStr(), price:null, where:""}];
-  saveCard(n,{purchases:list}, ok=>{ $("sync").textContent = ok ? (owned ? c.name+" marked as needed" : c.name+" marked as owned today. Tap the card to add what you paid.") : "Couldn't save. Check that the container is running."; });
+  saveCard(n,{purchases:list}, ok=>{ $("sync").textContent = ok ? (owned ? c.name+" marked as needed" : c.name+" marked as owned today. Tap the card to add what you paid.") : "Couldn't save. Check that "+srv()+" is online."; });
   const t=document.querySelector('.sleeve[data-n="'+CSS.escape(n)+'"] .tag'); if(t) t.focus();
 }
 
@@ -2029,7 +2051,7 @@ $("cForm").onsubmit=async e=>{
     $("sync").textContent=(editing?"Saved changes to ":"Added ")+j.name+(body.tcg&&!editing?". Its price fills in on the next refresh.":".");
     await loadState(); loadSets().then(()=>{ if($("drawer").open) drawSets(); });
     if(editing && state.open===j.n && $("dlg").open) openCard(j.n);
-  }catch(err){ $("cErr").textContent=(err&&err.message&&err.message!=="Failed to fetch") ? err.message : "Couldn't save. Check that the container is running."; }
+  }catch(err){ $("cErr").textContent=(err&&err.message&&err.message!=="Failed to fetch") ? err.message : "Couldn't save. Check that "+srv()+" is online."; }
   finally{ $("cSave").disabled=false; }
 };
 $("dCEdit").onclick=()=>{ if(state.open) openCustom(state.open); };
@@ -2040,7 +2062,7 @@ $("dCDel").onclick=async()=>{
     {body:Object.assign(document.createElement("div"),{className:"note",textContent:"It's removed from this binder."+extra+" Backups you already have still include it."})});
   if(!ok) return;
   const r=await fetch("api/set/"+enc(state.sid)+"/custom/"+enc(c.n),{method:"DELETE"}).catch(()=>null);
-  if(!r || !r.ok){ $("dSaved").textContent="Couldn't delete. Check that the container is running."; return; }
+  if(!r || !r.ok){ $("dSaved").textContent="Couldn't delete. Check that "+srv()+" is online."; return; }
   $("dlg").close(); $("sync").textContent="Deleted "+c.name+".";
   await loadState(); loadSets();
 };
@@ -2303,12 +2325,12 @@ function saveCard(n, patch, done){
   if(!wasDone && allOwned() && celeOn() && !isPrivate()) setTimeout(()=>celebrate((state.set.name||"Your binder")+" · all "+state.cards.length+" cards"),350); render(); if(state.open===n && $("dlg").open) ownLine(n); if(state.view==="pages") drawPages(); if(state.view==="shop") drawShop(); if(state.view==="upg") drawUpg(); if(state.view==="stats") state.spendStale=true;
   saveChain=saveChain.then(()=>fetch("api/set/"+enc(sid)+"/card/"+enc(n),{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(next)}))
     .then(r=>{ if(!r.ok) throw 0; const s=state.sets.find(x=>x.id===sid); if(s){ s.owned=state.cards.filter(c=>qty(c.n)>0).length; } done&&done(true); })
-    .catch(()=>{ done&&done(false); });
+    .catch(()=>{ done&&done(false); const c=state.cards.find(x=>x.n===n); toast("Couldn't save "+(c?c.name:"that card")+".", "Try again", ()=>saveCard(n, patch, done)); });
 }
 function save(patch){
   const n=state.open; if(n==null) return;
   $("dSaved").textContent="Saving…";
-  saveCard(n, patch, ok=>{ $("dSaved").textContent = ok ? "Saved" : "Couldn't save. Check that the neo-binder container is running."; });
+  saveCard(n, patch, ok=>{ $("dSaved").textContent = ok ? "Saved" : "Couldn't save. Check that "+srv()+" is online."; });
   $("dQty").textContent=qty(n);
 }
 $("dPlus").onclick=()=>{
@@ -2572,7 +2594,7 @@ async function saveSlots(slots){
       } else msg.append("Saved. Prices updated.");
       return state.sid && loadState();
     })
-    .catch(e=>{ drawSlots(); msg.textContent=(e&&e.message&&e.message!=="Failed to fetch") ? e.message : "Couldn't save. Check that the container is running."; });
+    .catch(e=>{ drawSlots(); msg.textContent=(e&&e.message&&e.message!=="Failed to fetch") ? e.message : "Couldn't save. Check that "+srv()+" is online."; });
 }
 function getSlots(){
   return fetch("api/settings").then(r=>r.json()).then(s=>{ if(s.options) state.slotOpts=s.options; setServerName(s.serverName); state.lastSync=s.lastSync||null; pendUI(); if($("stHosts") && document.activeElement!==$("stHosts")) $("stHosts").value=(s.otherHosts||[]).join(", "); return s; }).catch(()=>null);
@@ -2605,7 +2627,7 @@ $("bkUp").onchange=async e=>{
   fetch("api/restore",{method:"POST",headers:{"Content-Type":"application/zip"},body:f})
     .then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error||"Restore failed"); return j; }))
     .then(j=>{ $("bkMsg").textContent="Restored "+j.files+" files. Reloading…"; setTimeout(()=>location.reload(),1200); })
-    .catch(err=>{ $("bkMsg").textContent=(err&&err.message&&err.message!=="Failed to fetch") ? err.message+"." : "Couldn't restore. Check that the container is running."; });
+    .catch(err=>{ $("bkMsg").textContent=(err&&err.message&&err.message!=="Failed to fetch") ? err.message+"." : "Couldn't restore. Check that "+srv()+" is online."; });
 };
 
 // ---------- backups saved on the server ----------
@@ -2630,7 +2652,7 @@ function loadAutoBackups(){
         fetch("api/backups/restore",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:b.name})})
           .then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error||"Restore failed"); return j; }))
           .then(j=>{ $("bkMsg").textContent="Restored "+j.files+" files. Reloading…"; setTimeout(()=>location.reload(),1200); })
-          .catch(err=>{ $("bkMsg").textContent=(err&&err.message&&err.message!=="Failed to fetch") ? err.message+"." : "Couldn't restore. Check that the container is running."; });
+          .catch(err=>{ $("bkMsg").textContent=(err&&err.message&&err.message!=="Failed to fetch") ? err.message+"." : "Couldn't restore. Check that "+srv()+" is online."; });
       };
       btns.append(dl,rs); li.append(info,btns); ul.append(li);
     }
@@ -2657,7 +2679,7 @@ $("imUp").onchange=async e=>{
   $("imMsg").textContent="Reading "+f.name+"…";
   let plan;
   try { plan=await post(""); }
-  catch(err){ $("imMsg").textContent=(err&&err.message&&err.message!=="Failed to fetch") ? err.message : "Couldn't read the file. Check that the container is running."; return; }
+  catch(err){ $("imMsg").textContent=(err&&err.message&&err.message!=="Failed to fetch") ? err.message : "Couldn't read the file. Check that "+srv()+" is online."; return; }
   const ch=plan.changes, newOwned=ch.filter(c=>c.have===0).length, more=ch.filter(c=>c.have>0&&c.add>0).length, extra=ch.filter(c=>!c.add).length;
   const ul=document.createElement("ul"); ul.className="changes";
   const line=t=>{ const li=document.createElement("li"); li.textContent=t; ul.append(li); };
@@ -2676,7 +2698,7 @@ $("imUp").onchange=async e=>{
     const done=await post("?apply=1");
     $("imMsg").textContent="Imported. "+done.changes.length+" card"+(done.changes.length===1?"":"s")+" updated. A backup from just before is saved on "+srv()+".";
     loadAutoBackups(); if(state.sid) loadState();
-  } catch(err){ $("imMsg").textContent=(err&&err.message&&err.message!=="Failed to fetch") ? err.message : "Couldn't import. Check that the container is running."; }
+  } catch(err){ $("imMsg").textContent=(err&&err.message&&err.message!=="Failed to fetch") ? err.message : "Couldn't import. Check that "+srv()+" is online."; }
 };
 // ---------- tab icon ----------
 function setIcon(v){
@@ -2690,7 +2712,7 @@ $("icUp").onchange=e=>{
   fetch("api/icon",{method:"POST",headers:{"Content-Type":f.type||"application/octet-stream"},body:f})
     .then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error||"Couldn't save"); return j; }))
     .then(j=>{ setIcon(j.v); $("icMsg").textContent="Saved. Other open tabs pick it up when reloaded."; })
-    .catch(err=>{ $("icMsg").textContent=(err&&err.message&&err.message!=="Failed to fetch") ? err.message : "Couldn't save. Check that the container is running."; });
+    .catch(err=>{ $("icMsg").textContent=(err&&err.message&&err.message!=="Failed to fetch") ? err.message : "Couldn't save. Check that "+srv()+" is online."; });
 };
 $("icReset").onclick=()=>fetch("api/icon",{method:"DELETE"}).then(()=>{ setIcon(); $("icMsg").textContent="Back to the default icon."; });
 function loadSettings(){
@@ -2709,7 +2731,7 @@ function saveSettings(patch, quiet){
   return fetch("api/settings",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(patch)})
     .then(r=>r.json().then(j=>{ if(!r.ok) throw 0; return j; }))
     .then(j=>{ showNext(j.next, $("stAuto").checked); if(!quiet) $("stSaved").textContent="Saved"; })
-    .catch(()=>{ $("stSaved").textContent="Couldn't save. Check that the container is running."; });
+    .catch(()=>{ $("stSaved").textContent="Couldn't save. Check that "+srv()+" is online."; });
 }
 $("stAuto").onchange=e=>saveSettings({auto:e.target.checked, tz:TZ, offset:-new Date().getTimezoneOffset()});
 $("stTime").onchange=e=>{ if(/^\d\d:\d\d$/.test(e.target.value)) saveSettings({time:e.target.value, tz:TZ, offset:-new Date().getTimezoneOffset()}); };
@@ -3307,6 +3329,14 @@ async function restoreSet(id, reopen){
 }
 // A short message at the bottom of the screen, with an optional button (like Undo). Disappears by itself.
 let toastTimer=0;
+// A problem message with a Try again button, for places that show a note instead of a toast.
+function retryNote(text, again){
+  const d=document.createElement("div"); d.className="note retry"; d.setAttribute("role","alert");
+  const sp=document.createElement("span"); sp.textContent=text+" ";
+  const b=document.createElement("button"); b.type="button"; b.className="btn"; b.textContent="Try again"; b.onclick=again;
+  d.append(sp,b); return d;
+}
+const offlineHint = () => "Check that "+srv()+" is on, and that Tailscale is on if you're away from home.";
 function toast(text, action, onAction){
   let t=$("toast");
   if(!t){ t=document.createElement("div"); t.id="toast"; t.className="toast"; t.setAttribute("role","status"); t.setAttribute("aria-live","polite");
@@ -3517,6 +3547,7 @@ function openSet(sid){
 }
 function loadState(){
   const sid=state.sid, seq=++loadSeq;
+  state.loadErr="";
   return fetch("api/set/"+enc(sid)+"/state").then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error||"Couldn't load"); return j; })).then(s=>{
     if(seq!==loadSeq) return;
     (s.cards||[]).forEach((c,i)=>{ if(c.extra) c.k=i; });
@@ -3531,7 +3562,7 @@ function loadState(){
     state.ready=true; header(); rarityOptions(); render(); renderView();
     fetch("api/set/"+enc(sid)+"/trends?today="+todayStr()).then(r=>r.json()).then(h=>{ if(seq!==loadSeq) return; state.trends=h.cards||{}; state.histFirst=h.first||""; state.seriesCache={}; render(); renderView(); }).catch(()=>{});
     if(!wasRunning){ $("sync").textContent="Saved on "+srv()+" · prices auto-refresh daily"; hideBar($("syncBar")); watchImages(); }
-  }).catch(err=>{ if(seq===loadSeq){ state.ready=false; render(); $("sync").textContent=(err&&err.message&&err.message!=="Failed to fetch" ? err.message : "Can't reach "+srv()+"")+". Try reloading."; } });
+  }).catch(err=>{ if(seq===loadSeq){ state.ready=false; state.loadErr=(err&&err.message&&err.message!=="Failed to fetch") ? err.message+"." : "Can't reach "+srv()+". "+offlineHint(); render(); $("sync").textContent=(err&&err.message&&err.message!=="Failed to fetch" ? err.message : "Can't reach "+srv())+"."; } });
 }
 
 // ---------- loading bars ----------
@@ -3583,7 +3614,7 @@ $("refresh").onclick=async()=>{
   if(!ok) return;
   $("refresh").disabled=true;
   fetch("api/refresh",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({set:state.sid})}).then(r=>r.json()).then(showJob)
-    .catch(()=>{ $("refresh").disabled=false; $("sync").textContent="Couldn't start a refresh. Check that the container is running."; });
+    .catch(()=>{ $("refresh").disabled=false; $("sync").textContent="Couldn't start a refresh."; toast("Couldn't start the price refresh. "+offlineHint(), "Try again", ()=>$("refresh").click()); });
 };
 
 // ---------- privacy mode ----------
@@ -3629,7 +3660,7 @@ function shopList(){
 function saveShop(){
   if(!state.sid) return;
   fetch("api/set/"+enc(state.sid)+"/shop",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(state.shop)})
-    .then(r=>{ if(!r.ok) throw 0; }).catch(()=>{ $("shopMsg").textContent="Couldn't save the order. Check that the container is running."; });
+    .then(r=>{ if(!r.ok) throw 0; }).catch(()=>{ $("shopMsg").textContent="Couldn't save the order. Check that "+srv()+" is online."; });
 }
 function setShopMode(m){
   const order = m==="mine" && !((state.shop||{}).order||[]).length ? shopList().map(c=>c.n) : ((state.shop||{}).order||[]);
@@ -3828,7 +3859,7 @@ $("shopBudget").value=recall("nd-budget")||"";
 // ---------- stats ----------
 function loadStats(){
   return fetch("api/spending").then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error); return j; })).then(sp=>{ state.spend=sp; state.spendStale=false; drawStats(); })
-    .catch(()=>{ $("chLine").replaceChildren(note("Couldn't load spending. Check that "+srv()+" is running.")); });
+    .catch(()=>{ $("chLine").replaceChildren(retryNote("Couldn't load spending. "+offlineHint(), ()=>{ $("chLine").replaceChildren(note("Loading…")); loadStats(); })); });
 }
 function note(t){ const d=document.createElement("div"); d.className="empty-note"; d.textContent=t; return d; }
 function drawStats(){
@@ -4015,7 +4046,7 @@ async function fdSearch(){
     if(!r.ready){ fdBuilding(r); if(!r.error || r.building) fd.poll=setTimeout(fdSearch,2500); return; }
     hideBar($("fdBar"));
     fd.res=r; fdShow(); $("fdSheet").scrollTop=0;
-  }catch(_){ $("fdBody").replaceChildren(fdNote("Couldn't search. Check that "+srv()+" is online.")); }
+  }catch(_){ $("fdBody").replaceChildren(retryNote("Couldn't search. "+offlineHint(), ()=>fdSearch())); }
 }
 function fdShow(){
   fdBack.hidden = fd.view!=="set";
@@ -4088,7 +4119,7 @@ async function fdOpenSet(id){
     if(fd.view!=="set") return;
     if(!r.ready || !r.set){ $("fdBody").replaceChildren(fdNote(r.error||"Couldn't load that set.")); return; }
     fd.set=r; fdShow(); $("fdSheet").scrollTop=0;
-  }catch(_){ $("fdBody").replaceChildren(fdNote("Couldn't load that set. Check that "+srv()+" is online.")); }
+  }catch(_){ $("fdBody").replaceChildren(retryNote("Couldn't load that set. "+offlineHint(), ()=>fdOpenSet(id))); }
 }
 function fdDrawSet(){
   const r=fd.set, st=r.set, B=$("fdBody");
@@ -4326,7 +4357,7 @@ function saveLayout(next){
     const sid=state.sid;
     fetch("api/set/"+enc(sid)+"/layout",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(next)})
       .then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error||"Couldn't save the pages"); }))
-      .catch(err=>toast((err&&err.message&&err.message!=="Failed to fetch") ? err.message+"." : "Couldn't save the pages. Check that "+srv()+" is online."));
+      .catch(err=>toast((err&&err.message&&err.message!=="Failed to fetch") ? err.message+"." : "Couldn't save the pages.", "Try again", ()=>saveLayout(next)));
   },350);
 }
 function pocket(n, i, L){
@@ -4965,7 +4996,7 @@ getSlots().then(loadSets).then(()=>{
   if(want) history.replaceState(null,"",location.pathname+location.search);
   if(!state.sets.length) return openSet(null);   // no binders yet: the binder screen explains how to add one
   showHome();
-}).finally(()=>{ hideSplash(); vtReady=true; }).then(()=>fetch("api/refresh")).then(r=>r&&r.json()).then(j=>{ if(j&&j.running) showJob(j); }).catch(()=>{ $("sync").textContent="Can't reach "+srv()+". Try reloading."; });
+}).finally(()=>{ hideSplash(); vtReady=true; }).then(()=>fetch("api/refresh")).then(r=>r&&r.json()).then(j=>{ if(j&&j.running) showJob(j); }).catch(()=>{ $("sync").textContent="Can't reach "+srv()+"."; toast("Can't reach "+srv()+". "+offlineHint(), "Try again", ()=>location.reload()); });
 window.addEventListener("popstate",()=>{   // phone back/forward between home and a binder
   const sid=location.hash.slice(1);
   if(!sid){ if(state.sets.length) showHome(); return; }

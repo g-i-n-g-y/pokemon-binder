@@ -10,6 +10,13 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.17 (October 16, 2026)
+
+- **Download your whole collection as a spreadsheet.** Settings → Backup and import → **Download spreadsheet** gives one Excel file with an "All binders" tab and a tab for each binder: every card, owned or needed, copies, condition, what you paid, today's price, value, the day you got it, and your notes.
+- **Loading placeholders.** While a binder loads, grey card outlines show where the cards will be, instead of a blank space.
+- **Try again buttons.** When the server can't be reached, the message now has a **Try again** button: opening a binder, saving a card, searching, loading a set, saving your pages, starting a price refresh and loading spending. Messages also say what to check (the server and Tailscale), and none mention "the container" anymore.
+- **Accessibility check.** An automatic audit of every main screen in all five themes now passes. Fixes: each card's picture is its own "open details" button, separate from the Need/Owned button, so screen readers and keyboards don't get a button inside a button; the binder screen is marked as the main content.
+
 ## v3.16 (October 16, 2026)
 
 - **Smoother screen changes.** Opening a binder slides it in from the right, and going back to My binders (home button or the phone's back gesture) slides it back. Switching tabs (Cards, Pages, Shopping list...) fades, and card details and other windows rise in gently. If your phone is set to reduce motion, everything switches instantly like before.
