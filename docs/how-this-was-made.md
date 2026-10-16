@@ -39,7 +39,7 @@ You never have to understand the code. You only have to understand what you want
 
 You don't need all four on day one. Start with the AI and your own computer. Add the rest when you want it.
 
-Optional later: **GitHub**, a free website that stores your code and every past version of it. Mine uses GitHub so the app can update itself when I tap a button and confirm.
+Later on, I also put my code here on GitHub so the app can update itself when I tap a button and confirm. You don't need that to start.
 
 ## Step by step
 
@@ -49,11 +49,20 @@ Sign up for an AI chat assistant. I used Claude, but the steps in this guide wor
 
 If your assistant lets you create a **project** (some call it a workspace or something similar), make one for your app. A project is like a folder for one idea: it remembers your instructions every time you start a new chat inside it, so you don't have to explain yourself over and over.
 
-A project has a place for **instructions**. Paste in the project instructions from the [prompt setup](#the-prompt-setup) section below, filled in with your own details. If your assistant has no projects, paste the instructions at the start of each new chat instead. Either way, this was the single most useful thing I did. It's how the AI knew I don't code, how I like things explained, and what rules my app follows.
+A project has a place for **instructions**. Write a few lines there about you and your app, like:
+
+- What the app is for, in one sentence
+- That you don't code and are new to computers, so it should use plain language and explain any technical word
+- That it should give you one step at a time and wait for you to say "done"
+- That your data should stay on your own computer, in its own folder, separate from the code
+
+If your assistant has no projects, paste those lines at the start of each new chat instead. Either way, this was the single most useful thing I did. It's how the AI knew I don't code, how I like things explained, and what rules my app follows.
 
 ### Step 2: Describe your idea
 
-Start a new chat inside the project and paste in the [first message](#2-your-first-message) from the prompt setup, filled in with your idea. Keep the first version small. Mine was "show my cards and what they're worth." Everything else came later.
+Start a new chat inside the project and describe your idea: what the app should do, in two or three short points. If you have a spreadsheet, a photo, or a screenshot of something you like, attach it. Showing beats describing. Then ask it to walk you through building it one step at a time.
+
+Keep the first version small. Mine was "show my cards and what they're worth." Everything else came later.
 
 ### Step 3: Install Python (one time only)
 
@@ -113,101 +122,6 @@ One catch: the app only works while that computer is on and awake. Later you can
 
 Every feature in my binder came from using it and thinking "it would be nice if..." Write those thoughts down and bring them to the AI one at a time.
 
-## The prompt setup
-
-These are the exact kinds of messages that made my project work. Copy them, replace everything in [square brackets], and delete anything that doesn't apply to you.
-
-### 1. Project instructions
-
-Paste this into your project's instructions box once. The AI reads it at the start of every chat in the project.
-
-```text
-PROJECT: [My app's name], a personal app that [what it does in one sentence,
-like "tracks my Pokémon card collection and what each card is worth"].
-It's just for me. [Any details that matter, like "I collect Unlimited, ungraded
-cards" or "prices in US dollars".]
-
-WHERE IT RUNS
-- It runs on my own [Windows / Mac] computer and opens in a web browser.
-- I want to open it on my phone too, privately (Tailscale, when we get there).
-- My data (my collection, notes, photos) must stay on my computer, in its own
-  folder, separate from the code, so an update can never erase it.
-- Never put passwords, keys or personal details in the code.
-
-HOW TO WORK WITH ME
-- I don't know how to code and I'm new to computers. Use plain language and
-  explain any technical word the first time you use it.
-- Give me one step at a time, then stop and wait for me to say "done" or paste
-  what I see. Never give me several steps at once.
-- Tell me exactly where to click and exactly what to type or paste.
-- When there are options, give me your one best choice plus one backup, not a
-  long list.
-- Before building something big, describe it or show me a mockup so I can say
-  yes or no first.
-- Test your changes before giving them to me, including on a phone-sized
-  screen.
-- Keep the look of the app consistent when adding new features.
-- Suggest improvements on your own (speed, reliability, ease of use) and tell
-  me why they help.
-- Keep the app simple: as few files and add-ons as possible.
-
-UPDATES
-- Give each version a number (1.0, 1.1, 1.1.1). Small fixes get the last
-  number, bigger changes get the middle number.
-- Keep a simple list of what changed in each version, in plain words.
-- Remind me to back up my data before any big change.
-```
-
-### 2. Your first message
-
-Use this to start the first chat in the project.
-
-```text
-I'd like to build [my app idea]. Here's what I want the first version to do:
-
-- [The one most important thing, like "show every card in the Neo Destiny set"]
-- [Second thing, like "let me mark which cards I own"]
-- [Third thing, like "show what each card is worth from recent sales"]
-
-[Optional: I've attached a spreadsheet / screenshot / photo of what I use now.]
-
-Please start by telling me what I'll need and checking what's already on my
-computer. Then walk me through it one step at a time.
-```
-
-If you have a spreadsheet, a photo, or a screenshot of something you like, attach it. Showing beats describing.
-
-### 3. Messages for every day after that
-
-**Reporting a problem:**
-
-```text
-Something's wrong. Here's what I did: [the steps you took].
-Here's what I expected: [what should have happened].
-Here's what happened instead: [what you saw]. Screenshot attached.
-```
-
-**Asking for something new:**
-
-```text
-I'd like the app to [what you want, like "show how much I've spent each month"].
-Show me what it would look like before building it.
-```
-
-**When you're stuck or lost:**
-
-```text
-I'm lost. Can you explain what we're doing and why, in simple terms,
-and then give me just the next step?
-```
-
-**When something looks off but you can't say why:**
-
-```text
-This part doesn't feel right [screenshot]. Can you give me two ideas to
-make it better?
-```
-
 ## What made it work
 
 - **Send screenshots.** A picture of what's wrong beats a paragraph describing it. On a phone, take a screenshot and attach it to your message.
@@ -248,5 +162,4 @@ make it better?
 | Backup | A copy of your data kept somewhere safe in case something goes wrong. |
 | Mockup | A quick picture of an idea, made before the real thing is built. |
 | Docker / container | A tidy box that holds an app and everything it needs. Handy on servers, but you can skip it when starting out. |
-| GitHub | A free website that stores code and every past version of it. Useful for backups and updates. |
 | Vibe coding | Building software by describing what you want to an AI instead of writing the code yourself. |
