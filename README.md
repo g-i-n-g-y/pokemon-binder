@@ -31,9 +31,17 @@ A self-hosted Pokémon TCG collection tracker. One small Python server (standard
 
 ## Screenshots
 
+**Home.** A shelf of all your binders, each with its cover Pokémon and how complete it is, plus Find a card and the cards you added most recently.
+
+![The home page with a shelf of binders](screenshots/home.png)
+
 **The binder.** Owned cards in color, cards you still need in greyscale, with totals at the top and each card's price trend.
 
 ![The binder's main page](screenshots/binder.png)
+
+**Pages.** Lay out a binder like a real one, page by page, with an inside cover featuring one of the set's best cards. Tap the round buttons to pick which Pokémon is on the cover.
+
+![The Pages view with the inside cover and page 1](screenshots/pages.png)
 
 **Card details.** The card, its prices from recent sales, market prices, a price chart, and the newest sales for every condition, so you can see whether a different condition is worth it.
 
@@ -43,11 +51,7 @@ A self-hosted Pokémon TCG collection tracker. One small Python server (standard
 
 ![Card details, My copy tab](screenshots/my-copy.png)
 
-**All your binders.** The sets menu shows every binder with its progress and value, plus totals across all of them. (Sample binders shown.)
-
-![Sets menu with totals across binders](screenshots/sets-menu.png)
-
-**Privacy mode.** Tap the eye button: every card shows in color, Owned/Need tags disappear, and your totals blur, so nobody looking over your shoulder can tell what you own.
+**Privacy mode.** Tap the eye button: every card shows in color, Owned/Need tags disappear, your totals blur, and the Shopping list, Upgrades and Stats tabs are locked, so nobody looking over your shoulder can tell what you own.
 
 ![Privacy mode turned on](screenshots/privacy-mode.png)
 
