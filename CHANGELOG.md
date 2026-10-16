@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.15.3 (October 16, 2026)
+
+- **Smoother launch screen.** The icon is now the same size and in the same spot as Android's own launch screen, so the hand-over between the two no longer looks like a zoom. It stays up for 1.5 seconds so you can see it, then fades into the home page. The thin scroll bar that showed on its right edge is gone.
+
 ## v3.15.2 (October 16, 2026)
 
 - **Launch screen for the installed app.** When you open the binder from your home screen, it shows the app icon (your own, if you set one in Settings) on the theme's background while your binders load, then fades into the home page. It shows for at least a moment and never more than 3 seconds. Opening the binder in a regular browser tab skips it.

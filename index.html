@@ -988,15 +988,18 @@ body.at-home > .wrap:not(.home){display:none}
 #splash{display:none}
 @media (display-mode: standalone){
   #splash{display:grid;place-items:center;position:fixed;inset:0;z-index:1000;background:var(--bg);transition:opacity .35s ease}
-  #splash img{width:min(38vw,168px);height:auto;aspect-ratio:1;object-fit:contain;border-radius:22%;animation:splashIn .5s ease both}
+  /* same size and spot as Android's own launch screen (240 points, centered on the whole screen incl. the status bar),
+     so the hand-over from Android's screen to this one doesn't jump */
+  #splash img{width:min(240px,58vw);height:auto;aspect-ratio:1;object-fit:contain;margin-top:-14px}
+  html.splashing{overflow:hidden}
 }
 #splash.out{opacity:0;pointer-events:none}
-@keyframes splashIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion:reduce){#splash img{animation:none}#splash{transition:none}}
+@media (prefers-reduced-motion:reduce){#splash{transition:none}}
 </style>
 </head>
 <body>
 <div id="splash" aria-hidden="true"><img src="favicon" alt=""></div>
+<script>document.documentElement.classList.add("splashing")</script>
 <div class="wrap">
   <header class="top">
     <div class="title">
@@ -4897,13 +4900,13 @@ $("stHosts").addEventListener("change",()=>{
 });
 
 // ---------- start ----------
-// The installed app opens on a launch screen with its icon, shown for at least 0.7 s and until the first screen is ready.
+// The installed app opens on a launch screen with its icon, shown for at least 1.5 s and until the first screen is ready.
 const splashAt=Date.now();
 function hideSplash(){
   const el=$("splash"); if(!el || el.dataset.out) return; el.dataset.out="1";
-  setTimeout(()=>{ el.classList.add("out"); setTimeout(()=>el.remove(),400); }, Math.max(0,700-(Date.now()-splashAt)));
+  setTimeout(()=>{ el.classList.add("out"); document.documentElement.classList.remove("splashing"); setTimeout(()=>el.remove(),400); }, Math.max(0,1500-(Date.now()-splashAt)));
 }
-setTimeout(hideSplash,3000);   // never longer than 3 s, even if the server is slow
+setTimeout(hideSplash,3500);   // never longer than 3.5 s, even if the server is slow
 header(); render();
 setPrivate(isPrivate());
 { const v=recall("nd-view"); if(v==="pages"||v==="shop"||v==="upg"||v==="stats") setView(v); }
