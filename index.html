@@ -155,7 +155,7 @@ dialog::backdrop{background:rgba(5,4,8,.6)}
 .upg-opts{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 16px;margin-top:10px}
 .upg-opts .grp{display:flex;flex-direction:column;gap:4px}
 .upg-opts .k{font-size:13px;color:var(--muted)}
-.bk{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btnrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}   /* a row of buttons (backups, custom card picture) */
 .dtabs button{white-space:nowrap}
 .tabpane{display:flex;flex-direction:column;gap:18px}
 .tabpane[hidden]{display:none}
@@ -1310,7 +1310,7 @@ body.at-home > .wrap:not(.home){display:none}
       <label class="f">TCGplayer link (optional, for prices)<input id="cTcg" inputmode="url" autocomplete="off" placeholder="https://www.tcgplayer.com/product/…"></label>
       <div class="note">Paste the card's TCGplayer page and it gets recent sales and a price on the next refresh, like any other card. No link? Type a price below instead.</div>
       <label class="f">Your price (optional, used when there are no sales)<input id="cPrice" inputmode="decimal" autocomplete="off" placeholder="0.00"></label>
-      <div class="bk"><label class="btn" for="cPic">Choose picture</label><input id="cPic" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,image/avif" hidden><span class="note" id="cPicName">Optional. A photo of the card becomes its picture.</span></div>
+      <div class="btnrow"><label class="btn" for="cPic">Choose picture</label><input id="cPic" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,image/avif" hidden><span class="note" id="cPicName">Optional. A photo of the card becomes its picture.</span></div>
       <div class="err" id="cErr" aria-live="polite"></div>
       <div class="row-end"><button class="btn" type="button" id="cCancel">Cancel</button><button class="btn primary" type="submit" id="cSave">Add card</button></div>
     </form>
@@ -1483,7 +1483,7 @@ body.at-home > .wrap:not(.home){display:none}
 
     <section class="ui-page" data-page="backup" data-title="Backup and import">
       <h3 class="ui-h">Backup</h3>
-      <div class="bk">
+      <div class="btnrow">
         <a class="btn" href="api/backup" download id="bkDown">Download backup</a>
         <label class="btn" for="bkUp">Restore from backup</label>
         <input id="bkUp" type="file" accept=".zip,application/zip" hidden>
@@ -1495,7 +1495,7 @@ body.at-home > .wrap:not(.home){display:none}
         <ul class="prevlist" id="bkAuto"></ul>
       </div>
       <h3 class="ui-h">Spreadsheet <span id="imSet"></span></h3>
-      <div class="bk">
+      <div class="btnrow">
         <a class="btn" href="#" id="imTpl">Download template</a>
         <label class="btn" for="imUp">Import spreadsheet</label>
         <input id="imUp" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
@@ -2569,7 +2569,7 @@ function loadAutoBackups(){
       const t=document.createElement("b"); t.textContent=bkKind[b.kind]||"Backup";
       const d=document.createElement("div"); d.className="s"; d.textContent=shortDate(b.created)+", "+new Date(b.created).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})+" · "+(b.size<1048576 ? Math.max(1,Math.round(b.size/1024))+" KB" : (b.size/1048576).toFixed(1)+" MB");
       info.append(t,d);
-      const btns=document.createElement("div"); btns.className="bk";
+      const btns=document.createElement("div"); btns.className="btnrow";
       const dl=document.createElement("a"); dl.className="btn"; dl.href="api/backups/"+enc(b.name); dl.download=""; dl.textContent="Download";
       const rs=document.createElement("button"); rs.className="btn"; rs.type="button"; rs.textContent="Restore";
       rs.onclick=async()=>{

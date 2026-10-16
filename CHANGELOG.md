@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Backup and import fixed:** the backup buttons were showing a giant binder cover behind them (since v3.10). The same fix also covers the picture button when making a custom card.
+
 ## v3.14 (October 16, 2026)
 
 - **Bring back or start fresh:** if you add a binder you removed earlier and its cards are still saved, the binder now asks first instead of quietly bringing them back. **Restore** puts back your cards, what you paid, notes and photos, in the binder's old spot. **Start fresh** begins with an empty binder; a backup of everything is saved first, just in case. Prices and price history are kept either way.
