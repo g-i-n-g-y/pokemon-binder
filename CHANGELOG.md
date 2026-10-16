@@ -10,6 +10,11 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.14 (October 16, 2026)
+
+- **Bring back or start fresh:** if you add a binder you removed earlier and its cards are still saved, the binder now asks first instead of quietly bringing them back. **Restore** puts back your cards, what you paid, notes and photos, in the binder's old spot. **Start fresh** begins with an empty binder; a backup of everything is saved first, just in case. Prices and price history are kept either way.
+- Backups made before a phone sync or a fresh start now have their own names in the list of backups saved on the server.
+
 ## v3.13.1 (October 15, 2026)
 
 - **Big screens (like 4K):** the home page uses more of the width, and all your binders plus **Add a binder** fit in one row.

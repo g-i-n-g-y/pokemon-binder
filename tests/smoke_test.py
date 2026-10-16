@@ -51,6 +51,8 @@ def sample_binder(root):
     write(root, "sets/neo4/prices.json", {"p": {"1": [25.0], "2": [10.0]}, "info": {"1": {"cond": {"LP": [25.0, 5, "2026-10-01"]},
                                           "recent": {"LP": [["2026-10-01", 25.0]]}, "src": "sales"}}, "updated": "2026-10-12T07:00:00Z"})
     write(root, "sets/neo4/history.json", {"2026-10-11": {"1": 24.0, "2": 9.0}, "2026-10-12": {"1": 25.0, "2": 10.0}})
+    write(root, "catalog.json", {"fetched": time.time(), "sets": [{"id": "neo4", "name": "Neo Destiny", "series": "Neo",
+                                  "printedTotal": 105, "total": 3, "releaseDate": "2002/02/28"}]})
     # a tiny every-card list for Find a card (the real one is made from the card database)
     with open(os.path.join(root, "data", "card_index.json"), "w") as f:
         json.dump({"fetched": time.time(),
@@ -302,6 +304,22 @@ def main():
         check("take an added card back out", code == 200)
         _, st = call(base, "GET", "/api/set/neo4/state")
         check("taken-out card is gone", not any(c["n"] == "neo1-80" for c in st["cards"]))
+
+        # removing a binder and adding it again asks whether to bring its cards back or start fresh
+        owned = lambda: next((b["owned"] for b in call(base, "GET", "/api/home")[1]["binders"] if b["id"] == "neo4"), None)
+        before = owned()
+        call(base, "DELETE", "/api/sets/neo4")
+        code, res = call(base, "POST", "/api/sets", {"id": "neo4"})
+        check("adding a removed binder asks about its saved cards", code == 409 and res.get("saved", {}).get("owned") == before, res)
+        code, res = call(base, "POST", "/api/sets", {"id": "neo4", "keep": True})
+        check("restore brings the cards back", code == 200 and res.get("restored") and owned() == before, res)
+        call(base, "DELETE", "/api/sets/neo4")
+        code, res = call(base, "POST", "/api/sets", {"id": "neo4", "keep": False})
+        check("start fresh adds it empty, with a backup first", code == 200 and owned() == 0
+              and any(f.startswith("before-fresh-") for f in os.listdir(os.path.join(tmp, "backups"))), res)
+        code, _ = call(base, "POST", "/api/sets", {"id": "neo4"})
+        _, home = call(base, "GET", "/api/home")
+        check("adding a binder that's already there doesn't ask", code == 200 and [b["id"] for b in home["binders"]].count("neo4") == 1)
         req = urllib.request.Request(base + "/api/set/my-1/cards", data=b'{"id":"base1-58"}', method="POST",
                                      headers={"Content-Type": "application/json", "Origin": "http://evil.example", "Sec-Fetch-Site": "cross-site"})
         try:

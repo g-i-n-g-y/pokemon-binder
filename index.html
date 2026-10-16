@@ -327,7 +327,8 @@ dialog.confirm{margin:auto;height:fit-content;max-height:calc(100% - 32px);width
 .cf{display:flex;flex-direction:column;gap:12px;padding:20px}
 .cf h2{font-family:var(--f-display);font-size:22px;margin:0}
 .cf p{margin:0;color:var(--muted);line-height:1.5}
-.cf-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
+.cf-btns{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;margin-top:6px}
+.cf-btns .btn[hidden]{display:none}
 .cf-btns .btn{padding:10px 16px}
 .btn.danger{background:var(--bad);border-color:var(--bad);color:var(--bg);font-weight:600}
 .photos{display:flex;flex-direction:column;gap:10px}
@@ -1323,6 +1324,7 @@ body.at-home > .wrap:not(.home){display:none}
     <div id="cfBody"></div>
     <div class="cf-btns">
       <button class="btn" value="cancel" type="submit" id="cfCancel">Cancel</button>
+      <button class="btn" value="alt" type="submit" id="cfAlt" hidden></button>
       <button class="btn danger" value="ok" type="submit" id="cfOk">Delete</button>
     </div>
   </form>
@@ -1489,7 +1491,7 @@ body.at-home > .wrap:not(.home){display:none}
       <div class="note" id="bkMsg">One file with everything, for every binder. Keep a copy somewhere other than <span class="srv">the server</span>.</div>
       <div class="prev" id="bkAutoWrap" hidden>
         <h3 class="ui-h">Saved on <span class="srv">the server</span></h3>
-        <div class="note">Made automatically before each update, import and restore.</div>
+        <div class="note">Made automatically before each update, import, restore and phone sync, and before a binder starts fresh.</div>
         <ul class="prevlist" id="bkAuto"></ul>
       </div>
       <h3 class="ui-h">Spreadsheet <span id="imSet"></span></h3>
@@ -1618,11 +1620,16 @@ const whichBuy = b => b.d ? "the purchase from "+fmtDay(b.d)+(b.price?" ("+money
 const isBlank = b => !b.price && !b.where && !(b.seller && b.seller.h);
 // In-page confirm box. Resolves true when the person confirms.
 function askConfirm(title, msg, okLabel, opts={}){
+  return askChoice(title, msg, okLabel, opts).then(v=>v==="ok");
+}
+// Same box with an optional middle button (opts.alt = its label). Resolves "ok", "alt", or "" for Cancel.
+function askChoice(title, msg, okLabel, opts={}){
   return new Promise(res=>{
     const dlg=$("confirm"); $("cfTitle").textContent=title; $("cfMsg").textContent=msg; $("cfOk").textContent=okLabel||"Delete";
     $("cfBody").replaceChildren(...(opts.body?[opts.body]:[]));
     $("cfOk").className="btn "+(opts.safe?"primary":"danger");
-    dlg.returnValue=""; dlg.onclose=()=>res(dlg.returnValue==="ok");
+    $("cfAlt").hidden=!opts.alt; $("cfAlt").textContent=opts.alt||"";
+    dlg.returnValue=""; dlg.onclose=()=>res(dlg.returnValue==="ok"||dlg.returnValue==="alt" ? dlg.returnValue : "");
     dlg.showModal(); $("cfCancel").focus();
   });
 }
@@ -2552,7 +2559,7 @@ $("bkUp").onchange=async e=>{
 };
 
 // ---------- backups saved on the server ----------
-const bkKind = {update:"Before update", "import":"Before import", restore:"Before restore", daily:"Daily"};
+const bkKind = {update:"Before update", "import":"Before import", restore:"Before restore", sync:"Before phone sync", fresh:"Before starting a binder fresh", daily:"Daily"};
 function loadAutoBackups(){
   fetch("api/backups").then(r=>r.json()).then(j=>{
     const list=(j.backups||[]).slice(0,6), ul=$("bkAuto"); ul.replaceChildren();
@@ -3224,6 +3231,23 @@ function drawRemoved(editing){
   const n=document.createElement("div"); n.className="note"; n.textContent="Removed binders are deleted for good after "+(state.keepDays||30)+" days.";
   box.append(h,g,n);
 }
+// Add a binder. If it was removed before with cards still saved, ask: bring them back, or start fresh?
+// Resolves the new binder's info (restored:true when the old cards came back), or null if the person cancels.
+async function addSetAsk(id){
+  const post=keep=>fetch("api/sets",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(keep==null?{id}:{id,keep})});
+  let r=await post(), j=await r.json().catch(()=>({}));
+  if(r.status===409 && j.saved){
+    const sv=j.saved, ago=sv.at ? agoText(new Date(sv.at*1000).toISOString()) : "";
+    const pick=await askChoice("Bring back your "+sv.name+" cards?",
+      "You removed this binder"+(ago?" "+ago:" before")+" with "+sv.owned+" card"+(sv.owned===1?"":"s")+" owned. They're still saved on "+srv()+".",
+      "Restore", {safe:true, alt:"Start fresh",
+        body:Object.assign(document.createElement("div"),{className:"note",textContent:"Restore brings back your cards, what you paid, notes and photos. Start fresh begins with an empty binder (a backup is saved first, just in case)."})});
+    if(!pick) return null;
+    r=await post(pick==="ok"); j=await r.json().catch(()=>({}));
+  }
+  if(!r.ok) throw new Error(j.error||"Couldn't add that set");
+  return j;
+}
 async function restoreSet(id, reopen){
   try{ const r=await fetch("api/sets/"+enc(id)+"/restore",{method:"POST"}); if(!r.ok) throw 0; }
   catch(_){ toast("Couldn't restore it. Check that "+srv()+" is online."); return; }
@@ -3289,10 +3313,11 @@ function drawDex(){
       add.onclick=async()=>{
         add.disabled=true; add.textContent="Adding…";
         try{
-          const r=await fetch("api/sets",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id})});
-          const j=await r.json(); if(!r.ok) throw new Error(j.error||"Couldn't add that Pokémon");
+          const j=await addSetAsk(id);
+          if(!j){ add.disabled=false; add.textContent="Add"; return; }
           await loadSets(); $("drawer").close(); showAdd(false); openSet(id);
-          $("sync").textContent=p.name+" master set added. Prices start filling in within a few minutes."; setTimeout(poll,1500);
+          if(j.restored) toast("Restored "+p.name+" with your cards.");
+          else { $("sync").textContent=p.name+" master set added. Prices start filling in within a few minutes."; setTimeout(poll,1500); }
         }catch(err){ add.disabled=false; add.textContent="Add"; $("addMsg").textContent=err.message+"."; }
       };
       row.append(add);
@@ -3344,10 +3369,11 @@ function drawCatalog(){
         add.onclick=async()=>{
           add.disabled=true; add.textContent="Adding…";
           try{
-            const r=await fetch("api/sets",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:s.id})});
-            const j=await r.json(); if(!r.ok) throw new Error(j.error||"Couldn't add that set");
+            const j=await addSetAsk(s.id);
+            if(!j){ add.disabled=false; add.textContent="Add"; return; }
             await loadSets(); $("drawer").close(); showAdd(false); openSet(s.id);
-            $("sync").textContent=s.name+" added. Prices start filling in within a few minutes."; setTimeout(poll,1500);
+            if(j.restored) toast("Restored "+s.name+" with your cards.");
+            else { $("sync").textContent=s.name+" added. Prices start filling in within a few minutes."; setTimeout(poll,1500); }
           }catch(err){ add.disabled=false; add.textContent="Add"; $("addMsg").textContent=err.message+". Check that "+srv()+" is online and try again."; }
         };
         row.append(add);
@@ -4026,10 +4052,10 @@ function fdDrawSet(){
     act.onclick=async()=>{
       act.disabled=true; act.textContent="Adding…";
       try{
-        const x=await fetch("api/sets",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:st.id})});
-        const j=await x.json(); if(!x.ok) throw new Error(j.error||"Couldn't add that set");
+        const j=await addSetAsk(st.id);
+        if(!j){ act.disabled=false; act.textContent="+ Add the whole set as a binder"; return; }
         st.inBinder=true; await loadSets(); act.disabled=false; act.textContent="Open this binder"; act.onclick=()=>fdOpenIn(st.id, null);
-        toast(st.name+" added as a binder.", "Open", ()=>fdOpenIn(st.id, null));
+        toast(st.name+(j.restored?" restored with your cards.":" added as a binder."), "Open", ()=>fdOpenIn(st.id, null));
       }catch(err){ act.disabled=false; act.textContent="+ Add the whole set as a binder"; toast(err.message+"."); }
     };
   }

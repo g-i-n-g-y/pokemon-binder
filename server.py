@@ -24,7 +24,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "3.13.1"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
+APP_VERSION = "3.14"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -1326,6 +1326,60 @@ def removed_sets():
         if sid not in sl["order"] and left > 0:
             out.append({"id": sid, "name": sl["meta"].get(sid, {}).get("name", sid), "at": at, "daysLeft": left})
     return sorted(out, key=lambda x: -x["at"])
+
+
+def saved_cards(sid):
+    """What a binder that isn't on the list still has saved (from being removed earlier), or None.
+    {owned, name, at} so adding it again can ask: bring those cards back, or start fresh?"""
+    sl = sets_list()
+    if sid in sl["order"]:
+        return None
+    coll = read_json(sdir(sid, "collection.json"), {})
+    owned = sum(1 for r in (coll.values() if isinstance(coll, dict) else [])
+                if isinstance(r, dict) and ((_is_num(r.get("qty")) and r["qty"] > 0) or r.get("purchases")))
+    if not owned:
+        return None
+    info = (sl.get("removed") or {}).get(sid)
+    return {"owned": owned, "name": sl["meta"].get(sid, {}).get("name", sid),
+            "at": info.get("at", 0) if isinstance(info, dict) else 0}
+
+
+FRESH_FILES = (("collection", {}), ("shop", {}), ("custom", []), ("extra", []), ("layout", None))
+
+
+def start_fresh(sid):
+    """Clear the cards a removed binder left behind (owned cards, purchases, notes, photos, shopping list,
+    added cards, page layout) so adding it again starts empty. Prices and price history stay. Backs up first."""
+    auto_backup("before-fresh")
+    with lock:
+        with tx():
+            for kind, empty in FRESH_FILES:
+                if data_exists(sdir(sid, kind + ".json")):
+                    write_json(sdir(sid, kind + ".json"), empty)
+        shutil.rmtree(sdir(sid, "photos"), ignore_errors=True)
+    log(f"{sid}: started fresh, cleared the cards saved from before")
+
+
+def add_set_again(sid, keep):
+    """Add a binder, deciding what happens to cards saved from an earlier removal.
+    keep=None: ask (raises SavedCards when there's something saved); True: bring them back; False: start empty."""
+    saved = saved_cards(sid)
+    if saved and keep is None:
+        raise SavedCards(saved)
+    if saved and keep:
+        if sid in (sets_list().get("removed") or {}):
+            meta = restore_set(sid)
+            return dict(meta, restored=True)
+        return dict(add_set(sid), restored=True)
+    if saved and keep is False:
+        start_fresh(sid)
+    return add_set(sid)
+
+
+class SavedCards(Exception):
+    def __init__(self, saved):
+        super().__init__("This binder still has cards saved from before")
+        self.saved = saved
 
 
 def purge_removed():
@@ -2934,8 +2988,8 @@ def apply_import(sid, plan):
 # ---------- backup and restore ----------
 
 BACKUPS = os.path.join(APP, "backups")          # safety copies made before a restore, update or import (on your server only)
-AUTO_KEEP = {"before-update": 10, "before-import": 5, "before-restore": 5, "before-sync": 5, "daily": 7}
-AUTO_NAME_RE = re.compile(r"(before-(?:update|import|restore|sync)|daily)-\d{8}-\d{6}(?:-\d{3})?\.zip")
+AUTO_KEEP = {"before-update": 10, "before-import": 5, "before-restore": 5, "before-sync": 5, "before-fresh": 5, "daily": 7}
+AUTO_NAME_RE = re.compile(r"(before-(?:update|import|restore|sync|fresh)|daily)-\d{8}-\d{6}(?:-\d{3})?\.zip")
 
 
 def backup_kind(k):
@@ -2985,7 +3039,8 @@ def auto_backup(kind):
     old = sorted(f for f in os.listdir(BACKUPS) if f.startswith(kind + "-") and f.endswith(".zip"))
     for f in old[:-AUTO_KEEP.get(kind, 5)]:
         os.remove(os.path.join(BACKUPS, f))
-    log(f"Saved a {'daily backup' if kind == 'daily' else 'backup before ' + backup_kind(kind)}: backups/{name}")
+    what = {"fresh": "starting a binder fresh"}.get(backup_kind(kind), backup_kind(kind))
+    log(f"Saved a {'daily backup' if kind == 'daily' else 'backup before ' + what}: backups/{name}")
     return name
 
 
@@ -3940,9 +3995,12 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/sets":
             raw = self.body(4096)
             try:
-                sid = json.loads(raw or b"{}").get("id", "")
-                assert re.fullmatch(SID_RE, sid)
-                meta = add_set(sid)
+                body = json.loads(raw or b"{}")
+                sid, keep = body.get("id", ""), body.get("keep")
+                assert re.fullmatch(SID_RE, sid) and keep in (None, True, False)
+                meta = add_set_again(sid, keep)
+            except SavedCards as e:
+                return self.send(409, {"error": str(e), "saved": e.saved})
             except urllib.error.URLError as e:
                 return self.send(502, {"error": f"Couldn't download the card list: {e}"})
             except Exception as e:
