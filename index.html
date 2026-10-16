@@ -58,6 +58,14 @@ h1 .l{color:var(--light)} h1 .d{color:var(--dark)}
 .conn.on{background:var(--good);opacity:1;box-shadow:0 0 0 2px color-mix(in srgb,var(--good) 22%,transparent)}
 .conn.off{background:var(--bad);opacity:1;box-shadow:0 0 0 2px color-mix(in srgb,var(--bad) 22%,transparent)}
 .hm-sync{justify-content:flex-start;margin-top:-6px}
+/* binder page: the dot and "Saved on ..." sit under the title on the left, same spot as on the home page */
+.actions{display:contents}
+header.top .syncline{order:3;flex-basis:100%;justify-content:flex-start;margin-top:-6px}
+header.top .sync{text-align:left}
+header.top .sync-bar{order:4;margin-top:-6px}
+.hm-bar{margin-top:-12px}
+/* big screens: binder pages use the same width as the home page, so the top of the page doesn't shift */
+@media (min-width:1500px){.wrap{max-width:1560px}}
 .syncline .offl{display:none}
 .syncline .pendn:empty{display:none}
 /* offline in card details: only adding a purchase works, so the rest is greyed out */
@@ -1159,6 +1167,7 @@ body.at-home > .wrap:not(.home){display:none}
 
 <main class="wrap home" id="home" hidden aria-labelledby="hmTitle">
   <header class="hm-top">
+    <button class="icon-btn" type="button" id="hmMenu" aria-label="Your binders menu" title="Your binders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
     <h1 id="hmTitle"><span class="l">My</span><span class="d"> binders</span></h1>
     <button class="icon-btn" type="button" id="hmPriv" aria-pressed="false" aria-label="Privacy mode" title="Privacy mode: hide what you own and spent"><svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
           <svg class="eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.2M6.6 6.6C3.9 8.3 2 12 2 12s3.6 7 10 7a10 10 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
@@ -1167,6 +1176,7 @@ body.at-home > .wrap:not(.home){display:none}
         </button>
   </header>
   <div class="syncline hm-sync"><span class="conn" role="img" aria-label="Checking the connection" title="Checking the connection"></span><span class="sync" id="hmSync">Saved on <span class="srv">the server</span></span><span class="sync offl">Offline · showing what's saved on this phone<span class="pendn"></span></span></div>
+  <div class="pbar sync-bar hm-bar" id="hmBar" role="progressbar" aria-label="Price check progress" hidden><i></i></div>
   <form class="hm-find" id="hmFind" role="search"><input type="search" class="field" id="hmQ" placeholder="Find a card: name, or 80/111" aria-label="Find a card" enterkeyhint="search"><button class="btn primary" type="submit">Search</button></form>
   <section aria-labelledby="hmBindersH">
     <div class="hm-h"><h2 class="eyebrow" id="hmBindersH">Your binders</h2>
@@ -4564,7 +4574,27 @@ const atHome = () => document.body.classList.contains("at-home");
 function showHome(){
   document.body.classList.add("at-home"); $("home").hidden=false; document.title="My binders";
   if(drawerEl.open) drawerEl.close();
-  window.scrollTo(0,0); drawHome(); loadHome();
+  window.scrollTo(0,0); drawHome(); loadHome(); homeJob();
+}
+// Price check progress on the home page, same as at the top of a binder. Checks every 3 seconds while one runs,
+// otherwise every 30 seconds in case the daily refresh starts while you're here.
+let homeTimer=null, homeRunning=false;
+function homeJob(){
+  clearTimeout(homeTimer); homeTimer=null;
+  if(!atHome()) return;
+  fetch("api/refresh").then(r=>r.json()).then(j=>{
+    if(!atHome()) return;
+    if(j.running){
+      homeRunning=true;
+      $("hmSync").textContent="Checking "+(j.name||"prices")+": card "+Math.min(j.done+1,j.total||1)+" of "+(j.total||"…");
+      setBar($("hmBar"), j.done, j.total);
+    } else if(homeRunning){
+      homeRunning=false; hideBar($("hmBar"));
+      $("hmSync").textContent=j.message||"Prices updated"; loadHome();
+      setTimeout(()=>{ if(!homeRunning) $("hmSync").textContent="Saved on "+srv(); }, 8000);
+    }
+    homeTimer=setTimeout(homeJob, homeRunning?3000:30000);
+  }).catch(()=>{ homeTimer=setTimeout(homeJob, 30000); });
 }
 function showBinder(){ if(!atHome()) return; document.body.classList.remove("at-home"); $("home").hidden=true; window.scrollTo(0,0); if(state.sid) header(); }
 function goHome(){ if(location.hash) history.pushState(null,"",location.pathname+location.search); showHome(); }
@@ -4632,6 +4662,7 @@ function agoText(d){
 }
 $("hmPriv").onclick=()=>{ setPrivate(!isPrivate()); if(atHome()) drawHome(); };
 $("hmCog").onclick=()=>$("cog").click();
+$("hmMenu").onclick=()=>{ showAdd(false); drawSets(); openDrawer(); loadSets().then(drawSets); };
 $("hmEdit").onclick=()=>{ showAdd(false); drawSets(); openDrawer(); loadSets().then(drawSets).then(()=>setEdit(true)); };
 $("hmFind").onsubmit=e=>{ e.preventDefault(); openFind($("hmQ").value.trim()); };
 $("drawer").addEventListener("close",()=>{ if(atHome()) loadHome(); });

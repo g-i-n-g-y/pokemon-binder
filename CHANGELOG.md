@@ -10,8 +10,11 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v3.15 (October 16, 2026)
 
+- **Menu button on My binders:** a menu button at the top left of the home page opens your binders list (the same list as in a binder), without going through Edit.
+- **Price check progress on My binders:** while prices are being checked, the home page shows which binder, how far along it is, and a progress bar, just like the top of a binder.
+- **Status line stays put:** the green dot and "Saved on the server" now sit under the title on the left on every page, on computers as well as phones. On big screens (like 4K), binder pages use the same width as the home page so nothing shifts when you switch.
 - **Backup and import fixed:** the backup buttons were showing a giant binder cover behind them (since v3.10). The same fix also covers the picture button when making a custom card.
 
 ## v3.14 (October 16, 2026)
