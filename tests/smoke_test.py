@@ -344,6 +344,9 @@ def main():
         ids = re.findall(r'\sid="([^"]+)"', page.split("<script>")[0])
         twice_ids = sorted({i for i in ids if ids.count(i) > 1})
         check("no two page elements share an id (the code would only find the first)", not twice_ids, twice_ids)
+        css = page.split("</style>")[0]
+        priv = [r for r in re.findall(r"([^{}]+)\{([^}]*)\}", css) if "#sValue" in r[0] and "data-private" in r[0]]
+        check("privacy mode blurs the money totals", bool(priv) and all("blur" in r[1] for r in priv), priv)
         srv = open(os.path.join(REPO, "server.py"), encoding="utf-8").read()
         defs = re.findall(r"^def (\w+)\(", srv, re.M)
         twice_defs = sorted({d for d in defs if defs.count(d) > 1})
