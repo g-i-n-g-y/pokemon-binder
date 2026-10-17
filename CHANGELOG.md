@@ -10,6 +10,11 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.19.5 (October 17, 2026)
+
+- **Card shows stay listed through the day after.** A show happening on the day of a weekly check (or running late) is no longer at risk of disappearing. Shows older than yesterday now drop off each day on their own instead of waiting for the next weekly check.
+- Today's shows get a **Today** tag, and yesterday's are dimmed with a **Yesterday** tag. The "upcoming" count only counts today and later.
+
 ## v3.19.4 (October 16, 2026)
 
 - Fixed privacy mode not hiding the totals at the top of a binder (cards owned, collection value, gain, cost to finish). They showed in outlined boxes instead of being blurred. This broke in a behind-the-scenes cleanup in v3.19.1. A new automatic check now catches it if it ever happens again.
