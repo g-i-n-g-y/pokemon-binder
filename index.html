@@ -553,6 +553,7 @@ dialog.float .skins{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
 .show .tags{display:flex;gap:6px;flex-wrap:wrap}
 .show .tag.tcg{border-color:var(--light);color:var(--light)}
 .show .tag.new{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.show.past{opacity:.6}
 @media (prefers-reduced-motion:reduce){.sleeve{transition:none}.sleeve:hover{transform:none}}
 /* Phones: compact sticky top bar, 2x2 stats, two-row filters, bigger tap targets */
 @media (max-width:640px){
@@ -3119,8 +3120,8 @@ function drawShows(){
   $("shScan").disabled=!!j.running; $("shScan").textContent=j.running ? "Scanning…" : "Scan now";
   const list=(j.shows||[]).filter(x=>showsKind==="all" || x.tcg);
   const isNew=x=>j.firstScan && x.first>j.firstScan && (Date.now()-new Date(x.first))<14*864e5;
-  const newN=list.filter(isNew).length;
-  let info=j.scanned ? "Last checked "+when(j.scanned)+". "+list.length+" upcoming"+(showsKind==="tcg"?" Pokémon/TCG":"")+" show"+(list.length===1?"":"s")+(newN?", "+newN+" new":"")+"." : "Not checked yet. Tap Scan now.";
+  const newN=list.filter(x=>isNew(x) && !(j.today && x.date<=j.today)).length, upN=list.filter(x=>!j.today || x.date>=j.today).length;
+  let info=j.scanned ? "Last checked "+when(j.scanned)+". "+upN+" upcoming"+(showsKind==="tcg"?" Pokémon/TCG":"")+" show"+(upN===1?"":"s")+(newN?", "+newN+" new":"")+"." : "Not checked yet. Tap Scan now.";
   if(j.running){ info="Checking for shows"+(j.total ? ": step "+Math.min(j.done+1,j.total)+" of "+j.total : "…"); setBar($("shBar"), j.done, j.total); }
   else { hideBar($("shBar")); if(j.error) info+=" Last scan had a problem: "+j.error+"."; }
   $("shInfo").textContent=info;
@@ -3140,7 +3141,9 @@ function drawShows(){
     const a=document.createElement("a"); a.href=x.url; a.target="_blank"; a.rel="noopener"; a.textContent=x.name+" ↗";
     const sub=document.createElement("span"); sub.className="s"; sub.textContent=x.town+(x.desc ? " · "+x.desc : "");
     const tags=document.createElement("div"); tags.className="tags";
-    if(isNew(x)){ const t=document.createElement("span"); t.className="tag new"; t.textContent="New"; tags.append(t); }
+    if(x.date===j.today){ const t=document.createElement("span"); t.className="tag new"; t.textContent="Today"; tags.append(t); }
+    else if(j.today && x.date<j.today){ row.classList.add("past"); const t=document.createElement("span"); t.className="tag"; t.textContent="Yesterday"; tags.append(t); }
+    else if(isNew(x)){ const t=document.createElement("span"); t.className="tag new"; t.textContent="New"; tags.append(t); }
     if(x.tcg){ const t=document.createElement("span"); t.className="tag tcg"; t.textContent="Pokémon / TCG"; tags.append(t); }
     wh.append(a,sub); if(tags.children.length) wh.append(tags);
     row.append(w,wh); L.append(row);

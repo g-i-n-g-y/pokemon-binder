@@ -2633,10 +2633,10 @@ def scan_shows(reason="manual"):
             shows[key] = rec
             new += 1
             shows_job["done"] += 1
-        today = today_local()
+        keep = shows_keep_from()
         with lock:
             cur = shows_state()   # newest copy, so town or weekly-scan changes made during the scan are kept
-            cur["shows"] = {k: v for k, v in shows.items() if v["date"] >= today}   # drop past shows
+            cur["shows"] = {k: v for k, v in shows.items() if v["date"] >= keep}   # drop shows older than yesterday
             cur.setdefault("firstScan", now)   # shows found on the very first scan aren't marked new
             cur.update(scanned=now, lastNew=new, error="")
             write_json(SHOWS_FILE, cur)
@@ -2651,6 +2651,12 @@ def scan_shows(reason="manual"):
     finally:
         shows_job["running"] = False
     return True
+
+
+def shows_keep_from():
+    """Shows stay listed through the day after they happen, so a show on the day a scan runs (or one that ran
+    late into the night) doesn't vanish. Older ones are dropped."""
+    return (local_now(get_settings()) - timedelta(days=1)).strftime("%Y-%m-%d")
 
 
 def shows_due():
@@ -3591,7 +3597,9 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, out, cache="no-store")
         if path == "/api/shows":
             st = shows_state()
-            return self.send(200, {"shows": sorted((tidy_show(x) for x in st["shows"].values()), key=lambda s: (s["date"], s["name"])),
+            keep = shows_keep_from()   # between weekly scans, shows older than yesterday drop off the list each day
+            return self.send(200, {"shows": sorted((tidy_show(x) for x in st["shows"].values() if x["date"] >= keep),
+                                                   key=lambda s: (s["date"], s["name"])),
                                    "areas": st["areas"], "auto": st["auto"], "scanned": st.get("scanned", ""),
                                    "firstScan": st.get("firstScan", ""), "error": st.get("error", ""), "running": shows_job["running"],
                                    "done": shows_job["done"], "total": shows_job["total"],
