@@ -2150,7 +2150,7 @@ def refresh_prices(sid, reason="daily", only_daily=False, only=None):
         # is kept: read the newest copy, add this refresh's results, and work out main prices with today's options.
         with lock:
             if sid not in sets_list()["order"]:
-                job["message"] = f"{name} was removed during the refresh."
+                job["message"] = f"{name} was removed during the price check."
                 return True
             prices = read_json(sdir(sid, "prices.json"), {})
             p = prices.setdefault("p", {})
@@ -2177,7 +2177,7 @@ def refresh_prices(sid, reason="daily", only_daily=False, only=None):
                           else f"{name}: updated {priced} of {len(cards)} prices.")
         log(f"{sid}: price refresh done, {priced} of {len(cards)} priced.")
     except Exception as e:
-        job["message"] = f"Price refresh failed: {e}"
+        job["message"] = f"Price check failed: {e}"
         log(f"{sid}: price refresh failed: {e}")
     finally:
         job["running"] = False

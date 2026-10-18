@@ -1205,7 +1205,7 @@ html,body{overscroll-behavior-y:none}
     <div class="shop-head">
       <div>
         <h2 class="sec">Shopping list</h2>
-        <p class="note">Cards you still need in this set. The running total shows what it costs to get every card up to that row. Drag the ⠿ handle to put cards in your own order.</p>
+        <p class="note">Cards you still need in this binder. The running total shows what it costs to get every card up to that row. Drag the ⠿ handle to put cards in your own order.</p>
         <div class="seg shop-sort" id="shopSort" role="group" aria-label="Shopping list order">
           <button type="button" data-m="lo" aria-pressed="true">Cheapest</button>
           <button type="button" data-m="hi" aria-pressed="false">Priciest</button>
@@ -1262,7 +1262,7 @@ html,body{overscroll-behavior-y:none}
       <div class="stat"><span class="k">This month</span><span class="v" id="tMonth">–</span><span class="s" id="tMonthN"></span></div>
       <div class="stat"><span class="k">Average per month</span><span class="v" id="tAvg">–</span><span class="s" id="tAvgN"></span></div>
     </div>
-    <p class="note">Spending and value cover every set in your binder.</p>
+    <p class="note">Spending and value cover all your binders.</p>
 
     <div class="panel">
       <h2 class="sec">Value vs. spent over time</h2>
@@ -1291,7 +1291,7 @@ html,body{overscroll-behavior-y:none}
     </div>
   </section>
 
-  <footer id="foot">Prices are averages of recent Unlimited sales (pick which ones per binder in Settings) and refresh automatically once a day. Tap Need on a card to mark it owned, or tap the card to log what you paid, set its condition, or add a photo of your copy. Tap the home button at the top left to switch binders or add a new one. Everything saves on <span class="srv">the server</span>.</footer>
+  <footer id="foot">Prices are averages of recent Unlimited sales (pick which ones per binder in Settings) and are checked automatically every night. Tap Need on a card to mark it owned, or tap the card to log what you paid, set its condition, or add a photo of your copy. Tap the home button at the top left to switch binders or add a new one. Everything saves on <span class="srv">the server</span>.</footer>
 </main>
 
 <main class="wrap home" id="home" hidden aria-labelledby="hmTitle">
@@ -1416,7 +1416,7 @@ html,body{overscroll-behavior-y:none}
     </div>
     <div class="tabpane" id="tabSales" hidden>
       <h3 class="rs-h">Recent sales</h3>
-      <div class="note">The newest Unlimited English sales for each condition from the last price refresh, so you can see whether a different condition is worth it. Your price options are outlined.</div>
+      <div class="note">The newest Unlimited English sales for each condition from the last price check, so you can see whether a different condition is worth it. Your price options are outlined.</div>
       <div class="rs" id="dSales"></div>
     </div>
     <div class="tabpane own-only" id="tabMine" hidden>
@@ -1516,7 +1516,7 @@ html,body{overscroll-behavior-y:none}
       </div>
       <label class="f">Rarity (optional)<input id="cRar" maxlength="40" autocomplete="off" placeholder="Promo"></label>
       <label class="f">TCGplayer link (optional, for prices)<input id="cTcg" inputmode="url" autocomplete="off" placeholder="https://www.tcgplayer.com/product/…"></label>
-      <div class="note">Paste the card's TCGplayer page and it gets recent sales and a price on the next refresh, like any other card. No link? Type a price below instead.</div>
+      <div class="note">Paste the card's TCGplayer page and it gets recent sales and a price on the next price check, like any other card. No link? Type a price below instead.</div>
       <label class="f">Your price (optional, used when there are no sales)<input id="cPrice" inputmode="decimal" autocomplete="off" placeholder="0.00"></label>
       <div class="btnrow"><label class="btn" for="cPic">Choose picture</label><input id="cPic" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,image/avif" hidden><span class="note" id="cPicName">Optional. A photo of the card becomes its picture.</span></div>
       <div class="err" id="cErr" aria-live="polite"></div>
@@ -1541,7 +1541,7 @@ html,body{overscroll-behavior-y:none}
 <dialog id="drawer" class="left" aria-labelledby="drTitle">
   <div class="sheet">
     <div class="dr-bar">
-      <h2 id="drTitle">Your sets</h2>
+      <h2 id="drTitle">Your binders</h2>
       <button class="dr-edit" type="button" id="drEdit" aria-pressed="false">Edit</button>
       <button class="fclose" type="button" id="drClose" aria-label="Close" title="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
@@ -1554,7 +1554,7 @@ html,body{overscroll-behavior-y:none}
       <button class="verline" type="button" id="verLine" title="What's new">Pokémon Binder <span id="verNum"></span></button>
     </div>
     <div id="drAdd" hidden>
-      <button class="close back" type="button" id="addBack">‹ Back to your sets</button>
+      <button class="close back" type="button" id="addBack">‹ Back to your binders</button>
       <h2 id="addTitle">Add a set</h2>
       <div class="seg addkind" id="addKind" role="group" aria-label="What to add">
         <button type="button" data-k="set" aria-pressed="true">A set</button>
@@ -1637,7 +1637,7 @@ html,body{overscroll-behavior-y:none}
       <h3 class="ui-h ui-navh">Pricing</h3>
       <div class="ui-group">
         <button class="ui-row" type="button" data-go="prices"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg></span><span class="ui-l"><b>Prices</b></span><span class="ui-v" id="sumPrices"></span><span class="ui-chev" aria-hidden="true"></span></button>
-        <button class="ui-row" type="button" data-go="refresh"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="ui-l"><b>Daily refresh</b></span><span class="ui-v" id="sumRefresh"></span><span class="ui-chev" aria-hidden="true"></span></button>
+        <button class="ui-row" type="button" data-go="refresh"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="ui-l"><b>Daily price check</b></span><span class="ui-v" id="sumRefresh"></span><span class="ui-chev" aria-hidden="true"></span></button>
       </div>
       <h3 class="ui-h ui-navh">Data</h3>
       <div class="ui-group">
@@ -1676,9 +1676,9 @@ html,body{overscroll-behavior-y:none}
       <div class="ui-group">
         <div class="ui-row ui-static"><span class="ui-l"><b>Install the binder as an app</b><small id="stAppS">Checking&hellip;</small></span><button class="btn" type="button" id="stAppBtn" hidden>Install</button></div>
       </div>
-      <h3 class="ui-h">Long press a card</h3>
+      <h3 class="ui-h">Press and hold a card</h3>
       <div class="ui-group">
-        <label class="ui-row ui-static" for="stLp"><span class="ui-l"><b>Press and hold a card to open</b><small>Works on Cards, Pages and Find a card. A quick tap still opens the card details.</small></span><select id="stLp" class="ui-ctl"><option value="ebay">eBay sold</option><option value="tcg">TCGplayer</option><option value="pc">PriceCharting</option><option value="off">Nothing</option></select></label>
+        <label class="ui-row ui-static" for="stLp"><span class="ui-l"><b>What it opens</b><small>Works on Cards, Pages and Find a card. A quick tap still opens the card details.</small></span><select id="stLp" class="ui-ctl"><option value="ebay">eBay sold</option><option value="tcg">TCGplayer</option><option value="pc">PriceCharting</option><option value="off">Nothing</option></select></label>
       </div>
       <div class="note">These only change this phone.</div>
     </section>
@@ -1697,15 +1697,15 @@ html,body{overscroll-behavior-y:none}
       <div class="note" id="setPrices">Each price is the average of the newest matching Unlimited English sales (up to 5 per condition). 1st Edition, Shadowless, Japanese and lots are skipped.</div>
     </section>
 
-    <section class="ui-page" data-page="refresh" data-title="Daily refresh">
+    <section class="ui-page" data-page="refresh" data-title="Daily price check">
       <div class="ui-group">
-        <label class="ui-row" for="stAuto"><span class="ui-l"><b>Refresh every set daily</b><small>Checks every card you own each night, and the rest every 3 days</small></span><input type="checkbox" class="ui-switch" id="stAuto"></label>
+        <label class="ui-row" for="stAuto"><span class="ui-l"><b>Check prices every night</b><small>Checks every card you own each night, and the rest every 3 days</small></span><input type="checkbox" class="ui-switch" id="stAuto"></label>
         <label class="ui-row" for="stAll"><span class="ui-l"><b>Check every card every night</b><small>Takes about twice as long. The Refresh prices button always checks every card in the set you're viewing</small></span><input type="checkbox" class="ui-switch" id="stAll"></label>
         <label class="ui-row ui-static" for="stTime"><span class="ui-l"><b>Time</b></span><input type="time" id="stTime" class="ui-ctl" value="03:00" step="900"></label>
-        <div class="ui-row ui-static"><span class="ui-l"><b>Next refresh</b><small id="stTz"></small></span><span class="ui-v" id="stNext">&ndash;</span></div>
+        <div class="ui-row ui-static"><span class="ui-l"><b>Next price check</b><small id="stTz"></small></span><span class="ui-v" id="stNext">&ndash;</span></div>
       </div>
       <div class="saved" id="stSaved" aria-live="polite"></div>
-      <div class="note">The Refresh prices button at the top updates only the set you're viewing.</div>
+      <div class="note">The Refresh prices button at the top checks only the binder you have open.</div>
     </section>
 
     <section class="ui-page" data-page="backup" data-title="Backup and import">
@@ -2005,7 +2005,7 @@ function stats(){
   $("sNeed").textContent=money0(need);
   $("sNeedN").textContent=needN+" cards to go";
   $("sFull").textContent=money0(full);
-  $("sUpd").textContent=state.updated ? "Prices as of "+when(state.updated) : "Prices load after the first refresh";
+  $("sUpd").textContent=state.updated ? "Prices as of "+when(state.updated) : "Prices load after the first price check";
 }
 
 // ---------- grid ----------
@@ -2214,7 +2214,7 @@ $("cForm").onsubmit=async e=>{
       if(!up.ok){ const uj=await up.json().catch(()=>({})); throw new Error("The card was saved, but the picture didn't upload"+(uj.error?" ("+uj.error+")":"")+". Try adding it again from the card."); }
     }
     $("cErr").textContent=""; $("cdlg").close();
-    $("sync").textContent=(editing?"Saved changes to ":"Added ")+j.name+(body.tcg&&!editing?". Its price fills in on the next refresh.":".");
+    $("sync").textContent=(editing?"Saved changes to ":"Added ")+j.name+(body.tcg&&!editing?". Its price fills in on the next price check.":".");
     await loadState(); loadSets().then(()=>{ if($("drawer").open) drawSets(); });
     if(editing && state.open===j.n && $("dlg").open) openCard(j.n);
   }catch(err){ $("cErr").textContent=(err&&err.message&&err.message!=="Failed to fetch") ? err.message : "Couldn't save. Check that "+srv()+" is online."; }
@@ -2267,12 +2267,12 @@ function priceSource(n){
   if(i && i.src==="manual") return "the price you typed for this custom card"+(customOf(n)&&customOf(n).tcg ? " (no recent TCGplayer sales yet)" : ". Add its TCGplayer link to use real sales instead")+". Used for set totals.";
   if(i && i.src==="tcgdex") return "no recent sales for your price options, so this uses TCGplayer's market price (via TCGdex)"+(i.last?", updated "+when(i.last):"")+". Used for set totals.";
   if(i && i.note) return i.note+".";
-  return priceOf(n) ? "starting price from PriceCharting. Replaced on the next refresh." : "fills in after the next refresh.";
+  return priceOf(n) ? "starting price from PriceCharting. Replaced on the next price check." : "fills in after the next price check.";
 }
 function mktLine(n){
   const m=(state.info[n]||{}).mkt||{}, el=$("dMkt"), bits=[];
   if(m.tp) bits.push("TCGplayer "+money(m.tp)+(m.tpLow?" (low "+money(m.tpLow)+")":""));
-  // Cardmarket is saved in dollars since v2.16.2 (cmUsd); older euro numbers stay hidden until the next refresh
+  // Cardmarket is saved in dollars since v2.16.2 (cmUsd); older euro numbers stay hidden until the next price check
   if(m.cmUsd && (m.cm30||m.cmTrend)) bits.push("Cardmarket 30-day avg "+money(m.cm30||m.cmTrend));
   el.hidden=!bits.length;
   el.textContent = bits.length ? "Market prices: "+bits.join(" · ")+". From TCGdex, a rough second opinion"+(bits.length>1?" (Cardmarket is converted from euros and may mix editions)":"")+"." : "";
@@ -2388,7 +2388,7 @@ setTimeout(()=>{ if(celeOn()) for(const ch of new Set(CELE_WORD.toLowerCase())){
 $("stCele").checked=celeOn();
 $("stCele").onchange=e=>store("nd-cele", e.target.checked ? undefined : "off");
 $("stLp").value=lpMode();
-$("stLp").onchange=e=>{ store("nd-lp", e.target.value==="ebay" ? undefined : e.target.value); $("sumPhone").textContent=e.target.value==="off" ? "" : "Hold: "+e.target.selectedOptions[0].textContent; };
+$("stLp").onchange=e=>{ store("nd-lp", e.target.value==="ebay" ? undefined : e.target.value); $("sumPhone").textContent=e.target.value==="off" ? "" : "Hold a card: "+e.target.selectedOptions[0].textContent; };
 $("stCeleTry").onclick=()=>celebrate((state.set.name||"Your binder")+" · "+state.cards.length+" of "+state.cards.length+" cards");
 
 // ---------- recent sales tab ----------
@@ -2431,7 +2431,7 @@ function drawSales(n){
   const i=state.info[n]||{}, box=$("dSales"); box.replaceChildren();
   if(!i.recent){
     const e=document.createElement("div"); e.className="rs-none";
-    e.textContent = "Recent sales show here after the next price refresh.";
+    e.textContent = "Recent sales show here after the next price check.";
     box.append(e); return;
   }
   const mineRaw=new Set(activeSlots().filter(sl=>sl.t==="raw").map(sl=>sl.c));
@@ -2779,7 +2779,7 @@ async function saveSlots(slots){
   [ "Only "+(state.set.name||"this binder")+" changes. Your other binders keep their own price options.",
     raw ? "Card prices and set totals switch to the "+(slots[1].t==="none"?after:"combined "+after)+" average right away, using sales already saved."
         : "Card prices and set totals switch to the "+slotName(slots[0])+" price"+(slots[1].t!=="none"?" (or "+slotName(slots[1])+" when there are no "+slotName(slots[0])+" sales)":"")+".",
-    graded ? "Graded prices come from eBay sold listings on PriceCharting. If they haven't been downloaded for this set yet, they fill in on the next refresh, which takes a bit longer than usual." : null,
+    graded ? "Graded prices come from eBay sold listings on PriceCharting. If they haven't been downloaded for this binder yet, they fill in on the next price check, which takes a bit longer than usual." : null,
     "The price history chart starts following the new price from today, so expect a jump on today's date. Older days stay as they were.",
     "Owned cards with a condition set still count at that condition's price in your collection value."
   ].filter(Boolean).forEach(t=>{ const li=document.createElement("li"); li.textContent=t; ul.append(li); });
@@ -2791,7 +2791,7 @@ async function saveSlots(slots){
     .then(j=>{
       state.slots=j.slots||slots; drawSlots(); msg.replaceChildren();
       if(j.needsRefresh){
-        msg.append("Saved. Graded prices load on the next refresh (a little slower than raw prices).");
+        msg.append("Saved. Graded prices load on the next price check (a little slower than raw prices).");
         const b=document.createElement("button"); b.className="btn"; b.type="button"; b.textContent="Refresh now";
         b.onclick=()=>{ $("settings").close(); $("refresh").click(); }; msg.append(b);
       } else msg.append("Saved. Prices updated.");
@@ -3188,7 +3188,7 @@ function settingsSummary(){
   const t=$("stTime").value||"03:00", [h,m]=t.split(":").map(Number);
   $("sumRefresh").textContent=$("stAuto").checked ? new Date(2000,0,1,h,m).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"}) : "Off";
   $("sumSrv").textContent=state.serverName||"Not named";
-  { const o=$("stLp").selectedOptions[0]; $("sumPhone").textContent=lpMode()==="off" ? "" : "Hold: "+(o?o.textContent:""); }
+  { const o=$("stLp").selectedOptions[0]; $("sumPhone").textContent=lpMode()==="off" ? "" : "Hold a card: "+(o?o.textContent:""); }
   if(!$("sumAbout").textContent) $("sumAbout").textContent=($("verNum").textContent||"").split(" ")[0];
   $("sumBackup").textContent="";
 }
@@ -3214,8 +3214,8 @@ function showUpdateDot(){
   $("verNum").replaceChildren("v"+j.running);
   if(j.updateAvailable){ const s=document.createElement("span"); s.className="new"; s.textContent="v"+j.latest+" available"; $("verNum").append(" ",s); }
   let dot=$("menuBtn").querySelector(".dot");
-  if(j.updateAvailable && !dot){ dot=document.createElement("span"); dot.className="dot"; dot.title="Update available"; $("menuBtn").append(dot); $("menuBtn").setAttribute("aria-label","Your sets (update available)"); }
-  if(!j.updateAvailable && dot){ dot.remove(); $("menuBtn").setAttribute("aria-label","Your sets"); }
+  if(j.updateAvailable && !dot){ dot=document.createElement("span"); dot.className="dot"; dot.title="Update available"; $("menuBtn").append(dot); $("menuBtn").setAttribute("aria-label","Your binders (update available)"); }
+  if(!j.updateAvailable && dot){ dot.remove(); $("menuBtn").setAttribute("aria-label","Your binders"); }
 }
 function drawNews(){
   const j=news, L=$("nwList"); L.replaceChildren();
@@ -3787,7 +3787,7 @@ function loadState(){
     state.shop=s.shop||{};
     state.ready=true; header(); rarityOptions(); render(); renderView();
     fetch("api/set/"+enc(sid)+"/trends?today="+todayStr()).then(r=>r.json()).then(h=>{ if(seq!==loadSeq) return; state.trends=h.cards||{}; state.histFirst=h.first||""; state.seriesCache={}; render(); renderView(); }).catch(()=>{});
-    if(!wasRunning){ $("sync").textContent="Saved on "+srv()+" · prices auto-refresh daily"; hideBar($("syncBar")); watchImages(); }
+    if(!wasRunning){ $("sync").textContent="Saved on "+srv()+" · prices checked every night"; hideBar($("syncBar")); watchImages(); }
   }).catch(err=>{ if(seq===loadSeq){ state.ready=false; state.loadErr=(err&&err.message&&err.message!=="Failed to fetch") ? err.message+"." : "Can't reach "+srv()+". "+offlineHint(); render(); $("sync").textContent=(err&&err.message&&err.message!=="Failed to fetch" ? err.message : "Can't reach "+srv())+"."; } });
 }
 
@@ -3808,11 +3808,11 @@ function watchImages(){
     const im=(p.images||{})[sid];
     if(im){
       imgWatching=sid;
-      if(!wasRunning){ $("sync").textContent="Downloading card images: "+(im.total ? Math.min(im.done+1,im.total)+" of "+im.total : "starting…"); setBar($("syncBar"), im.done, im.total); }
+      if(!wasRunning){ $("sync").textContent="Downloading card pictures: "+(im.total ? Math.min(im.done+1,im.total)+" of "+im.total : "starting…"); setBar($("syncBar"), im.done, im.total); }
       imgTimer=setTimeout(watchImages,2500);
     } else if(imgWatching===sid){
       imgWatching=null; render();
-      if(!wasRunning){ hideBar($("syncBar")); $("sync").textContent="Card images downloaded"; }
+      if(!wasRunning){ hideBar($("syncBar")); $("sync").textContent="Card pictures downloaded"; }
     }
   }).catch(()=>{});
 }
@@ -3840,7 +3840,7 @@ $("refresh").onclick=async()=>{
   if(!ok) return;
   $("refresh").disabled=true;
   fetch("api/refresh",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({set:state.sid})}).then(r=>r.json()).then(showJob)
-    .catch(()=>{ $("refresh").disabled=false; $("sync").textContent="Couldn't start a refresh."; toast("Couldn't start the price refresh. "+offlineHint(), "Try again", ()=>$("refresh").click()); });
+    .catch(()=>{ $("refresh").disabled=false; $("sync").textContent="Couldn't start a price check."; toast("Couldn't start the price check. "+offlineHint(), "Try again", ()=>$("refresh").click()); });
 };
 
 // ---------- privacy mode ----------
@@ -3910,7 +3910,7 @@ function shopTotals(){
     const b3=document.createElement("b"); b3.textContent=money(fitCost);
     msg.append("With ",b1," you can get ",b2," card"+(fit===1?"":"s")+" for ",b3,".");
   } else if(count){
-    msg.textContent=count+" cards needed · "+money(run)+" to finish the set.";
+    msg.textContent=count+" cards needed · "+money(run)+" to finish this binder.";
   }
 }
 // Rows were rearranged by hand: switch to "My order" and save it.
@@ -4022,12 +4022,12 @@ function drawShop(){
     const tdT=document.createElement("td"); tdT.className="num hide-sm"; tdT.append(trendEl(trend(c.n)));
     const tdR=document.createElement("td"); tdR.className="num run";
     const tdA=document.createElement("td");
-    const bt=document.createElement("button"); bt.type="button"; bt.className="btn"; bt.textContent="Bought";
+    const bt=document.createElement("button"); bt.type="button"; bt.className="btn"; bt.textContent="Got it";
     bt.title="Mark as owned and log today's date"; bt.onclick=()=>{ quickToggle(c.n); };
     tdA.append(bt);
     tr.append(tdG,tdI,tdN,tdP,tdT,tdR,tdA); body.append(tr);
   }
-  if(!need.length){ const tr=document.createElement("tr"); const td=document.createElement("td"); td.colSpan=7; td.className="empty"; td.textContent="You own every card in this set."; tr.append(td); body.append(tr); }
+  if(!need.length){ const tr=document.createElement("tr"); const td=document.createElement("td"); td.colSpan=7; td.className="empty"; td.textContent="You own every card in this binder."; tr.append(td); body.append(tr); }
   shopTotals();
 }
 // ---------- upgrades ----------
@@ -4073,7 +4073,7 @@ function drawUpg(){
   }
   if(!rows.length){
     const tr=document.createElement("tr"); const td=document.createElement("td"); td.colSpan=6; td.className="empty";
-    td.textContent = !owned.length ? "You don't own any cards in this set yet." : !p.from.length ? "Pick at least one condition to upgrade." : "No cards to upgrade with these choices.";
+    td.textContent = !owned.length ? "You don't own any cards in this binder yet." : !p.from.length ? "Pick at least one condition to upgrade." : "No cards to upgrade with these choices.";
     tr.append(td); body.append(tr);
   }
   $("upgMsg").textContent = priced ? rows.length+" card"+(rows.length===1?"":"s")+" to upgrade · "+money(run)+" for "+p.to+" copies, or about "+money(net)+" after selling yours." : "";
@@ -4092,10 +4092,10 @@ function drawStats(){
   const sp=state.spend; if(!sp) return;
   const T=sp.totals, gain=T.value-T.spent;
   $("tSpent").textContent=money0(T.spent);
-  $("tSpentN").textContent=T.purchases+" purchase"+(T.purchases===1?"":"s")+(T.undated?" · "+T.undated+" before tracking":"");
+  $("tSpentN").textContent=T.purchases+" purchase"+(T.purchases===1?"":"s")+(T.undated?" · "+T.undated+" undated":"");
   $("tValue").textContent=money0(T.value);
   $("tGain").replaceChildren();
-  if(T.spent>0){ const s=document.createElement("span"); s.className=gain>=0?"pos":"neg"; s.textContent=(gain>=0?"+":"−")+money0(Math.abs(gain)); $("tGain").append(s, gain>=0?" more than you paid":" less than you paid"); }
+  if(T.spent>0){ const s=document.createElement("span"); s.className=gain>=0?"pos":"neg"; s.textContent=(gain>=0?"+":"−")+money0(Math.abs(gain)); $("tGain").append(s, " vs. paid"); }
   else $("tGain").textContent="Log purchases to compare";
   const thisM=todayStr().slice(0,7), mo=sp.months.find(m=>m.m===thisM);
   $("tMonth").textContent=money0(mo?mo.spent:0); $("tMonthN").textContent=(mo?mo.count:0)+" purchase"+((mo&&mo.count===1)?"":"s");

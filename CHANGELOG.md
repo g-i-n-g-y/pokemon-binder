@@ -10,6 +10,16 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Clearer wording, the same words everywhere:**
+  - Settings → Phone: the long-press setting reads **Hold a card: eBay sold** (it used to say "Hold: eBay sold"), and its page is titled **Press and hold a card**.
+  - Your own collections are called **binders** everywhere (the menu was titled "Your sets").
+  - **Price check** everywhere instead of a mix of "refresh" and "price check". Settings → Daily refresh is now **Daily price check**, and the binder's status line says "prices checked every night".
+  - **Pictures** instead of a mix of "images" and "pictures".
+  - The shopping list's **Bought** button is now **Got it**, the same as in card show mode.
+- Stats on phones: "21 before tracking" is now "21 undated", and the gain reads "+$2,614 vs. paid", so neither gets cut off.
+
 ## v3.21.3 (October 18, 2026)
 
 - **Type a seller in card show mode:** under Seller on the Got it screen, pick the site or app (Instagram, TikTok, Facebook, X, Whatnot, eBay, Venmo, Cash App, PayPal, a website or a card shop) and type their username. It shows the link it will save so you can check it. Pasting their profile link picks the right site by itself. Sellers you type are remembered for the rest of the day, like scanned ones.
