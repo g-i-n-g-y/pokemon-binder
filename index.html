@@ -1011,7 +1011,14 @@ body.at-show > .wrap:not(.show){display:none}
 #swBuy .sb-seller .chip svg{width:16px;height:16px}
 #swBuy .sb-save{height:52px;font-size:16px}
 #swBuy .sb-manual{display:flex;gap:8px}
-#swBuy .sb-manual select{flex:0 0 132px;height:44px}
+#swBuy .sb-manual select{flex:0 0 124px;height:44px;min-width:0}
+#swBuy .sb-scan{flex:none;width:44px;height:44px}
+#swBuy .sb-scan svg{width:20px;height:20px}
+.sel-sug{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.sel-sug:empty{display:none}
+.sel-sug .sug-l{flex-basis:100%;font-size:12px;color:var(--muted)}
+.sel-sug .chip{display:inline-flex;align-items:center;height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;font-size:13px;cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sel-sug .chip[aria-pressed="true"]{border-color:var(--dark);background:var(--dark-soft)}
 #swBuy .sb-manual input{flex:1;min-width:0;height:44px}
 #swBuy #sbLink a{color:var(--dark)}
 #swPick .sp-list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
@@ -1412,12 +1419,12 @@ html,body{overscroll-behavior-y:none}
     <div class="f"><span>Condition</span><div class="sb-cond" id="sbCond" role="group" aria-label="Condition"></div></div>
     <label class="f">Where (remembered for today)<input class="field" id="sbWhere" maxlength="60" autocomplete="off" placeholder="Card show, table 14"></label>
     <div class="f"><span>Seller (optional)</span>
-      <select class="field" id="sbPast" aria-label="Pick a seller you've bought from before" hidden></select>
-      <div class="sb-seller" id="sbSeller"></div>
       <div class="sb-manual">
         <select class="field" id="sbPlat" aria-label="Seller's site or app"></select>
-        <input class="field" id="sbHandle" maxlength="100" autocomplete="off" placeholder="@username or paste their link" aria-label="Seller's username">
+        <input class="field" id="sbHandle" maxlength="100" autocomplete="off" placeholder="@username or link" aria-label="Seller's username">
+        <button class="icon-btn sb-scan" type="button" id="sbScan" aria-label="Scan the vendor's QR code" title="Scan vendor QR code"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><path d="M8 8h3v3H8zM13 13h3v3h-3zM13 8h3M8 16h3"/></svg></button>
       </div>
+      <div class="sel-sug" id="sbSeller"></div>
       <div class="note" id="sbLink"></div>
       <input type="file" id="sbQr" accept="image/*" capture="environment" hidden>
       <div class="note" id="sbQrMsg"></div>
@@ -1495,7 +1502,6 @@ html,body{overscroll-behavior-y:none}
         <label class="f">Date<input type="date" id="bDate" required></label>
         <label class="f">Paid ($)<input type="number" id="bPrice" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></label>
         <label class="f">Where<input type="text" id="bWhere" maxlength="60" list="whereList" placeholder="eBay, card show, local shop…"></label>
-        <label class="f past-f" id="bPastL" hidden>Past seller<select id="bPast"></select></label>
         <label class="f">Seller
           <select id="bPlat">
             <option value="">None</option>
@@ -1515,7 +1521,8 @@ html,body{overscroll-behavior-y:none}
             <option value="shop">Card shop / other</option>
           </select>
         </label>
-        <label class="f">Handle or name<input type="text" id="bHandle" maxlength="100" list="handleList" placeholder="@shopname" disabled></label>
+        <label class="f">Handle or name<input type="text" id="bHandle" maxlength="100" autocomplete="off" placeholder="@shopname" disabled></label>
+        <div class="sel-sug past-f" id="bSug"></div>
         <div class="formbtns">
           <button class="btn primary" type="submit" id="bSubmit">Add purchase</button>
           <button class="btn" type="button" id="bCancel" hidden>Cancel</button>
@@ -2563,7 +2570,7 @@ function openCard(n){
   $("dCond").value=r.cond||"";
   $("dNote").value=r.note||"";
   resetBuyForm();
-  loadSellers().then(list=>{ if(state.open!==n) return; fillPast($("bPast"), list); $("bPastL").hidden=!list.length; });
+  bSugList=[]; drawBSug(); loadSellers().then(list=>{ if(state.open!==n) return; bSugList=list; drawBSug(); });
   drawBuys(n); drawSpark(n);
   photoSide="front"; drawPhoto(n);
   $("dSaved").textContent=state.ready ? "" : "Can't reach "+srv()+" right now, so changes won't save.";
@@ -2659,11 +2666,23 @@ function loadSellers(){
   return fetch("api/sellers").then(r=>r.ok?r.json():Promise.reject()).then(j=>{ pastSellers=j.sellers||[]; return pastSellers; })
     .catch(()=>pastSellers||(showData&&showData.sellers)||[]);
 }
-function fillPast(sel, list){
-  sel.replaceChildren(); const z=document.createElement("option"); z.value=""; z.textContent="Pick a seller you've bought from"; sel.append(z);
-  list.forEach((x,i)=>{ const o=document.createElement("option"); o.value=String(i); o.textContent=sellerLabel(x)+(x.n>1?" · "+x.n+" buys":""); sel.append(o); });
-  sel._list=list; sel.value="";
+// Seller suggestions under the username box: your 3 most recent sellers, or past sellers matching what you type.
+// Stays small however many sellers you build up.
+function sellerSuggest(box, list, typed, current, pick){
+  box.replaceChildren();
+  const q=(typed||"").trim().replace(/^[@$]+/,"").toLowerCase();
+  const same=(a,b)=>a && b && a.p===b.p && a.h.toLowerCase()===b.h.toLowerCase();
+  let show, label;
+  if(!q){ show=list.slice(0,3); label="Recent"; }
+  else { show=list.filter(x=>x.h.toLowerCase().includes(q) && !same(x,current)).slice(0,5); label="Bought from before"; }
+  if(!show.length) return;
+  const l=document.createElement("span"); l.className="sug-l"; l.textContent=label; box.append(l);
+  for(const x of show){
+    const b=document.createElement("button"); b.type="button"; b.className="chip"; b.textContent=sellerLabel(x);
+    b.setAttribute("aria-pressed", same(x,current)); b.onclick=()=>pick(x); box.append(b);
+  }
 }
+const mergeSellers=(...lists)=>{ const out=[], seen=new Set(); for(const l of lists) for(const x of l||[]){ if(!x||!x.h) continue; const k=x.p+"|"+x.h.toLowerCase(); if(!seen.has(k)){ seen.add(k); out.push(x); } } return out; };
 function handleOptions(){
   const seen=new Map();
   for(const k in state.own) for(const b of (state.own[k].purchases||[])) if(b && b.seller && b.seller.h) seen.set(b.seller.p+"|"+b.seller.h, b.seller);
@@ -2671,11 +2690,15 @@ function handleOptions(){
   const plat=$("bPlat").value;
   for(const v of seen.values()) if(!plat || v.p===plat){ const o=document.createElement("option"); o.value=v.h; dl.append(o); }
 }
-$("bPast").onchange=e=>{
-  const x=(e.target._list||[])[+e.target.value]; e.target.value=""; if(!x) return;
-  $("bPlat").value=PLAT[x.p] && [...$("bPlat").options].some(o=>o.value===x.p) ? x.p : "shop";
-  $("bHandle").disabled=false; $("bHandle").value=x.h; handleOptions();
-};
+var bSugList=[];
+function drawBSug(){
+  const cur=$("bHandle").value.trim() ? {p:$("bPlat").value, h:cleanHandle($("bPlat").value,$("bHandle").value)} : null;
+  sellerSuggest($("bSug"), bSugList, $("bHandle").value, cur, x=>{
+    $("bPlat").value=[...$("bPlat").options].some(o=>o.value===x.p) ? x.p : "shop";
+    $("bHandle").disabled=false; $("bHandle").value=x.h; drawBSug();
+  });
+}
+$("bHandle").addEventListener("input", drawBSug);
 $("bPlat").addEventListener("change",()=>{
   const p=$("bPlat").value; $("bHandle").disabled=!p;
   $("bHandle").placeholder = p==="web" ? "shopname.com" : p==="shop" ? "Shop or person's name" : "@handle";
@@ -2686,14 +2709,14 @@ let editIdx=null;
 function resetBuyForm(){
   editIdx=null; $("dBuyForm").classList.remove("editing");
   $("bDate").value=todayStr(); $("bPrice").value=""; $("bWhere").value=""; $("bPlat").value=""; $("bHandle").value=""; $("bHandle").disabled=true;
-  $("bSubmit").textContent="Add purchase"; $("bCancel").hidden=true;
+  $("bSubmit").textContent="Add purchase"; $("bCancel").hidden=true; drawBSug();
 }
 function editBuy(n,i){
   const b=buys(n)[i]; if(!b) return;
   editIdx=i; $("dBuyForm").classList.add("editing");
   $("bDate").value=b.d||""; $("bPrice").value=(b.price==null?"":b.price); $("bWhere").value=b.where||"";
   $("bPlat").value=(b.seller&&b.seller.p)||""; $("bHandle").value=(b.seller&&b.seller.h)||""; $("bHandle").disabled=!$("bPlat").value;
-  $("bSubmit").textContent="Save changes"; $("bCancel").hidden=false;
+  $("bSubmit").textContent="Save changes"; $("bCancel").hidden=false; drawBSug();
   handleOptions(); $("bPrice").focus();
 }
 $("bCancel").onclick=resetBuyForm;
@@ -5174,7 +5197,7 @@ function setSeller(sel){   // fill the dropdown and username box from a chip or 
 function sellerHint(){
   const box=$("sbLink"); box.replaceChildren();
   const p=$("sbPlat").value;
-  $("sbHandle").placeholder = p==="web" ? "theirshop.com" : p==="shop" ? "Shop or person's name" : p==="cashapp" ? "$cashtag or paste their link" : "@username or paste their link";
+  $("sbHandle").placeholder = p==="web" ? "theirshop.com" : p==="shop" ? "Shop or person's name" : p==="cashapp" ? "$cashtag or link" : "@username or link";
   if(!buySeller) return;
   const P=PLAT[buySeller.p], href=P && P.url ? P.url(buySeller.h) : null;
   if(href){ const a=document.createElement("a"); a.href=href; a.target="_blank"; a.rel="noopener noreferrer"; a.textContent=href.replace(/^https?:\/\/(www\.)?/,"")+" ↗"; box.append("Links to ", a); }
@@ -5185,21 +5208,11 @@ function readSeller(){
   sellerHint(); drawSeller();
 }
 function drawSeller(){
-  const box=$("sbSeller"); box.replaceChildren();
-  const today=(todayKey("nd-show-sellers")||[]).filter(x=>x && x.p && x.h);
-  const same=(a,b)=>a && b && a.p===b.p && a.h===b.h;
-  for(const sel of today){
-    const b=document.createElement("button"); b.type="button"; b.className="chip"; b.textContent=sellerLabel(sel);
-    b.setAttribute("aria-pressed", same(sel,buySeller)); b.onclick=()=>setSeller(same(sel,buySeller)?null:sel);
-    box.append(b);
-  }
-  const scan=document.createElement("button"); scan.type="button"; scan.className="chip";
-  scan.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><path d="M8 8h3v3H8zM13 13h3v3h-3zM13 8h3M8 16h3"/></svg>';
-  scan.append("Scan vendor QR"); scan.onclick=()=>$("sbQr").click();
-  box.append(scan);
+  const list=mergeSellers(todayKey("nd-show-sellers"), (showData&&showData.sellers), pastSellers);
+  sellerSuggest($("sbSeller"), list, $("sbHandle").value, buySeller, x=>setSeller({p:x.p, h:x.h}));
 }
 for(const k of SELLER_PLATS){ const o=document.createElement("option"); o.value=k; o.textContent=PLAT[k].label; $("sbPlat").append(o); }
-$("sbPast").onchange=e=>{ const x=(e.target._list||[])[+e.target.value]; e.target.value=""; if(x) setSeller({p:x.p, h:x.h}); };
+$("sbScan").onclick=()=>$("sbQr").click();
 $("sbPlat").onchange=()=>{ if($("sbHandle").value.trim()) readSeller(); else sellerHint(); };
 $("sbHandle").oninput=readSeller;
 $("sbHandle").addEventListener("paste",()=>setTimeout(()=>{   // a pasted profile link picks the right site by itself
@@ -5231,7 +5244,6 @@ function openBuy(c){
   const cb=$("sbCond"); cb.replaceChildren();
   for(const k of ["NM","LP","MP","HP","DMG"]){ const b=document.createElement("button"); b.type="button"; b.textContent=k; b.setAttribute("aria-pressed", k===buyCond); b.onclick=()=>{ buyCond=buyCond===k?"":k; [...cb.children].forEach(x=>x.setAttribute("aria-pressed", x.textContent===buyCond)); }; cb.append(b); }
   setSeller(null);
-  { const list=(showData&&showData.sellers)||pastSellers||[]; fillPast($("sbPast"), list); $("sbPast").hidden=!list.length; }
   $("sbNote").textContent=isOffline() ? "No signal: this is saved on the phone and synced after you confirm, once you're back online." : "Adds a copy to "+c.set+" with today's date.";
   $("sbSave").disabled=false;
   $("swBuy").showModal();
