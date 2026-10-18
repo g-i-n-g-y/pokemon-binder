@@ -281,6 +281,11 @@ table.shop .btn{padding:6px 10px;font-size:13px;white-space:nowrap}
 .trend{font-family:var(--f-mono);font-size:13px;white-space:nowrap}
 .trend.up{color:var(--good)} .trend.down{color:var(--bad)} .trend.flat{color:var(--muted)}
 .price .trend{font-size:11px;margin-left:4px}
+/* old price: last sold a while ago, or no recent sales (a small clock next to the price, explained under the cards) */
+.stale{display:inline-block;width:12px;height:12px;margin-left:4px;vertical-align:-1px;color:#d9a441;opacity:.9}
+.stale svg{width:100%;height:100%;display:block}
+.stale-key{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin:2px 0 0}
+.stale-key .stale{margin:0;flex:none}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
 .two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
 .chart{position:relative;min-height:60px}
@@ -1117,6 +1122,7 @@ html,body{overscroll-behavior-y:none}
   <p class="gap-note" id="gapNote" hidden></p>
 
   <div class="grid" id="grid" role="region" aria-label="Cards"></div>
+  <p class="stale-key" id="staleKey" hidden><span class="stale"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span id="staleKeyT"></span></p>
   </div>
 
   <section id="vPages" hidden aria-label="Binder pages">
@@ -1902,6 +1908,7 @@ function render(){
     for(let i=0;i<12;i++){ const k=document.createElement("div"); k.className="sleeve skel"; k.setAttribute("aria-hidden","true"); k.innerHTML='<span class="sk-art"></span><span class="sk-line"></span><span class="sk-line short"></span>'; g.append(k); }
   }
   else if(!list.length){ const e=document.createElement("div"); e.className="empty"; e.textContent=state.cards.length ? "No cards match these filters." : (state.ready ? (isOwn(state.sid) ? "This binder is empty. Add cards with Find a card." : "This set has no cards yet.") : "Loading cards…"); g.append(e); }
+  let anyStale=false;
   for(const c of list){
     const b=document.createElement("div");
     b.className="sleeve"+(qty(c.n)>0?"":" need"); b.dataset.n=c.n;
@@ -1914,7 +1921,9 @@ function render(){
     f.append(no,nm,r,cardImg(c));
     const m=document.createElement("div"); m.className="meta";
     const p=document.createElement("span"); p.className="price"; p.textContent=priceOf(c.n) ? money(priceOf(c.n)) : "–";
-    const tr=trend(c.n); if(tr && Math.abs(tr.pct)>=5) p.append(trendEl(tr,true));
+    const sw=staleWhy(c.n), tr=trend(c.n);
+    if(sw){ p.append(staleEl(sw)); anyStale=true; }   // an old price's up/down arrow doesn't mean much, so the clock takes its place
+    else if(tr && Math.abs(tr.pct)>=5) p.append(trendEl(tr,true));
     const t=document.createElement("button"); t.type="button"; t.className="tag"+(qty(c.n)>0?" own":"");
     t.textContent=qty(c.n)>0 ? (qty(c.n)>1?"Owned ×"+qty(c.n):"Owned") : "Need";
     t.title=qty(c.n)>0 ? "Tap to mark as needed" : "Tap to mark as owned";
@@ -1925,6 +1934,8 @@ function render(){
     b.append(m); g.append(b);
   }
   if(state.ready && state.sid && !state.q) g.append(missTile());
+  $("staleKey").hidden=!anyStale;
+  $("staleKeyT").textContent="Old price: the last sale was over 3 months ago, or there are no recent sales. Tap the card to see when it last sold.";
   $("count").textContent=list.length+" of "+state.cards.length+" cards";
   filterSummary(list.length);
   stats();
@@ -2099,6 +2110,19 @@ const slotName = sl => sl.t==="raw" ? sl.c : sl.t==="graded" ? (sl.co==="Any" ? 
 const slotKey = sl => sl.t==="raw" ? sl.c : sl.co+" "+sl.g;
 function slotVal(n, sl){ const i=state.info[n]||{}; return sl.t==="raw" ? (i.cond||{})[sl.c] : sl.t==="graded" ? (i.graded||{})[slotKey(sl)] : null; }
 const mainLabel = () => allRaw() ? "Combined "+activeSlots().map(slotName).join("/") : slotName(state.slots[0])+" price";
+// Old prices: the newest sale is over STALE_DAYS old, or there are no recent sales and the market price is used.
+const STALE_DAYS=90;
+const STALE_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+function staleWhy(n){
+  const i=state.info[n]; if(!i || !priceOf(n)) return "";
+  if(i.src==="tcgdex") return "No recent sales, so this is TCGplayer's market price";
+  if((i.src==="tcgplayer"||i.src==="pricecharting") && i.last){
+    const d=(new Date(todayStr())-new Date(i.last.slice(0,10)+"T00:00:00"))/864e5;
+    if(d>STALE_DAYS) return "Last sold "+when(i.last.slice(0,10));
+  }
+  return "";
+}
+function staleEl(why){ const s=document.createElement("span"); s.className="stale"; s.innerHTML=STALE_SVG; s.title="Old price: "+why; s.setAttribute("role","img"); s.setAttribute("aria-label","Old price: "+why); return s; }
 function priceSource(n){
   const i=state.info[n];
   const sales = i ? i.count+" recent "+"sale"+(i.count===1?"":"s") : "";
@@ -2334,6 +2358,7 @@ function openCard(n){
   $("dCustom").hidden=!c.custom; $("dExtra").hidden=!c.extra;
   { const sp=cardSpot(n); $("dSpot").hidden=!sp; if(sp) setSpot(sp.text); }
   $("dP").textContent=basePrice(n) ? money(basePrice(n)) : "–";
+  { const sw=staleWhy(n); if(sw) $("dP").append(staleEl(sw)); }
   lpmpBox(n); mktLine(n); drawSales(n); ownLine(n); setCardTab(cardTab);
   { const sd=document.querySelector("#dlg .cs-side"); if(sd) sd.scrollTop=0; }
   $("dPsrc").textContent=priceSource(n);

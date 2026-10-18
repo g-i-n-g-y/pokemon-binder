@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.20 (October 18, 2026)
+
+- **Old price warning:** a small clock next to a card's price means the price may be out of date: its newest sale is over 3 months old, or there are no recent sales and TCGplayer's market price is used instead. A note under the cards explains the clock, and the card's details show when it last sold. On old prices the clock takes the place of the up/down arrow.
+
 ## v3.19.5 (October 17, 2026)
 
 - **Card shows stay listed through the day after.** A show happening on the day of a weekly check (or running late) is no longer at risk of disappearing. Shows older than yesterday now drop off each day on their own instead of waiting for the next weekly check.
