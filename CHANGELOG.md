@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v3.23.1 (October 18, 2026)
 
 - **Card show mode sorting:** one **Price** button with an arrow. Tap it for lowest first (↑), tap again for highest first (↓). **By page** is new: cards in the order they sit in your binder pages, with each card's spot shown (like "Page 5, back"), so you can work through a binder page by page. By binder stays.
 - **Card show mode header:** the calendar (card shows), privacy and settings buttons are now at the top, the same as on My binders. Picking which binders you're working on moved to a **Change** link next to the binder names.
