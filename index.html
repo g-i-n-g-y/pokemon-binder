@@ -1448,6 +1448,9 @@ html,body{overscroll-behavior-y:none}
             <option value="venmo">Venmo</option>
             <option value="cashapp">Cash App</option>
             <option value="paypal">PayPal</option>
+            <option value="linktree">Linktree</option>
+            <option value="beacons">Beacons</option>
+            <option value="stan">Stan</option>
             <option value="web">Website</option>
             <option value="shop">Card shop / other</option>
           </select>
@@ -2555,6 +2558,9 @@ const PLAT = {
   venmo:{label:"Venmo", tag:"VEN", url:h=>"https://venmo.com/u/"+enc(h)},
   cashapp:{label:"Cash App", tag:"CASH", url:h=>"https://cash.app/$"+enc(h)},
   paypal:{label:"PayPal", tag:"PP", url:h=>"https://paypal.me/"+enc(h)},
+  linktree:{label:"Linktree", tag:"LINK", url:h=>"https://linktr.ee/"+enc(h)},
+  beacons:{label:"Beacons", tag:"LINK", url:h=>"https://beacons.ai/"+enc(h)},
+  stan:{label:"Stan", tag:"LINK", url:h=>"https://stan.store/"+enc(h)},
   web:{label:"Website", tag:"WEB", url:h=>{ const u=/^https?:\/\//i.test(h)?h:"https://"+h; try{ const x=new URL(u); return /^https?:$/.test(x.protocol)?x.href:null; }catch(_){ return null; } }},
   shop:{label:"Card shop", tag:"SHOP", url:null}
 };
@@ -5013,7 +5019,7 @@ $("drMode").onclick=e=>{ const b=e.target.closest("button"); if(!b) return;
 let buyCard=null, buyCond="", buySeller=null;
 const todayKey = k => { try{ const v=JSON.parse(localStorage.getItem(k)||"null"); return v && v.d===todayStr() ? v.v : null; }catch(_){ return null; } };
 const setTodayKey = (k,v) => store(k, JSON.stringify({d:todayStr(), v}));
-function sellerLabel(sel){ const P=PLAT[sel.p]; return (P ? P.label+" " : "")+(sel.p==="web" ? sel.h.replace(/^https?:\/\/(www\.)?/i,"").slice(0,32) : (["instagram","tiktok","x","venmo"].includes(sel.p)?"@":sel.p==="cashapp"?"$":"")+sel.h); }
+function sellerLabel(sel){ const P=PLAT[sel.p]; return (P ? P.label+" " : "")+(sel.p==="web" ? sel.h.replace(/^https?:\/\/(www\.)?/i,"").slice(0,32) : (["instagram","tiktok","x","venmo","linktree","beacons","stan"].includes(sel.p)?"@":sel.p==="cashapp"?"$":"")+sel.h); }
 // What a vendor's QR code points to, as a seller: Venmo, Cash App, PayPal, social pages, or any website.
 function parseVendorQr(text){
   const t=(text||"").trim(); if(!t) return null;
@@ -5031,9 +5037,12 @@ function parseVendorQr(text){
   if(host==="x.com"||host==="twitter.com") return pick("x", seg[0]);
   if(host==="whatnot.com" && seg[0]==="user") return pick("whatnot", seg[1]);
   if(host==="ebay.com" && seg[0]==="usr") return pick("ebay", seg[1]);
+  if(host==="linktr.ee"||host==="linktree.com") return pick("linktree", seg[0]);
+  if(host==="beacons.ai"||host==="beacons.page") return pick("beacons", seg[0]);
+  if(host==="stan.store") return pick("stan", seg[0]);
   return pick("web","");
 }
-const SELLER_PLATS=["instagram","tiktok","facebook","x","whatnot","ebay","venmo","cashapp","paypal","web","shop"];
+const SELLER_PLATS=["instagram","linktree","tiktok","facebook","x","whatnot","ebay","venmo","cashapp","paypal","beacons","stan","web","shop"];
 function setSeller(sel){   // fill the dropdown and username box from a chip or a scanned code
   buySeller=sel && sel.h ? sel : null;
   $("sbPlat").value=buySeller ? buySeller.p : "instagram";
@@ -5071,7 +5080,7 @@ for(const k of SELLER_PLATS){ const o=document.createElement("option"); o.value=
 $("sbPlat").onchange=()=>{ if($("sbHandle").value.trim()) readSeller(); else sellerHint(); };
 $("sbHandle").oninput=readSeller;
 $("sbHandle").addEventListener("paste",()=>setTimeout(()=>{   // a pasted profile link picks the right site by itself
-  const v=$("sbHandle").value.trim(); if(!/^https?:\/\/|\.(com|me|app|net|org|tv)\//i.test(v)) return;
+  const v=$("sbHandle").value.trim(); if(!/^https?:\/\/|\.(com|me|app|net|org|tv|ee|ai|store|page)\//i.test(v)) return;
   const sel=parseVendorQr(v); if(sel && sel.p!=="shop") setSeller(sel);
 },0));
 $("sbQr").onchange=async e=>{
