@@ -314,6 +314,28 @@ def main():
         _, st = call(base, "GET", "/api/set/neo4/state")
         check("taken-out card is gone", not any(c["n"] == "neo1-80" for c in st["cards"]))
 
+        # card show mode: needed cards, the working-on pick, a one-tap buy and a synced buy with its condition
+        code, show = call(base, "GET", "/api/show")
+        need_before = len(show.get("cards", []))
+        check("card show lists the cards you still need", code == 200 and need_before > 0, show)
+        n_buy = next(c["n"] for c in show["cards"] if c["sid"] == "neo4")
+        code, res = call(base, "POST", f"/api/set/neo4/card/{n_buy}/buy", {"purchase": {"id": "showbuy0001", "d": "2026-10-18", "price": 4.5, "where": "Show"}, "cond": "LP"})
+        code2, res2 = call(base, "POST", f"/api/set/neo4/card/{n_buy}/buy", {"purchase": {"id": "showbuy0001", "d": "2026-10-18", "price": 4.5, "where": "Show"}, "cond": "LP"})
+        _, st = call(base, "GET", "/api/set/neo4/state")
+        rec = st["collection"].get(n_buy, {})
+        check("Got it adds one copy with its condition, never twice", code == 200 and res.get("added") and res2.get("added") is False
+              and rec.get("qty") == 1 and rec.get("cond") == "LP", (res, res2, rec))
+        _, show = call(base, "GET", "/api/show")
+        check("a bought card leaves the card show list", len(show["cards"]) == need_before - 1)
+        code, _ = call(base, "PUT", "/api/settings", {"showBinders": ["neo4", "nope"]})
+        _, home = call(base, "GET", "/api/home")
+        check("working-on binders are saved and shown on the home page", code == 200 and home.get("working") == ["neo4"], home.get("working"))
+        sync_card = show["cards"][0]
+        n_sync = sync_card["n"]
+        code, res = call(base, "POST", "/api/sync", {"changes": [{"sid": sync_card["sid"], "n": n_sync, "purchase": {"id": "showsync0001", "d": "2026-10-18", "price": 2}, "cond": "MP"}]})
+        _, st = call(base, "GET", f"/api/set/{sync_card['sid']}/state")
+        check("an offline card show buy syncs with its condition", code == 200 and st["collection"].get(n_sync, {}).get("cond") == "MP", st["collection"].get(n_sync))
+
         # removing a binder and adding it again asks whether to bring its cards back or start fresh
         owned = lambda: next((b["owned"] for b in call(base, "GET", "/api/home")[1]["binders"] if b["id"] == "neo4"), None)
         before = owned()

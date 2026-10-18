@@ -10,6 +10,14 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.21 (October 18, 2026)
+
+- **Card show mode:** one list of every card you still need from the binders you're working on, with prices, search by name or number, and sorting by cheapest, priciest or binder. Tap **Got it** to log a buy: the price you paid (it tells you how far over or under the price you are), condition, and where. Where and condition are remembered for the day. Open it from **Card shows → Start card show mode** or the ☰ menu on My binders.
+- **Works with no signal:** the list is saved on the phone, and buys made offline wait there and sync after you confirm, like other offline changes. The condition comes along now too.
+- **Scan a vendor's QR code:** on the Got it screen, **Scan vendor QR** takes a photo of a vendor's code and adds them as the seller: Venmo, Cash App, PayPal, Instagram, TikTok, Facebook, X, Whatnot, eBay, or any website. Sellers you scan stay on the list for the rest of the day, so the next buy from the same table is one tap. Needs Chrome on Android.
+- **Working on:** pick which binders you're collecting right now. Card show mode uses them, and they get a small "Working on" tag on My binders.
+- Venmo, Cash App and PayPal are now seller choices when you log any purchase.
+
 ## v3.20 (October 18, 2026)
 
 - **Old price warning:** a small clock next to a card's price means the price may be out of date: its newest sale is over 3 months old, or there are no recent sales and TCGplayer's market price is used instead. A note under the cards explains the clock, and the card's details show when it last sold. On old prices the clock takes the place of the up/down arrow.

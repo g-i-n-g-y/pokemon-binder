@@ -24,7 +24,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "3.20"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
+APP_VERSION = "3.21"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -1172,7 +1172,48 @@ def home_data():
         for g, d in card_dex(gids[i:i + 6]).items():
             want[g]["dex"] = d
     recent.sort(key=lambda x: x["d"], reverse=True)
-    return {"binders": binders, "recent": recent[:12]}
+    working = [x for x in (get_settings().get("showBinders") or []) if x in sl["order"]]   # card show mode picks
+    return {"binders": binders, "recent": recent[:12], "working": working}
+
+
+def show_data():
+    """Card show mode: every card you still need from the binders you're working on (all binders if none
+    are picked), with its price and when it last sold, plus what you've bought today."""
+    sl = sets_list()
+    st = get_settings()
+    picked = [sid for sid in (st.get("showBinders") or []) if sid in sl["order"]]
+    use = picked or list(sl["order"])
+    today = local_now(st).strftime("%Y-%m-%d")
+    cards_out, binders = [], []
+    spent, bought = 0.0, 0
+    for sid in sl["order"]:
+        coll = read_json(sdir(sid, "collection.json"), {})
+        for r in coll.values():
+            for b in (r.get("purchases") or []) if isinstance(r, dict) else []:
+                if isinstance(b, dict) and b.get("d") == today:
+                    bought += 1
+                    spent += float(b.get("price") or 0)
+        if sid not in use:
+            continue
+        meta = sl["meta"].get(sid, {})
+        cards = read_json(sdir(sid, "cards.json"), None)
+        cards = (cards or []) + extra_list(sid) + custom_cards(sid) if cards is not None or is_own(sid) else []
+        pr = read_json(sdir(sid, "prices.json"), {}) or {}
+        prices, info = pr.get("p") or {}, pr.get("info") or {}
+        need = 0
+        for c in cards:
+            if _owned(coll.get(c["n"])):
+                continue
+            need += 1
+            i = info.get(c["n"]) or {}
+            cards_out.append({"sid": sid, "set": meta.get("name", sid), "n": c["n"], "name": c.get("name", ""),
+                              "num": c.get("num", c["n"]),
+                              "pt": c.get("pt") or ("" if is_multi(sid) or c.get("extra") or c.get("custom") else meta.get("printedTotal") or ""), "rarity": c.get("rarity", ""),
+                              "custom": bool(c.get("custom")), "price": (prices.get(c["n"]) or [0])[0] or 0,
+                              "src": i.get("src", ""), "last": i.get("last", "")})
+        binders.append({"id": sid, "name": meta.get("name", sid), "need": need})
+    return {"picked": picked, "binders": binders, "cards": cards_out, "today": today,
+            "bought": bought, "spent": round(spent, 2)}
 
 
 def pokemon_art(num, shiny=False):
@@ -3137,7 +3178,30 @@ def clean_sync_change(ch):
     sel = p.get("seller")
     if isinstance(sel, dict) and isinstance(sel.get("p"), str) and isinstance(sel.get("h"), str) and sel["h"].strip():
         out["seller"] = {"p": sel["p"][:20], "h": sel["h"].strip()[:100]}
+    if ch.get("cond") in RAW_CONDS:
+        out["_cond"] = ch["cond"]   # the copy's condition (card show mode); set on the card, not kept in the purchase
     return sid, n, out
+
+
+def add_one_purchase(sid, n, purchase):
+    """Add one purchase to a card (needs the lock). False if that purchase id is already there.
+    A condition sent with it becomes the card's condition when this is the first copy."""
+    purchase = dict(purchase)
+    cond = purchase.pop("_cond", None)
+    rec = read_json(sdir(sid, "collection.json"), {}).get(n)
+    rec = dict(rec) if isinstance(rec, dict) else {}
+    buys = [b for b in rec.get("purchases") or [] if isinstance(b, dict)]
+    if any(b.get("id") == purchase["id"] for b in buys):
+        return False
+    first = not _owned(rec)
+    buys.append(purchase)
+    buys.sort(key=lambda b: b.get("d") or "")
+    rec["purchases"] = buys
+    rec["qty"] = len(buys)
+    if cond and (first or not rec.get("cond")):
+        rec["cond"] = cond
+    collection_put(sid, n, rec)
+    return True
 
 
 def apply_sync(changes):
@@ -3157,17 +3221,9 @@ def apply_sync(changes):
     added, skipped = [], 0
     with lock:
         for sid, n, purchase in cleaned:
-            rec = read_json(sdir(sid, "collection.json"), {}).get(n)
-            rec = dict(rec) if isinstance(rec, dict) else {}
-            buys = [b for b in rec.get("purchases") or [] if isinstance(b, dict)]
-            if any(b.get("id") == purchase["id"] for b in buys):
+            if not add_one_purchase(sid, n, purchase):
                 skipped += 1      # already sent once
                 continue
-            buys.append(purchase)
-            buys.sort(key=lambda b: b.get("d") or "")
-            rec["purchases"] = buys
-            rec["qty"] = len(buys)
-            collection_put(sid, n, rec)
             added.append({"sid": sid, "n": n, "id": purchase["id"]})
         at = now_iso()
         if added:
@@ -3633,6 +3689,7 @@ class Handler(BaseHTTPRequestHandler):
             ls = st.get("lastSync") or {}
             out["lastSync"] = {"at": ls.get("at", ""), "count": len(ls.get("added") or []), "undone": ls.get("undone", "")} if ls else None
             out["refreshAll"] = bool(st.get("refreshAll"))
+            out["showBinders"] = list(st.get("showBinders") or [])
             out["options"] = {"raw": RAW_CONDS, "graders": GRADERS, "grades": GRADES}
             out["next"] = next_run(st).isoformat() if st["auto"] else ""
             out["lastAuto"] = st.get("lastAuto", "")
@@ -3661,6 +3718,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, set_trends(m.group(1), today), cache="no-store")
             except ValueError:
                 return self.send(400, {"error": "bad date"})
+        if path == "/api/show":
+            return self.send(200, show_data(), cache="no-store")
         if path == "/api/home":
             return self.send(200, home_data(), cache="no-store")
         if path == "/api/covernums":   # Pokédex numbers for the binder covers: ?c=neo4-1,neo4-107
@@ -3883,6 +3942,9 @@ class Handler(BaseHTTPRequestHandler):
                     st["serverName"] = name
                 if "otherHosts" in new:
                     st["otherHosts"] = clean_hosts(new["otherHosts"])
+                if "showBinders" in new:   # card show mode: the binders you're working on
+                    order = sets_list()["order"]
+                    st["showBinders"] = [x for x in dict.fromkeys(new["showBinders"] or []) if isinstance(x, str) and x in order]
                 # a new time today shouldn't be skipped just because today's run already happened earlier
                 if "time" in new:
                     merged = dict(DEFAULT_SETTINGS); merged.update(st)
@@ -4041,6 +4103,22 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(404, {"error": "No such binder"})
             start_images(m_pic.group(1), now=True)
             return self.send(200, {"started": True})
+        m_buy = re.fullmatch(rf"/api/set/({SID_RE})/card/({NUM_RE})/buy", path)
+        if m_buy:   # card show mode: add one copy you just bought, from any screen
+            try:
+                body = json.loads(self.body(4096) or b"{}")
+                assert isinstance(body, dict)
+                sid, n, purchase = clean_sync_change({"sid": m_buy.group(1), "n": m_buy.group(2),
+                                                      "purchase": body.get("purchase"), "cond": body.get("cond")})
+                if sid not in sets_list()["order"]:
+                    raise ValueError("That binder isn't on the server any more")
+                with lock:
+                    added = add_one_purchase(sid, n, purchase)
+            except (ValueError, AssertionError) as e:
+                return self.send(400, {"error": str(e) or "bad request"})
+            except Exception:
+                return self.send(400, {"error": "bad request"})
+            return self.send(200, {"ok": True, "added": added})
         m_rs = re.fullmatch(rf"/api/sets/({SID_RE})/restore", path)
         if m_rs:
             try:

@@ -82,7 +82,7 @@ body.offline #dMinus,body.offline #dCond,body.offline #dNote,body.offline #dBuys
 .pend-list .px:hover{color:var(--bad);background:var(--sleeve)}
 .waiting{display:inline-block;margin-left:6px;font-size:11px;padding:1px 6px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
 body.offline .syncline .offl{display:inline}
-body.offline .syncline #sync,body.offline .syncline #hmSync{display:none}
+body.offline .syncline #sync,body.offline .syncline #hmSync,body.offline .syncline #swSync{display:none}
 .ui-row .conn{width:10px;height:10px}
 /* loading bars: real progress when the server knows the total, a sliding bar while it's still counting */
 .pbar{height:6px;border-radius:3px;background:var(--sleeve);overflow:hidden;width:100%;position:relative}
@@ -926,6 +926,61 @@ body.drag-shop,body.drag-shop *{cursor:grabbing!important}
 @media (min-width:760px){.pg-side.cover.vb-cover{min-height:0;border-radius:12px 0 0 12px}}
 /* ---------- Home: a shelf of your binders (v3.10) ---------- */
 body.at-home > .wrap:not(.home){display:none}
+body.at-show > .wrap:not(.show){display:none}
+/* ---------- card show mode ---------- */
+.show{gap:14px}
+.show>*{align-self:stretch}
+@media (min-width:760px){.show .sw-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr))}.sw-more{grid-column:1/-1}.sw-empty{grid-column:1/-1}.sw-stats{max-width:560px}}
+.sw-pick{height:44px;display:flex;align-items:center;gap:6px;padding:0 14px;white-space:nowrap}
+.sw-pick svg{width:16px;height:16px}
+.sw-chips{display:flex;gap:6px;flex-wrap:wrap}
+.sw-chips span{padding:5px 10px;border-radius:999px;background:var(--dark-soft);border:1px solid var(--dark);font-size:13px}
+.sw-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.sw-stats>div{padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.sw-stats>div+div{border-left:1px solid var(--line)}
+.sw-stats small{font-size:11px;color:var(--muted)}
+.sw-stats b{font-family:var(--f-display);font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sw-stats .spent{color:var(--good)}
+:root[data-private] .sw-stats .spent,:root[data-private] .sw-stats .fin{filter:blur(7px)}
+.sw-find{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.sw-find .field{flex:1 1 220px;min-width:0;height:44px;border-radius:12px;background:var(--surface)}
+.sw-list{display:flex;flex-direction:column;gap:8px}
+.sw-row{display:flex;align-items:center;gap:12px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--surface);content-visibility:auto;contain-intrinsic-size:auto 86px}
+.sw-row .th{width:46px;height:64px;flex:none;border-radius:5px;overflow:hidden;background:var(--sleeve);border:1px solid var(--line);display:grid;place-items:center;font:500 9px var(--f-mono);color:var(--muted)}
+.sw-row .th img{width:100%;height:100%;object-fit:cover;display:block}
+.sw-row .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.sw-row .tx b{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sw-row .tx small{font-size:12px;color:var(--muted)}
+.sw-row .tx .price{font-size:14px}
+.sw-row .tx .price i{font-style:normal;font-size:11px;color:var(--muted);margin-left:4px;font-family:var(--f-body)}
+.sw-row .got{height:44px;flex:none;padding:0 14px}
+.sw-empty{padding:28px 12px;text-align:center;color:var(--muted)}
+.sw-more{align-self:center}
+#swBuy .sb-card{display:flex;gap:14px;align-items:center}
+#swBuy .sb-card .th{width:60px;height:84px;flex:none;border-radius:6px;overflow:hidden;background:var(--sleeve);border:1px solid var(--line);display:grid;place-items:center;font:500 10px var(--f-mono);color:var(--muted)}
+#swBuy .sb-card .th img{width:100%;height:100%;object-fit:cover;display:block}
+#swBuy .sb-card b{font-family:var(--f-display);font-size:22px;display:block}
+#swBuy .sb-card small{display:block;color:var(--muted);font-size:13px}
+#swBuy .sb-price{display:flex;align-items:center;gap:4px;height:60px;padding:0 14px;border:2px solid var(--dark);border-radius:14px;background:var(--bg)}
+#swBuy .sb-price span{font:500 26px var(--f-mono);color:var(--muted)}
+#swBuy .sb-price input{flex:1;min-width:0;border:0;background:none;color:var(--ink);font:500 26px var(--f-mono);outline:none}
+#swBuy .sb-delta{font-size:12px;min-height:16px;color:var(--muted)}
+#swBuy .sb-delta.under{color:var(--good)} #swBuy .sb-delta.over{color:var(--bad)}
+#swBuy .sb-cond{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+#swBuy .sb-cond button{height:44px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--muted);font:500 14px var(--f-body);cursor:pointer}
+#swBuy .sb-cond button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+#swBuy .sb-seller{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+#swBuy .sb-seller .chip{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;font-size:13px;cursor:pointer}
+#swBuy .sb-seller .chip[aria-pressed="true"]{border-color:var(--dark);background:var(--dark-soft)}
+#swBuy .sb-seller .chip svg{width:16px;height:16px}
+#swBuy .sb-save{height:52px;font-size:16px}
+#swPick .sp-list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+#swPick .sp-list label{display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:56px;cursor:pointer}
+#swPick .sp-list label+label{border-top:1px solid var(--line)}
+#swPick .sp-list span{flex:1;min-width:0}
+#swPick .sp-list small{display:block;color:var(--muted);font-size:12px}
+#swPick .sp-list input{width:22px;height:22px;accent-color:var(--dark);margin:0}
+.bk .bk-work{position:absolute;top:10px;left:10px;padding:3px 7px;border-radius:6px;background:rgba(0,0,0,.6);color:#fff;font:600 10px var(--f-body);letter-spacing:.05em;text-transform:uppercase}
 .home{gap:18px}
 .hm-top{display:flex;align-items:center;gap:10px}
 .hm-top h1{flex:1;margin:0}
@@ -1258,6 +1313,63 @@ html,body{overscroll-behavior-y:none}
   </section>
 </main>
 
+<main class="wrap show" id="showView" hidden aria-labelledby="swTitle">
+  <header class="hm-top">
+    <button class="icon-btn" type="button" id="swBack" aria-label="Back to My binders" title="My binders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <h1 id="swTitle"><span class="l">Card</span><span class="d"> show</span></h1>
+    <button class="btn sw-pick" type="button" id="swPickBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/></svg><span id="swPickLbl">Binders</span></button>
+  </header>
+  <div class="syncline hm-sync"><span class="conn" role="img" aria-label="Checking the connection" title="Checking the connection"></span><span class="sync" id="swSync">Ready offline · buys made with no signal sync when you're back</span><span class="sync offl">Offline · buys are saved on this phone<span class="pendn"></span></span></div>
+  <div class="sw-chips" id="swChips"></div>
+  <div class="sw-stats">
+    <div><small>Still need</small><b id="swNeed">–</b></div>
+    <div><small>To finish</small><b class="fin" id="swFin">–</b></div>
+    <div><small id="swSpentL">Bought today</small><b class="spent" id="swSpent">–</b></div>
+  </div>
+  <div class="sw-find">
+    <input class="field" type="search" id="swQ" placeholder="Name or number, like 107" aria-label="Find a needed card" enterkeyhint="search" autocomplete="off">
+    <div class="seg" id="swSort" role="group" aria-label="Sort">
+      <button type="button" data-s="cheap" aria-pressed="true">Cheapest</button>
+      <button type="button" data-s="dear" aria-pressed="false">Priciest</button>
+      <button type="button" data-s="set" aria-pressed="false">By binder</button>
+    </div>
+  </div>
+  <div class="sw-list" id="swList" aria-live="polite"></div>
+  <p class="stale-key" id="swStaleKey" hidden><span class="stale"></span><span>Old price: the last sale was over 3 months ago, or there are no recent sales.</span></p>
+</main>
+
+<dialog id="swBuy" class="float" aria-labelledby="sbTitle">
+  <div class="sheet">
+    <button class="close" type="button" id="sbClose">Close ✕</button>
+    <h2 id="sbTitle">Got it</h2>
+    <div class="sb-card"><div class="th" id="sbTh"></div><div><b id="sbName"></b><small id="sbSet"></small><small id="sbAvg"></small></div></div>
+    <label class="f">Price paid
+      <span class="sb-price"><span aria-hidden="true">$</span><input id="sbPrice" inputmode="decimal" autocomplete="off" placeholder="0.00" aria-label="Price paid in dollars"></span>
+    </label>
+    <div class="sb-delta" id="sbDelta" aria-live="polite"></div>
+    <div class="f"><span>Condition</span><div class="sb-cond" id="sbCond" role="group" aria-label="Condition"></div></div>
+    <label class="f">Where (remembered for today)<input class="field" id="sbWhere" maxlength="60" autocomplete="off" placeholder="Card show, table 14"></label>
+    <div class="f"><span>Seller (optional)</span>
+      <div class="sb-seller" id="sbSeller"></div>
+      <input type="file" id="sbQr" accept="image/*" capture="environment" hidden>
+      <div class="note" id="sbQrMsg"></div>
+    </div>
+    <button class="btn primary sb-save" type="button" id="sbSave">Save · mark owned</button>
+    <div class="note" id="sbNote">No signal? It's saved on this phone and synced later, after you confirm.</div>
+  </div>
+</dialog>
+
+<dialog id="swPick" class="float" aria-labelledby="spTitle">
+  <div class="sheet">
+    <button class="close" type="button" id="spClose">Close ✕</button>
+    <h2 id="spTitle">Working on</h2>
+    <div class="note">Pick the binders you're collecting right now. Card show mode lists the cards you still need from these, and they get a small "Working on" tag on My binders. Pick none to use every binder.</div>
+    <div class="sp-list" id="spList"></div>
+    <div class="err" id="spErr" aria-live="polite"></div>
+    <div class="row-end"><button class="btn primary" type="button" id="spDone">Done</button></div>
+  </div>
+</dialog>
+
 <dialog id="dlg" class="float" aria-labelledby="dName">
   <div class="sheet card-sheet">
     <button class="close" type="button" id="dClose">Close ✕</button>
@@ -1420,7 +1532,7 @@ html,body{overscroll-behavior-y:none}
       <div class="allsum" id="allSum" hidden></div>
       <div class="ui-group setlist" id="setList"></div>
       <div id="rmList" class="rm-list" hidden></div>
-      <div class="ui-group"><button class="ui-row" type="button" id="findOpen"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></span><span class="ui-l"><b>Find a card</b><small>Search every English card and set</small></span><span class="ui-chev" aria-hidden="true"></span></button><button class="ui-row" type="button" id="addOpen"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span class="ui-l"><b>Add a binder</b><small>A set, every card of a Pokémon, or your own</small></span><span class="ui-chev" aria-hidden="true"></span></button></div>
+      <div class="ui-group"><button class="ui-row" type="button" id="findOpen"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></span><span class="ui-l"><b>Find a card</b><small>Search every English card and set</small></span><span class="ui-chev" aria-hidden="true"></span></button><button class="ui-row" type="button" id="showOpen"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/><path d="M14 6v12" stroke-dasharray="2 2"/></svg></span><span class="ui-l"><b>Card show mode</b><small>The cards you still need, for buying at a show</small></span><span class="ui-chev" aria-hidden="true"></span></button><button class="ui-row" type="button" id="addOpen"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span class="ui-l"><b>Add a binder</b><small>A set, every card of a Pokémon, or your own</small></span><span class="ui-chev" aria-hidden="true"></span></button></div>
       <button class="verline" type="button" id="verLine" title="What's new">Pokémon Binder <span id="verNum"></span></button>
     </div>
     <div id="drAdd" hidden>
@@ -1475,6 +1587,7 @@ html,body{overscroll-behavior-y:none}
   <div class="sheet">
     <button class="close" type="button" id="shClose">Close ✕</button>
     <h2 id="shTitle">Card shows</h2>
+    <button class="btn primary" type="button" id="shMode">Start card show mode</button>
     <div class="note" id="shInfo">Loading…</div>
     <div class="pbar" id="shBar" role="progressbar" aria-label="Checking for shows" hidden><i></i></div>
     <div class="row" style="align-items:center">
@@ -2424,6 +2537,9 @@ const PLAT = {
   x:{label:"X", tag:"X", url:h=>"https://x.com/"+enc(h)},
   whatnot:{label:"Whatnot", tag:"WN", url:h=>"https://www.whatnot.com/user/"+enc(h)},
   ebay:{label:"eBay", tag:"EBAY", url:h=>"https://www.ebay.com/usr/"+enc(h)},
+  venmo:{label:"Venmo", tag:"VEN", url:h=>"https://venmo.com/u/"+enc(h)},
+  cashapp:{label:"Cash App", tag:"CASH", url:h=>"https://cash.app/$"+enc(h)},
+  paypal:{label:"PayPal", tag:"PP", url:h=>"https://paypal.me/"+enc(h)},
   web:{label:"Website", tag:"WEB", url:h=>{ const u=/^https?:\/\//i.test(h)?h:"https://"+h; try{ const x=new URL(u); return /^https?:$/.test(x.protocol)?x.href:null; }catch(_){ return null; } }},
   shop:{label:"Card shop", tag:"SHOP", url:null}
 };
@@ -4744,7 +4860,7 @@ function withTransition(kind, fn){
 function showHome(){
   const was=homeShown; homeShown=true;
   if(drawerEl.open) drawerEl.close();
-  const swap=()=>{ document.body.classList.add("at-home"); $("home").hidden=false; document.title="My binders";
+  const swap=()=>{ closeShow(); document.body.classList.add("at-home"); $("home").hidden=false; document.title="My binders";
     if(window.scrollY) window.scrollTo(0,0);   // only when needed: on phones this flashes the scroll bar
     drawHome(); };
   was ? swap() : withTransition("back", swap);
@@ -4770,9 +4886,239 @@ function homeJob(){
     homeTimer=setTimeout(homeJob, homeRunning?3000:30000);
   }).catch(()=>{ homeTimer=setTimeout(homeJob, 30000); });
 }
-function showBinder(){ if(!atHome()) return; homeShown=false;
-  withTransition("forward", ()=>{ document.body.classList.remove("at-home"); $("home").hidden=true; if(window.scrollY) window.scrollTo(0,0); if(state.sid) header(); }); }
+function showBinder(){ if(!atHome() && !atShow()) return; homeShown=false;
+  withTransition("forward", ()=>{ closeShow(); document.body.classList.remove("at-home"); $("home").hidden=true; if(window.scrollY) window.scrollTo(0,0); if(state.sid) header(); }); }
 function goHome(){ if(location.hash) history.pushState(null,"",location.pathname+location.search); showHome(); }
+
+// ---------- card show mode ----------
+// One list of every card you still need from the binders you're working on, with a big "Got it" to log a buy.
+// Works with no signal: the list comes from the saved copy, and buys wait on the phone like other offline changes.
+const atShow = () => document.body.classList.contains("at-show");
+let showData=null, showSort=recall("nd-show-sort")||"cheap", showLimit=150;
+function openShow(push=true){
+  if(push && location.hash!=="#show") history.pushState(null,"","#show");
+  if(drawerEl.open) drawerEl.close();
+  if($("shows").open) $("shows").close();
+  homeShown=false;
+  document.body.classList.remove("at-home"); $("home").hidden=true;
+  document.body.classList.add("at-show"); $("showView").hidden=false; document.title="Card show";
+  if(window.scrollY) window.scrollTo(0,0);
+  showLimit=150; drawShowView(); loadShow();
+}
+function closeShow(){ if(!atShow()) return; document.body.classList.remove("at-show"); $("showView").hidden=true; }
+function loadShow(){
+  return fetch("api/show").then(r=>r.ok?r.json():Promise.reject()).then(j=>{ showData=j; if(atShow()) drawShowView(); })
+    .catch(()=>{ if(atShow() && !showData) drawShowView("Can't load the list. Open card show mode once while connected so it's saved on this phone."); });
+}
+const showBoughtLocal = () => pendingList().filter(p=>p.purchase && p.purchase.d===todayStr());
+function showCards(){
+  if(!showData) return [];
+  const pend=new Set(pendingList().map(p=>p.sid+"|"+p.n));
+  return showData.cards.filter(c=>!pend.has(c.sid+"|"+c.n) && !c.gone);
+}
+function showStale(c){
+  if(!c.price) return "";
+  if(c.src==="tcgdex") return "market price";
+  if((c.src==="tcgplayer"||c.src==="pricecharting") && c.last){
+    const d=(new Date(todayStr())-new Date(c.last.slice(0,10)+"T00:00:00"))/864e5;
+    if(d>STALE_DAYS) return "last sold "+new Date(c.last.slice(0,10)+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+  }
+  return "";
+}
+const showNum = c => c.pt && /^\d+$/.test(c.num||"") ? c.num+"/"+c.pt : (c.num||c.n);
+function showThumb(c, box){
+  box.replaceChildren(); box.textContent=showNum(c);
+  if(c.custom) return;
+  const im=document.createElement("img"); im.alt=""; im.loading="lazy"; im.decoding="async";
+  im.onload=()=>{ box.replaceChildren(im); }; im.onerror=()=>{};
+  im.src="set/"+enc(c.sid)+"/img/"+enc(c.n)+".png";
+}
+function drawShowView(err){
+  const list=$("swList"); list.replaceChildren();
+  $("swSort").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.s===showSort));
+  if(!showData){
+    const e=document.createElement("div"); e.className="sw-empty"; e.textContent=err||"Loading your needed cards…"; list.append(e);
+    return;
+  }
+  const picked=showData.picked||[];
+  $("swPickLbl").textContent=picked.length ? picked.length+" binder"+(picked.length===1?"":"s") : "All binders";
+  const chips=$("swChips"); chips.replaceChildren();
+  for(const b of showData.binders){ const sp=document.createElement("span"); sp.textContent=b.name; chips.append(sp); }
+  chips.hidden=!picked.length;
+  let cards=showCards();
+  $("swNeed").textContent=cards.length;
+  $("swFin").textContent=money0(cards.reduce((a,c)=>a+(c.price||0),0));
+  const loc=showBoughtLocal(), n=(showData.bought||0)+loc.length, spent=(showData.spent||0)+loc.reduce((a,p)=>a+(Number(p.purchase.price)||0),0);
+  $("swSpent").textContent=money0(spent); $("swSpentL").textContent="Bought today"+(n?" · "+n:"");
+  const q=$("swQ").value.trim().toLowerCase();
+  if(q){
+    const numQ=/^#?\d+[a-z]?(\/\d*)?$/i.test(q) ? normNum(q.replace(/^#/,"").split("/")[0]) : null;
+    cards=cards.filter(c=> numQ!=null ? normNum(String(c.num||c.n).toLowerCase())===numQ : (c.name||"").toLowerCase().includes(q));
+  }
+  const byNum=(a,b)=>(parseInt(a.num,10)||0)-(parseInt(b.num,10)||0) || String(a.n).localeCompare(String(b.n));
+  if(showSort==="dear") cards.sort((a,b)=>(b.price||0)-(a.price||0));
+  else if(showSort==="set"){ const ord=showData.binders.map(b=>b.id); cards.sort((a,b)=>ord.indexOf(a.sid)-ord.indexOf(b.sid) || byNum(a,b)); }
+  else cards.sort((a,b)=>(a.price||1e9)-(b.price||1e9));
+  if(!cards.length){
+    const e=document.createElement("div"); e.className="sw-empty";
+    e.textContent=q ? "No needed card matches that." : "Nothing left to buy in these binders. Nice!";
+    list.append(e);
+  }
+  let anyStale=false;
+  for(const c of cards.slice(0, showLimit)){
+    const row=document.createElement("div"); row.className="sw-row";
+    const th=document.createElement("div"); th.className="th"; showThumb(c, th);
+    const tx=document.createElement("div"); tx.className="tx";
+    const b=document.createElement("b"); b.textContent=c.name;
+    const sm=document.createElement("small"); sm.textContent=c.set+" · "+showNum(c);
+    const pr=document.createElement("span"); pr.className="price"; pr.textContent=c.price ? money(c.price) : "No price yet";
+    const st=showStale(c); if(st){ const i=document.createElement("i"); i.textContent=st; pr.append(staleEl(st[0].toUpperCase()+st.slice(1)), i); anyStale=true; }
+    tx.append(b,sm,pr);
+    const got=document.createElement("button"); got.type="button"; got.className="btn primary got"; got.textContent="Got it";
+    got.setAttribute("aria-label","Got "+c.name+", log what you paid");
+    got.onclick=()=>openBuy(c);
+    row.append(th,tx,got); list.append(row);
+  }
+  if(cards.length>showLimit){
+    const more=document.createElement("button"); more.type="button"; more.className="btn sw-more"; more.textContent="Show "+Math.min(150,cards.length-showLimit)+" more";
+    more.onclick=()=>{ showLimit+=150; drawShowView(); }; list.append(more);
+  }
+  $("swStaleKey").hidden=!anyStale;
+  if(anyStale && !$("swStaleKey").firstElementChild.firstChild) $("swStaleKey").firstElementChild.innerHTML=STALE_SVG;
+}
+$("swSort").onclick=e=>{ const b=e.target.closest("button"); if(!b) return; showSort=b.dataset.s; store("nd-show-sort",showSort); drawShowView(); };
+$("swQ").oninput=()=>{ showLimit=150; drawShowView(); };
+$("swBack").onclick=()=>goHome();
+$("showOpen").onclick=()=>openShow();
+$("shMode").onclick=()=>openShow();
+
+// the buy sheet
+let buyCard=null, buyCond="", buySeller=null;
+const todayKey = k => { try{ const v=JSON.parse(localStorage.getItem(k)||"null"); return v && v.d===todayStr() ? v.v : null; }catch(_){ return null; } };
+const setTodayKey = (k,v) => store(k, JSON.stringify({d:todayStr(), v}));
+function sellerLabel(sel){ const P=PLAT[sel.p]; return (P ? P.label+" " : "")+(sel.p==="web" ? sel.h.replace(/^https?:\/\/(www\.)?/i,"").slice(0,32) : (["instagram","tiktok","x","venmo"].includes(sel.p)?"@":sel.p==="cashapp"?"$":"")+sel.h); }
+// What a vendor's QR code points to, as a seller: Venmo, Cash App, PayPal, social pages, or any website.
+function parseVendorQr(text){
+  const t=(text||"").trim(); if(!t) return null;
+  let u=null; try{ u=new URL(/^[a-z][a-z0-9+.-]*:/i.test(t) ? t : "https://"+t); }catch(_){}
+  if(!u || !/^https?:$/.test(u.protocol) || !/\./.test(u.hostname)) return {p:"shop", h:t.slice(0,100)};
+  const host=u.hostname.replace(/^(www\.|m\.)/,"").toLowerCase(), seg=u.pathname.split("/").filter(Boolean).map(decodeURIComponent);
+  const pick=(p,h)=>h ? {p, h:String(h).replace(/^[@$]+/,"").slice(0,100)} : {p:"web", h:u.href.slice(0,100)};
+  if(host==="venmo.com") return seg[0]==="u" ? pick("venmo",seg[1]) : (seg[0] && !["code","pay","account"].includes(seg[0]) ? pick("venmo",seg[0]) : pick("web",""));
+  if(host==="cash.app"||host==="cash.me") return pick("cashapp", (seg[0]||"").startsWith("$") ? seg[0] : "");
+  if(host==="paypal.me") return pick("paypal", seg[0]);
+  if(host==="paypal.com" && seg[0]==="paypalme") return pick("paypal", seg[1]);
+  if(host==="instagram.com") return pick("instagram", seg[0]);
+  if(host==="tiktok.com") return pick("tiktok", (seg[0]||"").startsWith("@") ? seg[0] : "");
+  if(host==="facebook.com") return pick("facebook", seg[0]);
+  if(host==="x.com"||host==="twitter.com") return pick("x", seg[0]);
+  if(host==="whatnot.com" && seg[0]==="user") return pick("whatnot", seg[1]);
+  if(host==="ebay.com" && seg[0]==="usr") return pick("ebay", seg[1]);
+  return pick("web","");
+}
+function drawSeller(){
+  const box=$("sbSeller"); box.replaceChildren();
+  const today=(todayKey("nd-show-sellers")||[]).filter(x=>x && x.p && x.h);
+  const same=(a,b)=>a && b && a.p===b.p && a.h===b.h;
+  const list=[...today]; if(buySeller && !list.some(x=>same(x,buySeller))) list.unshift(buySeller);
+  for(const sel of list){
+    const b=document.createElement("button"); b.type="button"; b.className="chip"; b.textContent=sellerLabel(sel);
+    b.setAttribute("aria-pressed", same(sel,buySeller)); b.onclick=()=>{ buySeller=same(sel,buySeller)?null:sel; drawSeller(); };
+    box.append(b);
+  }
+  const scan=document.createElement("button"); scan.type="button"; scan.className="chip";
+  scan.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><path d="M8 8h3v3H8zM13 13h3v3h-3zM13 8h3M8 16h3"/></svg>';
+  scan.append("Scan vendor QR"); scan.onclick=()=>$("sbQr").click();
+  box.append(scan);
+}
+$("sbQr").onchange=async e=>{
+  const f=e.target.files && e.target.files[0]; e.target.value=""; if(!f) return;
+  const msg=$("sbQrMsg");
+  if(!("BarcodeDetector" in window)){ msg.textContent="This browser can't read QR codes. Chrome on Android can. You can add the seller later in the card's details."; return; }
+  msg.textContent="Reading the code…";
+  try{
+    const img=await createImageBitmap(f);
+    const codes=await new BarcodeDetector({formats:["qr_code"]}).detect(img);
+    const sel=codes.length ? parseVendorQr(codes[0].rawValue) : null;
+    if(!sel){ msg.textContent="No QR code found in that photo. Try again a little closer."; return; }
+    buySeller=sel;
+    const today=(todayKey("nd-show-sellers")||[]).filter(x=>!(x.p===sel.p && x.h===sel.h)); today.unshift(sel); setTodayKey("nd-show-sellers", today.slice(0,8));
+    msg.textContent="Seller added. They stay on this list for the rest of today."; drawSeller();
+  }catch(_){ msg.textContent="Couldn't read that photo. Try again, or add the seller later in the card's details."; }
+};
+function openBuy(c){
+  buyCard=c; buySeller=null; buyCond=recall("nd-show-cond")||"";
+  showThumb(c, $("sbTh"));
+  $("sbName").textContent=c.name; $("sbSet").textContent=c.set+" · "+showNum(c);
+  const st=showStale(c); $("sbAvg").textContent=c.price ? "Price "+money(c.price)+(st?" · "+st:"") : "No price yet";
+  $("sbPrice").value=""; $("sbDelta").textContent=""; $("sbDelta").className="sb-delta"; $("sbQrMsg").textContent="";
+  $("sbWhere").value=todayKey("nd-show-where")||"";
+  const cb=$("sbCond"); cb.replaceChildren();
+  for(const k of ["NM","LP","MP","HP","DMG"]){ const b=document.createElement("button"); b.type="button"; b.textContent=k; b.setAttribute("aria-pressed", k===buyCond); b.onclick=()=>{ buyCond=buyCond===k?"":k; [...cb.children].forEach(x=>x.setAttribute("aria-pressed", x.textContent===buyCond)); }; cb.append(b); }
+  drawSeller();
+  $("sbNote").textContent=isOffline() ? "No signal: this is saved on the phone and synced after you confirm, once you're back online." : "Adds a copy to "+c.set+" with today's date.";
+  $("sbSave").disabled=false;
+  $("swBuy").showModal();
+}
+$("sbPrice").oninput=()=>{
+  const v=parseFloat($("sbPrice").value), p=buyCard&&buyCard.price, d=$("sbDelta");
+  if(!(v>=0) || !p){ d.textContent=""; d.className="sb-delta"; return; }
+  const diff=v-p; d.className="sb-delta "+(diff<=0?"under":"over");
+  d.textContent=Math.abs(diff)<0.005 ? "Right at the price" : money(Math.abs(diff))+(diff<0?" under":" over")+" the price ("+Math.round(Math.abs(diff)/p*100)+"%)";
+};
+$("sbClose").onclick=()=>$("swBuy").close();
+$("swBuy").addEventListener("click",e=>{ if(e.target===$("swBuy")) $("swBuy").close(); });
+$("sbSave").onclick=async()=>{
+  const c=buyCard; if(!c) return;
+  const raw=$("sbPrice").value.trim().replace(/^\$/,""), price=raw==="" ? null : Math.round(parseFloat(raw)*100)/100;
+  if(raw!=="" && !(price>=0 && price<1e7)){ $("sbDelta").className="sb-delta over"; $("sbDelta").textContent="That price doesn't look right."; return; }
+  const where=$("sbWhere").value.trim().slice(0,60); setTodayKey("nd-show-where", where);
+  if(buyCond) store("nd-show-cond", buyCond);
+  const purchase={id:newId(), d:todayStr(), price, where};
+  if(buySeller) purchase.seller=buySeller;
+  const keepOnPhone=()=>{
+    const pend=pendingList(); pend.push({sid:c.sid, n:c.n, name:c.name, set:c.set, at:new Date().toISOString(), purchase, cond:buyCond||undefined}); setPending(pend);
+  };
+  $("sbSave").disabled=true;
+  let online=false;
+  if(!isOffline()){
+    try{
+      const r=await fetch("api/set/"+enc(c.sid)+"/card/"+enc(c.n)+"/buy",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({purchase, cond:buyCond||null})});
+      if(r.status===400){ const j=await r.json().catch(()=>({})); $("sbSave").disabled=false; $("sbNote").textContent=(j.error||"Couldn't save that")+"."; return; }
+      online=r.ok;
+    }catch(_){}
+  }
+  if(!online) keepOnPhone();   // no signal (or it dropped mid-save): wait on the phone; the purchase id stops it being added twice
+  else { c.gone=true; showData.bought=(showData.bought||0)+1; showData.spent=(showData.spent||0)+(price||0); }
+  if(state.sid===c.sid) state.ready=false;   // that binder reloads next time it opens
+  $("swBuy").close(); drawShowView();
+  toast(online ? c.name+" marked owned"+(price!=null?" · "+money(price):"")+"." : c.name+" saved on this phone. It syncs when you're back online.");
+};
+
+// which binders you're working on
+$("swPickBtn").onclick=()=>{
+  const box=$("spList"); box.replaceChildren(); $("spErr").textContent="";
+  const picked=new Set((showData&&showData.picked)||[]);
+  for(const s of state.sets){
+    const l=document.createElement("label"), sp=document.createElement("span"), b=document.createElement("b"), sm=document.createElement("small");
+    b.textContent=s.name; const left=(s.count||0)-(s.owned||0); sm.textContent=left>0 ? left+" to go" : "Complete";
+    sp.append(b,sm);
+    const cb=document.createElement("input"); cb.type="checkbox"; cb.value=s.id; cb.checked=picked.has(s.id); cb.setAttribute("aria-label","Working on "+s.name);
+    l.append(sp,cb); box.append(l);
+  }
+  $("swPick").showModal();
+};
+$("spClose").onclick=()=>$("swPick").close();
+$("swPick").addEventListener("click",e=>{ if(e.target===$("swPick")) $("swPick").close(); });
+$("spDone").onclick=async()=>{
+  const ids=[...$("spList").querySelectorAll("input:checked")].map(x=>x.value);
+  if(isOffline()){ $("spErr").textContent="Changing binders needs a connection to "+srv()+"."; return; }
+  try{
+    const r=await fetch("api/settings",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({showBinders:ids})});
+    if(!r.ok) throw 0;
+  }catch(_){ $("spErr").textContent="Couldn't save. Check that "+srv()+" is online."; return; }
+  $("swPick").close(); showData=null; drawShowView(); loadShow(); if(homeData) homeData.working=ids;
+};
 function goBinder(sid, then){
   if(location.hash!=="#"+sid) history.pushState(null,"","#"+sid);
   if(state.view!=="cards") setView("cards");   // a binder always opens on its Cards tab, even the one you just left
@@ -4831,6 +5177,7 @@ function drawHome(){
       lg.onload=()=>{ if(lg.dataset.fit) return; fitLogo(lg); nb.replaceWith(lg); nm.classList.add("has-logo"); }; lg.onerror=()=>lg.remove(); lg.src="set/"+enc(b.id)+"/logo.png";
     }
     t.append(ring,nm);
+    if(((homeData&&homeData.working)||[]).includes(b.id)){ const wk=document.createElement("span"); wk.className="bk-work"; wk.textContent="Working on"; t.append(wk); }
     t.setAttribute("aria-label", b.name+", "+sub+(!isPrivate() ? ", "+pct+"% complete" : ""));
     t.onclick=()=>goBinder(b.id);
     shelf.append(t);
@@ -4928,7 +5275,7 @@ function warmCache(force){
   if(!force && Date.now()-last < 6*3600e3) return;
   try{ localStorage.setItem("nd-warm", String(Date.now())); }catch(_){}
   const get=u=>fetch(u,{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null);
-  Promise.all([get("api/home"), get("api/sets"), get("api/settings")]).then(([home, sets])=>{
+  Promise.all([get("api/home"), get("api/sets"), get("api/settings"), get("api/show")]).then(([home, sets])=>{   // api/show: card show mode works with no signal
     const ids=new Set([...((home&&home.binders)||[]).map(b=>b.id), ...((sets&&sets.sets)||[]).map(b=>b.id)]);
     let chain=Promise.resolve();
     ids.forEach(id=>{ chain=chain.then(()=>get("api/set/"+encodeURIComponent(id)+"/state")); });
@@ -4983,12 +5330,13 @@ function applyPending(sid){
     const r=state.own[p.n]||{}, l=(r.purchases||[]).filter(b=>b && typeof b==="object");
     if(l.some(b=>b.id===p.purchase.id)) continue;
     const purchases=[...l, p.purchase].sort((a,b)=>(a.d||"").localeCompare(b.d||""));
-    state.own[p.n]={...r, purchases, qty:purchases.length};
+    state.own[p.n]={...r, purchases, qty:purchases.length, ...(p.cond && !r.cond ? {cond:p.cond} : {})};
   }
 }
 function pendWords(p){
   const b=p.purchase, bits=[];
   if(b.price!=null) bits.push("paid "+money(b.price));
+  if(p.cond) bits.push(p.cond);
   if(b.where) bits.push((b.price!=null?"at ":"from ")+b.where);
   if(b.seller && b.seller.h) bits.push((PLAT[b.seller.p]||{}).label ? PLAT[b.seller.p].label+" "+b.seller.h : b.seller.h);
   return bits.length ? bits.join(" · ") : "no price added";
@@ -5030,7 +5378,7 @@ async function reviewSync(){
     syncAsked=true;
     if(!ok) return;   // "Cancel": everything stays on the phone as it was
     if(!pend.length){ setPending(pendingList().filter(q=>!dropped.has(q.purchase.id))); if(state.sid) loadState(); return; }
-    const r=await fetch("api/sync",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({changes:pend.map(p=>({sid:p.sid,n:p.n,purchase:p.purchase}))})});
+    const r=await fetch("api/sync",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({changes:pend.map(p=>({sid:p.sid,n:p.n,purchase:p.purchase,cond:p.cond}))})});
     const j=await r.json();
     if(!r.ok) throw new Error(j.error||"Sync failed");
     const sent=new Set(pend.map(p=>p.purchase.id));
@@ -5135,6 +5483,7 @@ header(); render();
 setPrivate(isPrivate());
 getSlots().then(loadSets).then(()=>{
   const want=location.hash.slice(1);
+  if(want==="show" && state.sets.length){ openShow(false); return; }
   if(state.sets.some(s=>s.id===want)) return openSet(want);
   if(want) history.replaceState(null,"",location.pathname+location.search);
   if(!state.sets.length) return openSet(null);   // no binders yet: the binder screen explains how to add one
@@ -5143,6 +5492,7 @@ getSlots().then(loadSets).then(()=>{
 window.addEventListener("popstate",()=>{   // phone back/forward between home and a binder
   const sid=location.hash.slice(1);
   if(!sid){ if(state.sets.length) showHome(); return; }
+  if(sid==="show"){ openShow(false); return; }
   if(state.sets.some(s=>s.id===sid)){ showBinder(); if(sid!==state.sid) openSet(sid); }
   else if(state.sets.length){ history.replaceState(null,"",location.pathname+location.search); showHome(); }   // not one of your binders
 });
