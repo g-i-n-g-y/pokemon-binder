@@ -1815,7 +1815,7 @@ html,body{overscroll-behavior-y:none}
       <div class="note" id="bkMsg">One file with everything, for every binder. Keep a copy somewhere other than <span class="srv">the server</span>. <b>Download spreadsheet</b> gives you your whole collection as an Excel file (a tab for every binder) to open anywhere.</div>
       <div class="prev" id="bkAutoWrap" hidden>
         <h3 class="ui-h">Saved on <span class="srv">the server</span></h3>
-        <div class="note">Made automatically before each update, import, restore and phone sync, and before a binder starts fresh.</div>
+        <div class="note">Made automatically before each update, import, restore and phone sync, and before a binder starts fresh. To save space, the ones before updates, imports and syncs leave out your photos (those never change your photos), and restoring one of those keeps the photos you have. One daily backup a week includes them.</div>
         <ul class="prevlist" id="bkAuto"></ul>
       </div>
       <h3 class="ui-h">Spreadsheet <span id="imSet"></span></h3>
@@ -2963,7 +2963,7 @@ function loadAutoBackups(){
     for(const b of list){
       const li=document.createElement("li"), info=document.createElement("div");
       const t=document.createElement("b"); t.textContent=bkKind[b.kind]||"Backup";
-      const d=document.createElement("div"); d.className="s"; d.textContent=shortDate(b.created)+", "+new Date(b.created).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})+" · "+(b.size<1048576 ? Math.max(1,Math.round(b.size/1024))+" KB" : (b.size/1048576).toFixed(1)+" MB");
+      const d=document.createElement("div"); d.className="s"; d.textContent=shortDate(b.created)+", "+new Date(b.created).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})+" · "+(b.size<1048576 ? Math.max(1,Math.round(b.size/1024))+" KB" : (b.size/1048576).toFixed(1)+" MB")+(b.photos===false ? " · without photos" : "");
       info.append(t,d);
       const btns=document.createElement("div"); btns.className="btnrow";
       const dl=document.createElement("a"); dl.className="btn"; dl.href="api/backups/"+enc(b.name); dl.download=""; dl.textContent="Download";
@@ -3118,6 +3118,7 @@ function loadStatus(){
     const bk=s.lastBackup; rows.push(row("Last automatic backup", bk ? agoText(bk.created) : "none yet", "A daily copy is kept for 7 days"));
     rows.push(row("Database size", fmtSize(s.dbSize)));
     rows.push(row("Card pictures", fmtSize(s.pictures), "Saved on "+srv()+" as you view cards"));
+    if(s.backupCount!=null) rows.push(row("Automatic backups", fmtSize(s.backupSize), s.backupCount+" kept · the oldest are deleted by themselves"));
     const low=s.freeSpace!=null && s.freeSpace<1073741824;
     rows.push(row("Free space", fmtSize(s.freeSpace), low ? "Running low" : "", low));
     const pr=s.problems||[];

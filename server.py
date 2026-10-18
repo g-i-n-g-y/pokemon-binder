@@ -24,7 +24,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "3.25"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
+APP_VERSION = "3.26"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -2476,6 +2476,7 @@ def status():
     return {"version": APP_VERSION, "uptime": int(time.time() - STARTED), "lastRefresh": int(last),
             "refreshing": bool(job["running"]), "lastBackup": backups[0] if backups else None,
             "dbSize": size, "pictures": pics, "freeSpace": free, "problems": problems,
+            "backupSize": sum(b["size"] for b in backups), "backupCount": len(backups),
             "settings": {k: get_settings().get(k) for k in ("auto", "time", "refreshAll")}}
 
 
@@ -2508,6 +2509,7 @@ def housekeeping():
     """Every 30 minutes: tidy up, save the daily backup, retry missing pictures, look for new sets and shows."""
     safely("freeing the card index", release_card_index)
     safely("cleanup of removed binders", purge_removed)
+    safely("leftover temporary files", clean_leftovers, 6 * 3600)   # anything temporary older than 6 hours
     safely("daily backup", lambda: daily_backup_due() and auto_backup("daily"))
     for sid in list(sets_list()["order"]):
         safely(f"{sid}: picture retry", start_images, sid)   # retries any pictures that failed earlier
@@ -3146,17 +3148,36 @@ def backup_files():
     return [n for n in out if BACKUP_RE.fullmatch(n)]
 
 
-def make_backup(target):
-    """A zip of your data as JSON files (the same layout every version uses), plus photos and the tab icon."""
+def make_backup(target, photos=True):
+    """A zip of your data as JSON files (the same layout every version uses), plus the tab icon and (unless
+    photos=False) your card photos. backup.json says whether photos are in it, so restoring one without them
+    leaves your current photos alone."""
     with lock:
         with db_lock:   # one consistent moment: nothing can save while this reads
             docs = [(k, db_read(k)) for k in db_keys() if BACKUP_RE.fullmatch(k)]
         with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as z:
-            z.writestr("backup.json", json.dumps({"app": "pokemon-binder", "version": APP_VERSION, "created": now_iso()}))
+            z.writestr("backup.json", json.dumps({"app": "pokemon-binder", "version": APP_VERSION, "created": now_iso(),
+                                                  "photos": bool(photos)}))
             for k, obj in docs:
                 z.writestr(k, json.dumps(obj, indent=1))
             for name in backup_files():
-                z.write(os.path.join(DATA, name), name)
+                if photos or "/photos/" not in name:
+                    z.write(os.path.join(DATA, name), name)
+
+
+PHOTO_KINDS = ("before-restore", "before-fresh")   # these can remove photos, so their backups keep them
+WEEK = 7 * DAY
+
+
+def backup_photos(kind):
+    """Should this automatic backup include your photos? Photos never change during an update, phone sync or
+    spreadsheet import, so those backups skip them (each copy of every photo adds up fast). Restores and fresh
+    starts keep them, and one daily backup a week does."""
+    if kind in PHOTO_KINDS:
+        return True
+    if kind == "daily":
+        return time.time() - (get_settings().get("photoBackupAt") or 0) > WEEK - 3600
+    return False
 
 
 def auto_backup(kind):
@@ -3165,9 +3186,15 @@ def auto_backup(kind):
     os.makedirs(BACKUPS, exist_ok=True)
     name = f"{kind}-{time.strftime('%Y%m%d-%H%M%S')}-{int(time.time() * 1000) % 1000:03d}.zip"
     tmp = os.path.join(BACKUPS, name + ".tmp")
+    photos = backup_photos(kind)
     try:
-        make_backup(tmp)
+        make_backup(tmp, photos=photos)
         os.replace(tmp, os.path.join(BACKUPS, name))
+        if photos and kind == "daily":
+            with lock:
+                st = read_json(SETTINGS, {})
+                st["photoBackupAt"] = int(time.time())
+                write_json(SETTINGS, st)
     finally:
         if os.path.exists(tmp):
             os.remove(tmp)
@@ -3298,7 +3325,12 @@ def list_auto_backups():
         m = AUTO_NAME_RE.fullmatch(f)
         if m:
             path = os.path.join(BACKUPS, f)
-            out.append({"name": f, "kind": backup_kind(m.group(1)), "size": os.path.getsize(path),
+            try:
+                with zipfile.ZipFile(path) as z:
+                    photos = json.loads(z.read("backup.json")).get("photos", True) is not False
+            except Exception:
+                photos = True
+            out.append({"name": f, "kind": backup_kind(m.group(1)), "size": os.path.getsize(path), "photos": photos,
                         "created": datetime.fromtimestamp(os.path.getmtime(path), timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")})
     return sorted(out, key=lambda x: x["created"] + x["name"], reverse=True)
 
@@ -3337,8 +3369,13 @@ def _restore_from(z, names):
             for n in names:
                 if DOC_RE.fullmatch(n):
                     db_write(n, json.loads(z.read(n)))
-        for sid in {n.split("/")[1] for n in names if n.startswith("sets/")}:
-            shutil.rmtree(sdir(sid, "photos"), ignore_errors=True)
+        try:
+            has_photos = json.loads(z.read("backup.json")).get("photos", True) is not False
+        except Exception:
+            has_photos = True
+        if has_photos:   # a backup made without photos (an automatic one) leaves your current photos as they are
+            for sid in {n.split("/")[1] for n in names if n.startswith("sets/")}:
+                shutil.rmtree(sdir(sid, "photos"), ignore_errors=True)
         if "favicon" not in names:
             for f in ("favicon", "favicon.json"):
                 if os.path.exists(os.path.join(DATA, f)):

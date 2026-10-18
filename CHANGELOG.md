@@ -10,8 +10,11 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v3.26 (October 18, 2026)
 
+- **Backups take much less space:** automatic backups made before an update, a phone sync or a spreadsheet import no longer include a copy of your card photos, since those never change photos. Backups before a restore or a fresh start still include them, and so does one daily backup a week. **Download backup** in Settings still includes everything. Restoring a backup without photos keeps the photos you have. The backups list says which ones are "without photos".
+- **Temporary files are cleaned regularly:** leftovers from an interrupted download, update check or backup are now removed every 30 minutes once they're over 6 hours old, not only when the server restarts.
+- **Status shows backup space:** Settings → About → Status has an Automatic backups line with how many are kept and the space they use.
 - **Fresh starts open on My binders:** after installing an update, restoring a backup, Reload the app or Clear saved copy, the app opens on My binders instead of the binder or card show screen you were on.
 
 ## v3.25 (October 18, 2026)

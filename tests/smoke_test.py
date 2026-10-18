@@ -381,6 +381,19 @@ def main():
         twice_defs = sorted({d for d in defs if defs.count(d) > 1})
         check("no two server functions share a name", not twice_defs, twice_defs)
 
+        # backups: the ones before a phone sync leave photos out (saves space); restoring one keeps your photos
+        _, bl = call(base, "GET", "/api/backups")
+        sync_bk = next((b for b in bl.get("backups", []) if b["kind"] == "sync"), None)
+        rest_bk = next((b for b in bl.get("backups", []) if b["kind"] == "restore"), None)
+        check("backups before a sync skip photos, before a restore keep them", sync_bk and sync_bk["photos"] is False and rest_bk and rest_bk["photos"] is True, bl)
+        call(base, "POST", "/api/set/neo4/photo/1", b"\x89PNG\r\n\x1a\nsmoke", "image/png")   # (start fresh above cleared the old one)
+        photo = os.path.join(tmp, "data", "sets", "neo4", "photos", "1")
+        had = os.path.exists(photo)
+        code, res = call(base, "POST", "/api/backups/restore", {"name": sync_bk["name"]}) if sync_bk else (0, None)
+        check("restoring a backup without photos keeps your photos", code == 200 and had and os.path.exists(photo), (code, res, had))
+        _, stt = call(base, "GET", "/api/status")
+        check("status shows how much space backups use", isinstance(stt.get("backupSize"), int) and stt.get("backupCount", 0) > 0, stt)
+
         log.seek(0)
         text = log.read()
         check("no unexpected errors in the log", "Traceback" not in text, text[-800:])
