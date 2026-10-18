@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v3.21.1 (October 18, 2026)
 
 - **Card show mode moved to the ☰ menu:** the top of the menu now switches between **My binders** and **Card show**. Card show mode has the same ☰ button at its top left, so you can switch back either way. The button in the Card shows (calendar) window is gone.
 
