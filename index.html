@@ -1014,6 +1014,23 @@ body.at-show > .wrap:not(.show){display:none}
 #swBuy .sb-manual select{flex:0 0 124px;height:44px;min-width:0}
 #swBuy .sb-scan{flex:none;width:44px;height:44px}
 #swBuy .sb-scan svg{width:20px;height:20px}
+.sel-hide{display:none!important}
+.sel-field{display:flex;gap:8px}
+.sel-btn{flex:1;min-width:0;height:44px;text-align:left;cursor:pointer;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font:inherit;font-size:15px}
+.sel-btn.set{color:var(--ink)}
+.sel-x{flex:none;width:44px;height:44px}
+.sel-x svg{width:18px;height:18px}
+.sl-top{display:flex;gap:8px}
+.sl-top .field{flex:1;min-width:0;height:44px}
+.sl-top .icon-btn{flex:none;width:44px;height:44px}
+.sl-top .icon-btn svg{width:20px;height:20px}
+.sl-new{display:flex;flex-direction:column;gap:8px;border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:12px 14px}
+.sl-new b{font-size:14px;font-weight:600}
+.sl-newrow{display:flex;gap:8px}
+.sl-newrow select{flex:1;min-width:0;height:44px}
+.sl-newrow .btn{flex:none;height:44px}
+.sl-list .ui-row{width:100%;text-align:left}
+.sl-list .ui-row[aria-current="true"]{background:var(--dark-soft)}
 .sel-sug{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .sel-sug:empty{display:none}
 .sel-sug .sug-l{flex-basis:100%;font-size:12px;color:var(--muted)}
@@ -1419,15 +1436,8 @@ html,body{overscroll-behavior-y:none}
     <div class="f"><span>Condition</span><div class="sb-cond" id="sbCond" role="group" aria-label="Condition"></div></div>
     <label class="f">Where (remembered for today)<input class="field" id="sbWhere" maxlength="60" autocomplete="off" placeholder="Card show, table 14"></label>
     <div class="f"><span>Seller (optional)</span>
-      <div class="sb-manual">
-        <select class="field" id="sbPlat" aria-label="Seller's site or app"></select>
-        <input class="field" id="sbHandle" maxlength="100" autocomplete="off" placeholder="@username or link" aria-label="Seller's username">
-        <button class="icon-btn sb-scan" type="button" id="sbScan" aria-label="Scan the vendor's QR code" title="Scan vendor QR code"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><path d="M8 8h3v3H8zM13 13h3v3h-3zM13 8h3M8 16h3"/></svg></button>
-      </div>
-      <div class="sel-sug" id="sbSeller"></div>
+      <div class="sel-field"><button type="button" class="field sel-btn" id="sbSelBtn">Choose seller</button><button type="button" class="icon-btn sel-x" id="sbSelX" aria-label="Remove the seller" title="Remove the seller" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
       <div class="note" id="sbLink"></div>
-      <input type="file" id="sbQr" accept="image/*" capture="environment" hidden>
-      <div class="note" id="sbQrMsg"></div>
     </div>
     <button class="btn primary sb-save" type="button" id="sbSave">Save · mark owned</button>
     <div class="note" id="sbNote">No signal? It's saved on this phone and synced later, after you confirm.</div>
@@ -1445,6 +1455,26 @@ html,body{overscroll-behavior-y:none}
   </div>
 </dialog>
 
+<dialog id="selDlg" class="float" aria-labelledby="slTitle">
+  <div class="sheet">
+    <button class="close" type="button" id="slClose">Close ✕</button>
+    <h2 id="slTitle">Seller</h2>
+    <div class="sl-top">
+      <input class="field" type="search" id="slQ" placeholder="Search, or type a new seller" autocomplete="off" aria-label="Search your sellers, or type a new one">
+      <button class="icon-btn" type="button" id="slScan" aria-label="Scan the vendor's QR code" title="Scan vendor QR code"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><path d="M8 8h3v3H8zM13 13h3v3h-3zM13 8h3M8 16h3"/></svg></button>
+      <input type="file" id="slQr" accept="image/*" capture="environment" hidden>
+    </div>
+    <div class="note" id="slMsg"></div>
+    <h3 class="ui-h" id="slH">Recent</h3>
+    <div class="ui-group sl-list" id="slList"></div>
+    <div class="sl-new" id="slNew" hidden>
+      <b id="slNewT">Add as a new seller</b>
+      <div class="sl-newrow"><select class="field" id="slPlat" aria-label="Their site or app"></select><button class="btn primary" type="button" id="slUse">Add</button></div>
+      <div class="note" id="slNewLink"></div>
+    </div>
+    <div class="row-end"><button class="btn" type="button" id="slNone">No seller</button></div>
+  </div>
+</dialog>
 <dialog id="zoom" aria-label="Card picture"><img id="zoomImg" alt=""><span class="note">Tap anywhere to close</span></dialog>
 <dialog id="dlg" class="float" aria-labelledby="dName">
   <div class="sheet card-sheet">
@@ -1502,7 +1532,8 @@ html,body{overscroll-behavior-y:none}
         <label class="f">Date<input type="date" id="bDate" required></label>
         <label class="f">Paid ($)<input type="number" id="bPrice" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></label>
         <label class="f">Where<input type="text" id="bWhere" maxlength="60" list="whereList" placeholder="eBay, card show, local shop…"></label>
-        <label class="f">Seller
+        <div class="f past-f"><span>Seller</span><div class="sel-field"><button type="button" class="field sel-btn" id="bSelBtn">Choose seller</button><button type="button" class="icon-btn sel-x" id="bSelX" aria-label="Remove the seller" title="Remove the seller" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div></div>
+        <label class="f sel-hide">Seller
           <select id="bPlat">
             <option value="">None</option>
             <option value="instagram">Instagram</option>
@@ -1521,8 +1552,7 @@ html,body{overscroll-behavior-y:none}
             <option value="shop">Card shop / other</option>
           </select>
         </label>
-        <label class="f">Handle or name<input type="text" id="bHandle" maxlength="100" autocomplete="off" placeholder="@shopname" disabled></label>
-        <div class="sel-sug past-f" id="bSug"></div>
+        <label class="f sel-hide">Handle or name<input type="text" id="bHandle" maxlength="100" autocomplete="off" placeholder="@shopname" disabled></label>
         <div class="formbtns">
           <button class="btn primary" type="submit" id="bSubmit">Add purchase</button>
           <button class="btn" type="button" id="bCancel" hidden>Cancel</button>
@@ -2666,22 +2696,6 @@ function loadSellers(){
   return fetch("api/sellers").then(r=>r.ok?r.json():Promise.reject()).then(j=>{ pastSellers=j.sellers||[]; return pastSellers; })
     .catch(()=>pastSellers||(showData&&showData.sellers)||[]);
 }
-// Seller suggestions under the username box: your 3 most recent sellers, or past sellers matching what you type.
-// Stays small however many sellers you build up.
-function sellerSuggest(box, list, typed, current, pick){
-  box.replaceChildren();
-  const q=(typed||"").trim().replace(/^[@$]+/,"").toLowerCase();
-  const same=(a,b)=>a && b && a.p===b.p && a.h.toLowerCase()===b.h.toLowerCase();
-  let show, label;
-  if(!q){ show=list.slice(0,3); label="Recent"; }
-  else { show=list.filter(x=>x.h.toLowerCase().includes(q) && !same(x,current)).slice(0,5); label="Bought from before"; }
-  if(!show.length) return;
-  const l=document.createElement("span"); l.className="sug-l"; l.textContent=label; box.append(l);
-  for(const x of show){
-    const b=document.createElement("button"); b.type="button"; b.className="chip"; b.textContent=sellerLabel(x);
-    b.setAttribute("aria-pressed", same(x,current)); b.onclick=()=>pick(x); box.append(b);
-  }
-}
 const mergeSellers=(...lists)=>{ const out=[], seen=new Set(); for(const l of lists) for(const x of l||[]){ if(!x||!x.h) continue; const k=x.p+"|"+x.h.toLowerCase(); if(!seen.has(k)){ seen.add(k); out.push(x); } } return out; };
 function handleOptions(){
   const seen=new Map();
@@ -2691,14 +2705,19 @@ function handleOptions(){
   for(const v of seen.values()) if(!plat || v.p===plat){ const o=document.createElement("option"); o.value=v.h; dl.append(o); }
 }
 var bSugList=[];
-function drawBSug(){
-  const cur=$("bHandle").value.trim() ? {p:$("bPlat").value, h:cleanHandle($("bPlat").value,$("bHandle").value)} : null;
-  sellerSuggest($("bSug"), bSugList, $("bHandle").value, cur, x=>{
-    $("bPlat").value=[...$("bPlat").options].some(o=>o.value===x.p) ? x.p : "shop";
-    $("bHandle").disabled=false; $("bHandle").value=x.h; drawBSug();
-  });
+function drawBSug(){   // the card details seller button shows what the (hidden) site and name boxes hold
+  const h=$("bHandle").value.trim(), cur=h ? {p:$("bPlat").value||"shop", h} : null;
+  $("bSelBtn").textContent=cur ? sellerLabel(cur) : "Choose seller";
+  $("bSelBtn").classList.toggle("set", !!cur); $("bSelX").hidden=!cur;
+  return cur;
 }
-$("bHandle").addEventListener("input", drawBSug);
+function setBSeller(sel){
+  if(sel){ $("bPlat").value=[...$("bPlat").options].some(o=>o.value===sel.p) ? sel.p : "shop"; $("bHandle").disabled=false; $("bHandle").value=sel.h; }
+  else { $("bPlat").value=""; $("bHandle").value=""; $("bHandle").disabled=true; }
+  drawBSug();
+}
+$("bSelBtn").onclick=()=>openSellerPicker(bSugList, drawBSug(), setBSeller);
+$("bSelX").onclick=()=>setBSeller(null);
 $("bPlat").addEventListener("change",()=>{
   const p=$("bPlat").value; $("bHandle").disabled=!p;
   $("bHandle").placeholder = p==="web" ? "shopname.com" : p==="shop" ? "Shop or person's name" : "@handle";
@@ -5188,58 +5207,85 @@ function parseVendorQr(text){
   return pick("web","");
 }
 const SELLER_PLATS=["instagram","linktree","tiktok","facebook","x","whatnot","ebay","venmo","cashapp","paypal","beacons","stan","web","shop"];
-function setSeller(sel){   // fill the dropdown and username box from a chip or a scanned code
-  buySeller=sel && sel.h ? sel : null;
-  $("sbPlat").value=buySeller ? buySeller.p : "instagram";
-  $("sbHandle").value=buySeller ? buySeller.h : "";
-  sellerHint(); drawSeller();
+// ---------- seller pop-up (card show mode and card details) ----------
+// A search box over everyone you've bought from (most recent first), Scan vendor QR, and "Add as a new seller".
+let slCb=null, slList=[], slCur=null;
+function openSellerPicker(list, cur, cb){
+  slList=list||[]; slCur=cur; slCb=cb;
+  $("slQ").value=""; $("slMsg").textContent=""; drawSl(); $("selDlg").showModal();
 }
-function sellerHint(){
-  const box=$("sbLink"); box.replaceChildren();
-  const p=$("sbPlat").value;
-  $("sbHandle").placeholder = p==="web" ? "theirshop.com" : p==="shop" ? "Shop or person's name" : p==="cashapp" ? "$cashtag or link" : "@username or link";
-  if(!buySeller) return;
-  const P=PLAT[buySeller.p], href=P && P.url ? P.url(buySeller.h) : null;
-  if(href){ const a=document.createElement("a"); a.href=href; a.target="_blank"; a.rel="noopener noreferrer"; a.textContent=href.replace(/^https?:\/\/(www\.)?/,"")+" ↗"; box.append("Links to ", a); }
+function slDone(sel){ $("selDlg").close(); const cb=slCb; slCb=null; if(cb) cb(sel); }
+const sameSeller=(a,b)=>a && b && a.p===b.p && a.h.toLowerCase()===b.h.toLowerCase();
+function slTyped(){   // what's in the search box, as a seller (a pasted link picks its own site)
+  const q=$("slQ").value.trim(); if(!q) return null;
+  if(/^https?:\/\/|\.(com|me|app|net|org|tv|ee|ai|store|page)\//i.test(q)){ const x=parseVendorQr(q); if(x && x.p!=="shop") return x; }
+  const p=$("slPlat").value; return {p, h:cleanHandle(p,q).slice(0,100)};
 }
-function readSeller(){
-  const p=$("sbPlat").value, h=cleanHandle(p, $("sbHandle").value);
-  buySeller=h ? {p, h:h.slice(0,100)} : null;
-  sellerHint(); drawSeller();
+function drawSl(){
+  const q=$("slQ").value.trim(), ql=q.replace(/^[@$]+/,"").toLowerCase();
+  const rows=ql ? slList.filter(x=>x.h.toLowerCase().includes(ql) || sellerLabel(x).toLowerCase().includes(ql)) : slList;
+  $("slH").textContent=ql ? (rows.length ? "Sellers you've bought from" : "No past seller matches") : (slList.length ? "Recent" : "No past sellers yet");
+  const box=$("slList"); box.replaceChildren(); box.hidden=!rows.length;
+  for(const x of rows.slice(0,60)){
+    const b=document.createElement("button"); b.type="button"; b.className="ui-row";
+    const l=document.createElement("span"); l.className="ui-l"; const t=document.createElement("b"); t.textContent=sellerLabel(x);
+    const m=document.createElement("small"); m.textContent=[x.n ? x.n+" buy"+(x.n===1?"":"s") : "Added today", x.last ? "last "+fmtDay(x.last) : ""].filter(Boolean).join(" · ");
+    l.append(t,m); b.append(l);
+    if(sameSeller(x,slCur)) b.setAttribute("aria-current","true");
+    b.onclick=()=>slDone({p:x.p, h:x.h}); box.append(b);
+  }
+  // a new seller: shown when what you typed isn't already on the list
+  const typed=slTyped(), isNew=!!(typed && typed.h && !slList.some(x=>sameSeller(x,typed)));
+  $("slNew").hidden=!isNew;
+  if(isNew){
+    if($("slPlat").value!==typed.p && [...$("slPlat").options].some(o=>o.value===typed.p)) $("slPlat").value=typed.p;
+    $("slNewT").textContent="Add “"+sellerLabel(typed)+"” as a new seller";
+    const P=PLAT[typed.p], href=P && P.url ? P.url(typed.h) : null;
+    $("slNewLink").textContent=href ? "Links to "+href.replace(/^https?:\/\/(www\.)?/,"") : "";
+  }
+  $("slNone").hidden=!slCur;
 }
-function drawSeller(){
-  const list=mergeSellers(todayKey("nd-show-sellers"), (showData&&showData.sellers), pastSellers);
-  sellerSuggest($("sbSeller"), list, $("sbHandle").value, buySeller, x=>setSeller({p:x.p, h:x.h}));
-}
-for(const k of SELLER_PLATS){ const o=document.createElement("option"); o.value=k; o.textContent=PLAT[k].label; $("sbPlat").append(o); }
-$("sbScan").onclick=()=>$("sbQr").click();
-$("sbPlat").onchange=()=>{ if($("sbHandle").value.trim()) readSeller(); else sellerHint(); };
-$("sbHandle").oninput=readSeller;
-$("sbHandle").addEventListener("paste",()=>setTimeout(()=>{   // a pasted profile link picks the right site by itself
-  const v=$("sbHandle").value.trim(); if(!/^https?:\/\/|\.(com|me|app|net|org|tv|ee|ai|store|page)\//i.test(v)) return;
-  const sel=parseVendorQr(v); if(sel && sel.p!=="shop") setSeller(sel);
-},0));
-$("sbQr").onchange=async e=>{
+for(const k of SELLER_PLATS){ const o=document.createElement("option"); o.value=k; o.textContent=PLAT[k].label; $("slPlat").append(o); }
+$("slPlat").value=recall("nd-sel-plat")||"instagram";
+$("slQ").oninput=drawSl;
+$("slPlat").onchange=()=>{ store("nd-sel-plat",$("slPlat").value); drawSl(); };
+$("slUse").onclick=()=>{ const x=slTyped(); if(x && x.h){ store("nd-sel-plat",x.p); slDone(x); } };
+$("slQ").addEventListener("keydown",e=>{ if(e.key==="Enter" && !$("slNew").hidden){ e.preventDefault(); $("slUse").click(); } });
+$("slNone").onclick=()=>slDone(null);
+$("slClose").onclick=()=>$("selDlg").close();
+$("selDlg").addEventListener("click",e=>{ if(e.target===$("selDlg")) $("selDlg").close(); });
+$("slScan").onclick=()=>$("slQr").click();
+$("slQr").onchange=async e=>{
   const f=e.target.files && e.target.files[0]; e.target.value=""; if(!f) return;
-  const msg=$("sbQrMsg");
-  if(!("BarcodeDetector" in window)){ msg.textContent="This browser can't read QR codes. Chrome on Android can. You can add the seller later in the card's details."; return; }
+  const msg=$("slMsg");
+  if(!("BarcodeDetector" in window)){ msg.textContent="This browser can't read QR codes. Chrome on Android can. Type their name instead."; return; }
   msg.textContent="Reading the code…";
   try{
     const img=await createImageBitmap(f);
     const codes=await new BarcodeDetector({formats:["qr_code"]}).detect(img);
     const sel=codes.length ? parseVendorQr(codes[0].rawValue) : null;
     if(!sel){ msg.textContent="No QR code found in that photo. Try again a little closer."; return; }
-    rememberSeller(sel); setSeller(sel);
-    msg.textContent="Seller added. They stay on this list for the rest of today.";
-  }catch(_){ msg.textContent="Couldn't read that photo. Try again, or add the seller later in the card's details."; }
+    slDone(sel);
+  }catch(_){ msg.textContent="Couldn't read that photo. Try again, or type their name."; }
 };
+// card show mode's seller button
+function setSeller(sel){
+  buySeller=sel && sel.h ? {p:sel.p, h:sel.h} : null;
+  $("sbSelBtn").textContent=buySeller ? sellerLabel(buySeller) : "Choose seller";
+  $("sbSelBtn").classList.toggle("set", !!buySeller); $("sbSelX").hidden=!buySeller;
+  const box=$("sbLink"); box.replaceChildren();
+  const P=buySeller && PLAT[buySeller.p], href=P && P.url ? P.url(buySeller.h) : null;
+  if(href){ const a=document.createElement("a"); a.href=href; a.target="_blank"; a.rel="noopener noreferrer"; a.textContent=href.replace(/^https?:\/\/(www\.)?/,"")+" ↗"; box.append("Links to ", a); }
+}
+$("sbSelBtn").onclick=()=>openSellerPicker(mergeSellers(todayKey("nd-show-sellers"), (showData&&showData.sellers), pastSellers), buySeller, sel=>{ if(sel) rememberSeller(sel); setSeller(sel); });
+$("sbSelX").onclick=()=>setSeller(null);
 function rememberSeller(sel){ const today=(todayKey("nd-show-sellers")||[]).filter(x=>!(x.p===sel.p && x.h===sel.h)); today.unshift(sel); setTodayKey("nd-show-sellers", today.slice(0,8)); }
 function openBuy(c){
   buyCard=c; buySeller=null; buyCond=recall("nd-show-cond")||"";
   showThumb(c, $("sbTh"));
   $("sbName").textContent=c.name; $("sbSet").textContent=c.set+" · "+showNum(c);
   const st=showStale(c); $("sbAvg").textContent=c.price ? "Price "+money(c.price)+(st?" · "+st:"") : "No price yet";
-  $("sbPrice").value=""; $("sbDelta").textContent=""; $("sbDelta").className="sb-delta"; $("sbQrMsg").textContent="";
+  $("sbPrice").value=""; $("sbDelta").textContent=""; $("sbDelta").className="sb-delta";
   $("sbWhere").value=todayKey("nd-show-where")||"";
   const cb=$("sbCond"); cb.replaceChildren();
   for(const k of ["NM","LP","MP","HP","DMG"]){ const b=document.createElement("button"); b.type="button"; b.textContent=k; b.setAttribute("aria-pressed", k===buyCond); b.onclick=()=>{ buyCond=buyCond===k?"":k; [...cb.children].forEach(x=>x.setAttribute("aria-pressed", x.textContent===buyCond)); }; cb.append(b); }

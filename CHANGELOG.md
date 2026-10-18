@@ -10,10 +10,14 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v3.25 (October 18, 2026)
 
-- **Past sellers without the long list:** the Past seller dropdown is gone. Under the username box you now see your 3 most recent sellers, and as you type, past sellers that match (up to 5). Tap one to fill it in. It stays small however many sellers you build up. Works the same in card show mode and in a card's details.
-- **Scan vendor QR** is now a small button at the end of the username row in card show mode, instead of a separate pill squeezed in between.
+- **Seller pop-up:** the seller is now one button ("Choose seller") with a ✕ to clear it, in both card show mode and a card's My copy. Tapping it opens a **Seller** pop-up with:
+  - a search box
+  - Scan vendor QR
+  - everyone you've bought from, most recent first, with how many times and when
+- **New sellers in the pop-up:** if what you type isn't on the list, an **Add as a new seller** box appears below it, where you pick their site. A pasted link (like a Linktree) picks the site by itself.
+- The pop-up stays the same size however many sellers you build up, and replaces the long Past seller list from v3.24.
 
 ## v3.24 (October 18, 2026)
 
