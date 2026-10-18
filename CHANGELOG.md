@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.23.2 (October 18, 2026)
+
+- **Card show mode, grouped:** By page puts a heading over each page side (like "Page 1, back · 7 left · $855"), so you can see how many cards are left on each page and what they'd cost. By binder does the same per binder. Values in the headings are hidden in privacy mode.
+
 ## v3.23.1 (October 18, 2026)
 
 - **Card show mode sorting:** one **Price** button with an arrow. Tap it for lowest first (↑), tap again for highest first (↓). **By page** is new: cards in the order they sit in your binder pages, with each card's spot shown (like "Page 5, back"), so you can work through a binder page by page. By binder stays.
