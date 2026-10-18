@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Fresh starts open on My binders:** after installing an update, restoring a backup, Reload the app or Clear saved copy, the app opens on My binders instead of the binder or card show screen you were on.
+
 ## v3.25 (October 18, 2026)
 
 - **Seller pop-up:** the seller is now one button ("Choose seller") with a ✕ to clear it, in both card show mode and a card's My copy. Tapping it opens a **Seller** pop-up with:
