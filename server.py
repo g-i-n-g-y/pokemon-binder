@@ -24,7 +24,7 @@ try:
 except ImportError:  # very old Python
     ZoneInfo = None
 
-APP_VERSION = "3.23.2"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
+APP_VERSION = "3.24"   # 3.0 big changes, 2.12 features, 2.11.1 small fixes (see CHANGELOG.md)
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(APP, "data")
@@ -1176,6 +1176,26 @@ def home_data():
     return {"binders": binders, "recent": recent[:12], "working": working}
 
 
+def all_sellers(limit=60):
+    """Everyone you've bought from, across every binder: [{p, h, n (purchases), last (date)}], most recent first."""
+    seen = {}
+    for sid in sets_list()["order"]:
+        coll = read_json(sdir(sid, "collection.json"), {})
+        for r in coll.values() if isinstance(coll, dict) else []:
+            for b in (r.get("purchases") or []) if isinstance(r, dict) else []:
+                sel = b.get("seller") if isinstance(b, dict) else None
+                if not (isinstance(sel, dict) and isinstance(sel.get("h"), str) and sel["h"].strip()):
+                    continue
+                p, h = str(sel.get("p") or "shop")[:20], sel["h"].strip()[:100]
+                k = (p, h.lower())
+                e = seen.setdefault(k, {"p": p, "h": h, "n": 0, "last": ""})
+                e["n"] += 1
+                d = str(b.get("d") or "")
+                if d >= e["last"]:
+                    e["last"], e["h"], e["p"] = d, h, p   # the name as written on your newest purchase from them
+    return sorted(seen.values(), key=lambda e: (e["last"], e["n"]), reverse=True)[:limit]
+
+
 def show_data():
     """Card show mode: every card you still need from the binders you're working on (all binders if none
     are picked), with its price and when it last sold, plus what you've bought today."""
@@ -1225,7 +1245,7 @@ def show_data():
                               "src": i.get("src", ""), "last": i.get("last", ""), "slot": slot.get(c["n"], 0)})
         binders.append({"id": sid, "name": meta.get("name", sid), "need": need, "pk": pk})
     return {"picked": picked, "binders": binders, "cards": cards_out, "today": today,
-            "bought": bought, "spent": round(spent, 2)}
+            "bought": bought, "spent": round(spent, 2), "sellers": all_sellers()}
 
 
 def pokemon_art(num, shiny=False):
@@ -3730,6 +3750,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, set_trends(m.group(1), today), cache="no-store")
             except ValueError:
                 return self.send(400, {"error": "bad date"})
+        if path == "/api/sellers":
+            return self.send(200, {"sellers": all_sellers()}, cache="no-store")
         if path == "/api/show":
             return self.send(200, show_data(), cache="no-store")
         if path == "/api/home":

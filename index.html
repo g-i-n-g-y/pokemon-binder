@@ -984,6 +984,7 @@ body.at-show > .wrap:not(.show){display:none}
 .sw-row .tx .price i{font-style:normal;font-size:11px;color:var(--muted);margin-left:4px;font-family:var(--f-body)}
 .sw-row .got{height:44px;flex:none;padding:0 14px}
 .sw-empty{padding:28px 12px;text-align:center;color:var(--muted)}
+.buyform .past-f{grid-column:1/-1}
 .sw-grp{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:10px 2px 0;grid-column:1/-1}
 .sw-grp:first-child{margin-top:0}
 .sw-grp b{font-size:15px;font-weight:600}
@@ -1411,6 +1412,7 @@ html,body{overscroll-behavior-y:none}
     <div class="f"><span>Condition</span><div class="sb-cond" id="sbCond" role="group" aria-label="Condition"></div></div>
     <label class="f">Where (remembered for today)<input class="field" id="sbWhere" maxlength="60" autocomplete="off" placeholder="Card show, table 14"></label>
     <div class="f"><span>Seller (optional)</span>
+      <select class="field" id="sbPast" aria-label="Pick a seller you've bought from before" hidden></select>
       <div class="sb-seller" id="sbSeller"></div>
       <div class="sb-manual">
         <select class="field" id="sbPlat" aria-label="Seller's site or app"></select>
@@ -1493,6 +1495,7 @@ html,body{overscroll-behavior-y:none}
         <label class="f">Date<input type="date" id="bDate" required></label>
         <label class="f">Paid ($)<input type="number" id="bPrice" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></label>
         <label class="f">Where<input type="text" id="bWhere" maxlength="60" list="whereList" placeholder="eBay, card show, local shop…"></label>
+        <label class="f past-f" id="bPastL" hidden>Past seller<select id="bPast"></select></label>
         <label class="f">Seller
           <select id="bPlat">
             <option value="">None</option>
@@ -2560,6 +2563,7 @@ function openCard(n){
   $("dCond").value=r.cond||"";
   $("dNote").value=r.note||"";
   resetBuyForm();
+  loadSellers().then(list=>{ if(state.open!==n) return; fillPast($("bPast"), list); $("bPastL").hidden=!list.length; });
   drawBuys(n); drawSpark(n);
   photoSide="front"; drawPhoto(n);
   $("dSaved").textContent=state.ready ? "" : "Can't reach "+srv()+" right now, so changes won't save.";
@@ -2649,6 +2653,17 @@ function sellerEl(sel){
   }
   const sp=document.createElement("span"); sp.className="seller"; sp.append(tag, text); return sp;
 }
+// Past sellers: everyone you've bought from in any binder, most recent first (card details and card show mode).
+let pastSellers=null;
+function loadSellers(){
+  return fetch("api/sellers").then(r=>r.ok?r.json():Promise.reject()).then(j=>{ pastSellers=j.sellers||[]; return pastSellers; })
+    .catch(()=>pastSellers||(showData&&showData.sellers)||[]);
+}
+function fillPast(sel, list){
+  sel.replaceChildren(); const z=document.createElement("option"); z.value=""; z.textContent="Pick a seller you've bought from"; sel.append(z);
+  list.forEach((x,i)=>{ const o=document.createElement("option"); o.value=String(i); o.textContent=sellerLabel(x)+(x.n>1?" · "+x.n+" buys":""); sel.append(o); });
+  sel._list=list; sel.value="";
+}
 function handleOptions(){
   const seen=new Map();
   for(const k in state.own) for(const b of (state.own[k].purchases||[])) if(b && b.seller && b.seller.h) seen.set(b.seller.p+"|"+b.seller.h, b.seller);
@@ -2656,6 +2671,11 @@ function handleOptions(){
   const plat=$("bPlat").value;
   for(const v of seen.values()) if(!plat || v.p===plat){ const o=document.createElement("option"); o.value=v.h; dl.append(o); }
 }
+$("bPast").onchange=e=>{
+  const x=(e.target._list||[])[+e.target.value]; e.target.value=""; if(!x) return;
+  $("bPlat").value=PLAT[x.p] && [...$("bPlat").options].some(o=>o.value===x.p) ? x.p : "shop";
+  $("bHandle").disabled=false; $("bHandle").value=x.h; handleOptions();
+};
 $("bPlat").addEventListener("change",()=>{
   const p=$("bPlat").value; $("bHandle").disabled=!p;
   $("bHandle").placeholder = p==="web" ? "shopname.com" : p==="shop" ? "Shop or person's name" : "@handle";
@@ -5179,6 +5199,7 @@ function drawSeller(){
   box.append(scan);
 }
 for(const k of SELLER_PLATS){ const o=document.createElement("option"); o.value=k; o.textContent=PLAT[k].label; $("sbPlat").append(o); }
+$("sbPast").onchange=e=>{ const x=(e.target._list||[])[+e.target.value]; e.target.value=""; if(x) setSeller({p:x.p, h:x.h}); };
 $("sbPlat").onchange=()=>{ if($("sbHandle").value.trim()) readSeller(); else sellerHint(); };
 $("sbHandle").oninput=readSeller;
 $("sbHandle").addEventListener("paste",()=>setTimeout(()=>{   // a pasted profile link picks the right site by itself
@@ -5210,6 +5231,7 @@ function openBuy(c){
   const cb=$("sbCond"); cb.replaceChildren();
   for(const k of ["NM","LP","MP","HP","DMG"]){ const b=document.createElement("button"); b.type="button"; b.textContent=k; b.setAttribute("aria-pressed", k===buyCond); b.onclick=()=>{ buyCond=buyCond===k?"":k; [...cb.children].forEach(x=>x.setAttribute("aria-pressed", x.textContent===buyCond)); }; cb.append(b); }
   setSeller(null);
+  { const list=(showData&&showData.sellers)||pastSellers||[]; fillPast($("sbPast"), list); $("sbPast").hidden=!list.length; }
   $("sbNote").textContent=isOffline() ? "No signal: this is saved on the phone and synced after you confirm, once you're back online." : "Adds a copy to "+c.set+" with today's date.";
   $("sbSave").disabled=false;
   $("swBuy").showModal();

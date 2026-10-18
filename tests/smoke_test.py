@@ -337,6 +337,12 @@ def main():
         _, st = call(base, "GET", f"/api/set/{sync_card['sid']}/state")
         check("an offline card show buy syncs with its condition", code == 200 and st["collection"].get(n_sync, {}).get("cond") == "MP", st["collection"].get(n_sync))
 
+        call(base, "POST", f"/api/set/neo4/card/{n_buy}/buy", {"purchase": {"id": "showbuy0002", "d": "2026-10-19", "price": 1, "seller": {"p": "instagram", "h": "CardGuy"}}})
+        call(base, "POST", f"/api/set/neo4/card/{n_buy}/buy", {"purchase": {"id": "showbuy0003", "d": "2026-10-18", "price": 1, "seller": {"p": "instagram", "h": "cardguy"}}})
+        _, sel = call(base, "GET", "/api/sellers")
+        first = (sel.get("sellers") or [{}])[0]
+        check("past sellers list everyone you've bought from, newest first", first.get("h") == "CardGuy" and first.get("n") == 2, sel)
+
         # removing a binder and adding it again asks whether to bring its cards back or start fresh
         owned = lambda: next((b["owned"] for b in call(base, "GET", "/api/home")[1]["binders"] if b["id"] == "neo4"), None)
         before = owned()
