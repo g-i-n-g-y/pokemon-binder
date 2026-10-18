@@ -10,8 +10,11 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v3.22 (October 18, 2026)
 
+- **Card details on phones, reworked:** a smaller card picture on the left with the name, number, rarity, binder spot and "You own this card" beside it, instead of everything stacked and centered. The Prices, Recent sales and My copy tabs now start right below, so prices show as soon as a card opens. The eBay sold, PriceCharting and TCGplayer buttons moved into the Prices tab.
+- **Tap the picture to see it big:** tapping the card picture (on phones and computers) shows it as large as the screen allows, handy for showing a vendor what you're looking for. Tap anywhere to close. A card always opens with the small picture.
+- **Totals on the Cards tab only:** the four boxes (Cards owned, Collection value, Cost to finish, Full set value) now show only on the Cards tab. Shopping, Upgrades and Stats open straight onto their own content.
 - **Clearer wording, the same words everywhere:**
   - Settings → Phone: the long-press setting reads **Hold a card: eBay sold** (it used to say "Hold: eBay sold"), and its page is titled **Press and hold a card**.
   - Your own collections are called **binders** everywhere (the menu was titled "Your sets").

@@ -138,6 +138,28 @@ dialog::backdrop{background:rgba(5,4,8,.6)}
 .sheet .row{display:flex;gap:12px;flex-wrap:wrap}
 .sheet .row>*{flex:1 1 120px;min-width:0}
 .big-art{width:100%;max-width:260px;aspect-ratio:63/88;border-radius:12px;object-fit:cover;align-self:center}
+.art-btn{position:relative;display:block;width:100%;max-width:260px;align-self:center;padding:0;border:0;background:none;cursor:zoom-in;border-radius:12px}
+.art-btn .big-art{display:block;max-width:100%}
+.art-btn .zoom-ic{position:absolute;right:6px;bottom:6px;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:rgba(0,0,0,.6);color:#fff}
+.art-btn .zoom-ic svg{width:15px;height:15px}
+#dlg .links-tab{display:none}
+dialog#zoom{margin:0;padding:16px;width:100vw;height:100dvh;max-width:none;max-height:none;border:0;background:rgba(5,4,8,.94);display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;cursor:zoom-out}
+dialog#zoom[open]{display:flex}
+dialog#zoom::backdrop{background:transparent}
+#zoomImg{max-width:100%;max-height:calc(100dvh - 70px);aspect-ratio:63/88;object-fit:contain;border-radius:14px}
+/* phones: small picture on the left, the card's name and details beside it; store links move into the Prices tab */
+@media (max-width:759px){
+  #dlg .cs-side{display:grid;grid-template-columns:112px minmax(0,1fr);gap:4px 14px;align-items:start;text-align:left}
+  #dlg .art-btn{width:112px;max-width:none;margin:0}
+  #dlg .art-btn .zoom-ic{width:24px;height:24px;right:4px;bottom:4px;border-radius:6px}
+  #dlg .big-art{border-radius:8px}
+  #dlg .cs-id{align-items:flex-start;gap:3px}
+  #dlg .cs-id h2{font-size:22px;line-height:1.15}
+  #dlg .cs-id .dspot{margin-top:6px;font-size:12px;padding:6px 8px}
+  #dlg .cs-own{margin-top:4px;font-size:12px}
+  #dlg .cs-side>.links{display:none}
+  #dlg .links-tab{display:flex}
+}
 
 .box{border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
 .box .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
@@ -198,6 +220,7 @@ dialog.cele::backdrop{background:transparent}
   dialog#dlg.float .sheet.card-sheet{display:grid;grid-template-columns:316px minmax(0,1fr);gap:0;padding:0;overflow:hidden}
   #dlg .cs-side{padding:22px;border-right:1px solid var(--line);overflow-y:auto;overscroll-behavior:contain;align-items:stretch;text-align:left}
   #dlg .cs-side .big-art{width:100%;max-width:100%;margin:0}
+  #dlg .art-btn{max-width:100%;width:100%}
   #dlg .cs-id{align-items:flex-start}
   /* store links: two equal buttons per row, a lone last one runs the full width */
   #dlg .cs-side .links{display:grid;grid-template-columns:1fr 1fr}
@@ -1086,7 +1109,7 @@ html,body{overscroll-behavior-y:none}
 #grid .note.retry{grid-column:1/-1;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
 /* Phones: the binder's tabs live in a bar at the bottom, in thumb reach (v3.18) */
 .views .vi{display:none}
-#binderMain[data-view="pages"] > section.stats{display:none}   /* not needed while laying out pages; each page shows its own cost */
+#binderMain[data-view]:not([data-view="cards"]) > section.stats{display:none}   /* the four totals show on Cards only; the other tabs open straight onto their own content */
 @media (max-width:640px){
   #views{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;align-self:auto;border:0;border-top:1px solid var(--line);border-radius:0;
     background:color-mix(in srgb,var(--surface) 92%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
@@ -1381,11 +1404,12 @@ html,body{overscroll-behavior-y:none}
   </div>
 </dialog>
 
+<dialog id="zoom" aria-label="Card picture"><img id="zoomImg" alt=""><span class="note">Tap anywhere to close</span></dialog>
 <dialog id="dlg" class="float" aria-labelledby="dName">
   <div class="sheet card-sheet">
     <button class="close" type="button" id="dClose">Close ✕</button>
     <aside class="cs-side">
-      <img class="big-art" id="dArt" alt="">
+      <button class="art-btn" type="button" id="dArtBtn" aria-label="Show the card bigger"><img class="big-art" id="dArt" alt=""><span class="zoom-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></span></button>
       <div class="cs-id">
         <div class="eyebrow" id="dNo"></div>
         <h2 id="dName"></h2>
@@ -1411,6 +1435,7 @@ html,body{overscroll-behavior-y:none}
       <span class="s yours" id="dYours" hidden></span>
       <span class="s mkt" id="dMkt" hidden></span>
       <div class="spark" id="dSpark"></div></div>
+    <div class="links links-tab" id="dLinks2"></div>
     <div class="cedit" id="dExtra" hidden><button class="btn" type="button" id="dXDel">Remove from this binder</button></div>
     <div class="cedit" id="dCustom" hidden><button class="btn" type="button" id="dCEdit">Edit custom card</button><button class="btn" type="button" id="dCDel">Delete custom card</button></div>
     </div>
@@ -2481,7 +2506,9 @@ function openCard(n){
   const c=state.cards.find(x=>x.n===n); if(!c) return; state.open=n;
   const r=rec(n);
   const art=$("dArt"); art.hidden=false; art.dataset.r=""; art.alt=c.name; art.src=base()+"/img/"+enc(n)+".png?full=1";
-  art.onerror=()=>{ if(!art.dataset.r && c.img){ art.dataset.r=1; art.src=c.img; } else art.hidden=true; };
+  art.onerror=()=>{ if(!art.dataset.r && c.img){ art.dataset.r=1; art.src=c.img; } else art.hidden=true; $("dArtBtn").hidden=art.hidden; };
+  $("dArtBtn").hidden=false;
+  if($("zoom").open) $("zoom").close();   // a card always opens with the small picture
   art.classList.toggle("need",qty(n)===0);
   $("dNo").textContent="No. "+label(c);
   $("dName").textContent=c.name;
@@ -2497,6 +2524,7 @@ function openCard(n){
   const L=$("dLinks"); L.replaceChildren(); const k=cardLinks(n);
   [["eBay sold",k.ebay],["PriceCharting",k.pc],["TCGplayer",k.tcg]]
    .forEach(([t,u])=>{ const a=document.createElement("a"); a.href=u; a.target="_blank"; a.rel="noopener"; a.textContent=t+" ↗"; L.append(a); });
+  $("dLinks2").replaceChildren(...[...L.children].map(a=>a.cloneNode(true)));   // phones show the store links in the Prices tab
   $("dQty").textContent=qty(n);
   $("dCond").value=r.cond||"";
   $("dNote").value=r.note||"";
@@ -4221,6 +4249,10 @@ function drawLog(log){
     tr.append(c1,c2,c3,c4,c6,c5); body.append(tr);
   }
 }
+// Tap the card picture to see it as big as the screen allows (handy for showing a vendor); tap again to close.
+$("dArtBtn").onclick=()=>{ const a=$("dArt"); if(a.hidden || !a.currentSrc) return; $("zoomImg").src=a.currentSrc; $("zoomImg").alt=a.alt; $("zoom").showModal(); };
+$("zoom").onclick=()=>$("zoom").close();
+$("dlg").addEventListener("close",()=>{ if($("zoom").open) $("zoom").close(); });
 $("dlg").addEventListener("close",()=>{ if(state.view==="stats" && state.spendStale) loadStats(); if(state.view==="shop") drawShop(); });
 
 // ---------- Find a card ----------
