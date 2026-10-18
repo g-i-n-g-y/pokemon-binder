@@ -10,6 +10,20 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.23 (October 18, 2026)
+
+- **One look for every pop-up:** every window and settings page now follows the same rules:
+  - the same title bar, with the title on the left, a close button on the right, and a back arrow when you're one level in
+  - bold section headings
+  - rounded grouped rows for settings
+  - switches for on/off
+  - full-width button rows
+  - the main button on the right on computers, and full width on phones
+- **Add a binder** uses the same title bar as Settings, and is called "Add a binder" everywhere (it said "Add a set").
+- **Card shows** window rebuilt in the same style: the weekly check is a switch, towns sit in a grouped row, and Save towns is in the usual spot.
+- **About → Recent problems** gives a short plain summary (like "card shows (6)"), with the full messages behind **Show details**.
+- **Card show mode:** card pictures load now (they were silently failing), and tapping a card's picture or name shows it full screen, the same as in card details.
+
 ## v3.22 (October 18, 2026)
 
 - **Card details on phones, reworked:** a smaller card picture on the left with the name, number, rarity, binder spot and "You own this card" beside it, instead of everything stacked and centered. The Prices, Recent sales and My copy tabs now start right below, so prices show as soon as a card opens. The eBay sold, PriceCharting and TCGplayer buttons moved into the Prices tab.

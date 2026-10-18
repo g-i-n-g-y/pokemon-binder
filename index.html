@@ -972,8 +972,9 @@ body.at-show > .wrap:not(.show){display:none}
 .sw-list{display:flex;flex-direction:column;gap:8px}
 .sw-row{display:flex;align-items:center;gap:12px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--surface);content-visibility:auto;contain-intrinsic-size:auto 86px}
 .sw-row .th{width:46px;height:64px;flex:none;border-radius:5px;overflow:hidden;background:var(--sleeve);border:1px solid var(--line);display:grid;place-items:center;font:500 9px var(--f-mono);color:var(--muted)}
-.sw-row .th img{width:100%;height:100%;object-fit:cover;display:block}
-.sw-row .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.sw-row .th{position:relative;padding:0;cursor:zoom-in}
+.sw-row .th img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.sw-row .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;cursor:zoom-in}
 .sw-row .tx b{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sw-row .tx small{font-size:12px;color:var(--muted)}
 .sw-row .tx .price{font-size:14px}
@@ -983,7 +984,8 @@ body.at-show > .wrap:not(.show){display:none}
 .sw-more{align-self:center}
 #swBuy .sb-card{display:flex;gap:14px;align-items:center}
 #swBuy .sb-card .th{width:60px;height:84px;flex:none;border-radius:6px;overflow:hidden;background:var(--sleeve);border:1px solid var(--line);display:grid;place-items:center;font:500 10px var(--f-mono);color:var(--muted)}
-#swBuy .sb-card .th img{width:100%;height:100%;object-fit:cover;display:block}
+#swBuy .sb-card .th{position:relative}
+#swBuy .sb-card .th img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 #swBuy .sb-card b{font-family:var(--f-display);font-size:22px;display:block}
 #swBuy .sb-card small{display:block;color:var(--muted);font-size:13px}
 #swBuy .sb-price{display:flex;align-items:center;gap:4px;height:60px;padding:0 14px;border:2px solid var(--dark);border-radius:14px;background:var(--bg)}
@@ -1062,6 +1064,23 @@ body.at-show > .wrap:not(.show){display:none}
 .hm-card b{display:block;font-size:12px;line-height:1.25;margin-top:5px}
 .hm-card small{display:block;font-size:11px;color:var(--muted);line-height:1.25}
 :root[data-private] #hmRecentBox{display:none}
+/* ---------- one look for every pop-up (v3.23) ----------
+   Title bar: title on the left, plain close on the right, back arrow when one level in.
+   Section headings: bold, sentence case. Settings: rounded grouped rows, switches for on/off.
+   Button rows (segmented): full width. Main action: right-aligned on computers, full width on phones. */
+dialog .sheet>.eyebrow{font-family:var(--f-body);font-size:14px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--ink);margin-bottom:-6px}
+.catalog h3{font-family:var(--f-body);font-size:14px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--ink);margin:16px 2px 4px}
+dialog .sheet .seg:not(.dtabs){display:flex;width:100%;align-self:stretch}
+dialog .sheet .seg:not(.dtabs) button{flex:1;text-align:center}
+.row-end,.sheet-foot{display:flex;gap:10px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
+.sheet-foot>a{margin-right:auto}
+.dr-bar h2{font-family:var(--f-display);font-size:22px;font-weight:700;line-height:1.2}
+.prob-det summary{cursor:pointer;color:var(--dark);font-size:13px;margin-top:6px}
+.prob-det small{display:block;white-space:pre-wrap;word-break:break-word;margin-top:6px;max-height:240px;overflow:auto}
+@media (max-width:640px){
+  dialog .row-end .btn,dialog .sheet-foot .btn{flex:1}
+  dialog .sheet-foot>a{flex-basis:100%;margin:0}
+}
 @media (max-width:640px){.home .hm-top{padding-top:10px}}   /* phones: the binder header has its own top spacing; match it */
 /* Launch screen for the installed app: the app icon until the binder is ready (v3.15.2) */
 #splash{display:none}
@@ -1566,6 +1585,7 @@ html,body{overscroll-behavior-y:none}
 <dialog id="drawer" class="left" aria-labelledby="drTitle">
   <div class="sheet">
     <div class="dr-bar">
+      <button class="fclose ui-back" type="button" id="addBack" hidden aria-label="Back to your binders" title="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
       <h2 id="drTitle">Your binders</h2>
       <button class="dr-edit" type="button" id="drEdit" aria-pressed="false">Edit</button>
       <button class="fclose" type="button" id="drClose" aria-label="Close" title="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
@@ -1579,8 +1599,6 @@ html,body{overscroll-behavior-y:none}
       <button class="verline" type="button" id="verLine" title="What's new">Pokémon Binder <span id="verNum"></span></button>
     </div>
     <div id="drAdd" hidden>
-      <button class="close back" type="button" id="addBack">‹ Back to your binders</button>
-      <h2 id="addTitle">Add a set</h2>
       <div class="seg addkind" id="addKind" role="group" aria-label="What to add">
         <button type="button" data-k="set" aria-pressed="true">A set</button>
         <button type="button" data-k="dex" aria-pressed="false">A Pokémon</button>
@@ -1632,18 +1650,18 @@ html,body{overscroll-behavior-y:none}
     <h2 id="shTitle">Card shows</h2>
     <div class="note" id="shInfo">Loading…</div>
     <div class="pbar" id="shBar" role="progressbar" aria-label="Checking for shows" hidden><i></i></div>
-    <div class="row" style="align-items:center">
-      <button class="btn" type="button" id="shScan" style="flex:0 0 auto">Scan now</button>
-      <div class="seg" id="shKind" role="group" aria-label="Which shows" style="flex:0 0 auto">
-        <button type="button" data-k="tcg" aria-pressed="true">Pokémon / TCG</button>
-        <button type="button" data-k="all" aria-pressed="false">All</button>
-      </div>
+    <div class="seg" id="shKind" role="group" aria-label="Which shows">
+      <button type="button" data-k="tcg" aria-pressed="true">Pokémon / TCG</button>
+      <button type="button" data-k="all" aria-pressed="false">All shows</button>
     </div>
     <div class="shows-list" id="shList"></div>
-    <div class="eyebrow">Options</div>
-    <label class="toggle" for="shAuto"><input type="checkbox" id="shAuto"> Check for new shows every week</label>
-    <label class="f">Towns to include (separate with commas)<textarea class="field" id="shAreas" rows="3"></textarea></label>
-    <div class="row" style="align-items:center"><button class="btn" type="button" id="shSave" style="flex:0 0 auto">Save towns</button><span class="note" id="shSaved"></span></div>
+    <div class="row-end"><button class="btn" type="button" id="shScan">Scan now</button></div>
+    <h3 class="ui-h">Options</h3>
+    <div class="ui-group">
+      <label class="ui-row" for="shAuto"><span class="ui-l"><b>Check for new shows every week</b></span><input type="checkbox" class="ui-switch" id="shAuto"></label>
+      <label class="ui-row ui-static ui-stack" for="shAreas"><span class="ui-l"><b>Towns to include</b><small>Separate them with commas</small></span><textarea class="field" id="shAreas" rows="3"></textarea></label>
+    </div>
+    <div class="row-end"><span class="note" id="shSaved"></span><button class="btn primary" type="button" id="shSave">Save towns</button></div>
     <div class="note">Shows come from TreasureHunter.show. Small shows that are only posted on Facebook or Instagram won't show up here, so check your local groups too.</div>
   </div>
 </dialog>
@@ -3028,9 +3046,14 @@ function loadStatus(){
     const low=s.freeSpace!=null && s.freeSpace<1073741824;
     rows.push(row("Free space", fmtSize(s.freeSpace), low ? "Running low" : "", low));
     const pr=s.problems||[];
-    if(pr.length){ const r=row("Recent problems", pr.length+" in the last day", "", true);
-      r.classList.add("ui-stack"); const ul=document.createElement("small"); ul.style.whiteSpace="pre-wrap"; ul.textContent=pr.map(p=>new Date(p.at*1000).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})+"  "+p.msg).join("\n");
-      r.querySelector(".ui-l").append(ul); rows.push(r); }
+    if(pr.length){
+      // a plain summary ("card shows: 6"), with the full messages behind Show details
+      const kinds={}; for(const p of pr){ const k=(p.msg.match(/^([^:]{2,40}):/)||[,"other"])[1].trim(); kinds[k]=(kinds[k]||0)+1; }
+      const r=row("Recent problems", pr.length+" in the last day", Object.entries(kinds).map(([k,n])=>k+(n>1?" ("+n+")":"")).join(" · "), true);
+      r.classList.add("ui-stack");
+      const det=document.createElement("details"); det.className="prob-det"; const sum=document.createElement("summary"); sum.textContent="Show details";
+      const pre=document.createElement("small"); pre.textContent=pr.map(p=>new Date(p.at*1000).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})+"  "+p.msg).join("\n");
+      det.append(sum,pre); r.querySelector(".ui-l").append(det); rows.push(r); }
     else rows.push(row("Recent problems", "None"));
     box.replaceChildren(...rows);
   }).catch(()=>{ box.replaceChildren(row("Status", "Couldn't reach "+srv(), "", true)); });
@@ -3661,7 +3684,6 @@ function drawDex(){
 function setAddKind(k){
   addKind=k;
   [...$("addKind").children].forEach(x=>x.setAttribute("aria-pressed", x.dataset.k===k));
-  $("addTitle").textContent=k==="own" ? "Make your own binder" : k==="dex" ? "Add a Pokémon" : "Add a set";
   $("addQ").hidden=k==="own";
   $("addQ").placeholder=k==="dex" ? "Search Pokémon, like Totodile or 158" : "Search sets, like Neo Genesis";
   $("addQ").setAttribute("aria-label", k==="dex" ? "Search Pokémon" : "Search sets");
@@ -3717,7 +3739,7 @@ function drawCatalog(){
 }
 function showAdd(on){
   $("drSets").hidden=on; $("drAdd").hidden=!on;
-  $("drTitle").hidden=on; $("drEdit").hidden=on || !state.sets.length;
+  $("drTitle").textContent=on ? "Add a binder" : "Your binders"; $("addBack").hidden=!on; $("drEdit").hidden=on || !state.sets.length;   // one title bar, with a back arrow on the add page
   if(!on) clearTimeout(dexTimer);
   if(on){
     $("addQ").value=""; setAddKind("set"); setTimeout(()=>$("addQ").focus(),50);
@@ -4980,12 +5002,16 @@ function showStale(c){
   return "";
 }
 const showNum = c => c.pt && /^\d+$/.test(c.num||"") ? c.num+"/"+c.pt : (c.num||c.n);
-function showThumb(c, box){
-  box.replaceChildren(); box.textContent=showNum(c);
+function showThumb(c, box){   // the card number shows until (or unless) the picture loads over it
+  box.replaceChildren(); const t=document.createElement("span"); t.textContent=showNum(c); box.append(t);
   if(c.custom) return;
   const im=document.createElement("img"); im.alt=""; im.loading="lazy"; im.decoding="async";
-  im.onload=()=>{ box.replaceChildren(im); }; im.onerror=()=>{};
+  im.onerror=()=>im.remove(); box.append(im);   // in the page right away: a lazy picture outside the page never loads
   im.src="set/"+enc(c.sid)+"/img/"+enc(c.n)+".png";
+}
+function zoomCard(c){   // the same full-screen picture as in card details
+  if(c.custom) return;
+  $("zoomImg").src="set/"+enc(c.sid)+"/img/"+enc(c.n)+".png?full=1"; $("zoomImg").alt=c.name; $("zoom").showModal();
 }
 function drawShowView(err){
   const list=$("swList"); list.replaceChildren();
@@ -5021,13 +5047,14 @@ function drawShowView(err){
   let anyStale=false;
   for(const c of cards.slice(0, showLimit)){
     const row=document.createElement("div"); row.className="sw-row";
-    const th=document.createElement("div"); th.className="th"; showThumb(c, th);
+    const th=document.createElement("button"); th.type="button"; th.className="th"; showThumb(c, th);
+    th.setAttribute("aria-label","Show "+c.name+" bigger"); th.onclick=()=>zoomCard(c);
     const tx=document.createElement("div"); tx.className="tx";
     const b=document.createElement("b"); b.textContent=c.name;
     const sm=document.createElement("small"); sm.textContent=c.set+" · "+showNum(c);
     const pr=document.createElement("span"); pr.className="price"; pr.textContent=c.price ? money(c.price) : "No price yet";
     const st=showStale(c); if(st){ const i=document.createElement("i"); i.textContent=st; pr.append(staleEl(st[0].toUpperCase()+st.slice(1)), i); anyStale=true; }
-    tx.append(b,sm,pr);
+    tx.append(b,sm,pr); tx.onclick=()=>zoomCard(c);
     const got=document.createElement("button"); got.type="button"; got.className="btn primary got"; got.textContent="Got it";
     got.setAttribute("aria-label","Got "+c.name+", log what you paid");
     got.onclick=()=>openBuy(c);
