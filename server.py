@@ -1200,6 +1200,18 @@ def show_data():
         cards = (cards or []) + extra_list(sid) + custom_cards(sid) if cards is not None or is_own(sid) else []
         pr = read_json(sdir(sid, "prices.json"), {}) or {}
         prices, info = pr.get("p") or {}, pr.get("info") or {}
+        # where each card sits in the binder's pages: your arranged pockets if you've moved cards, else set order
+        # (the phone refines this with the exact order it last showed for the binder)
+        lay = read_json(sdir(sid, "layout.json"), {}) or {}
+        pk = lay.get("pockets") if lay.get("pockets") in POCKETS else 9
+        slot = {}
+        if isinstance(lay.get("slots"), list):
+            slot = {x: i for i, x in enumerate(lay["slots"]) if isinstance(x, str)}
+        nxt = (max(slot.values()) + 1) if slot else 0
+        for c in cards:
+            if c["n"] not in slot:
+                slot[c["n"]] = nxt
+                nxt += 1
         need = 0
         for c in cards:
             if _owned(coll.get(c["n"])):
@@ -1210,8 +1222,8 @@ def show_data():
                               "num": c.get("num", c["n"]),
                               "pt": c.get("pt") or ("" if is_multi(sid) or c.get("extra") or c.get("custom") else meta.get("printedTotal") or ""), "rarity": c.get("rarity", ""),
                               "custom": bool(c.get("custom")), "price": (prices.get(c["n"]) or [0])[0] or 0,
-                              "src": i.get("src", ""), "last": i.get("last", "")})
-        binders.append({"id": sid, "name": meta.get("name", sid), "need": need})
+                              "src": i.get("src", ""), "last": i.get("last", ""), "slot": slot.get(c["n"], 0)})
+        binders.append({"id": sid, "name": meta.get("name", sid), "need": need, "pk": pk})
     return {"picked": picked, "binders": binders, "cards": cards_out, "today": today,
             "bought": bought, "spent": round(spent, 2)}
 

@@ -318,6 +318,7 @@ def main():
         code, show = call(base, "GET", "/api/show")
         need_before = len(show.get("cards", []))
         check("card show lists the cards you still need", code == 200 and need_before > 0, show)
+        check("card show knows each card's page spot", all(isinstance(c.get("slot"), int) for c in show["cards"]) and all(b.get("pk") in (4, 9, 12, 16) for b in show["binders"]))
         n_buy = next(c["n"] for c in show["cards"] if c["sid"] == "neo4")
         code, res = call(base, "POST", f"/api/set/neo4/card/{n_buy}/buy", {"purchase": {"id": "showbuy0001", "d": "2026-10-18", "price": 4.5, "where": "Show"}, "cond": "LP"})
         code2, res2 = call(base, "POST", f"/api/set/neo4/card/{n_buy}/buy", {"purchase": {"id": "showbuy0001", "d": "2026-10-18", "price": 4.5, "where": "Show"}, "cond": "LP"})

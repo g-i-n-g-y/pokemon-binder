@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Card show mode sorting:** one **Price** button with an arrow. Tap it for lowest first (↑), tap again for highest first (↓). **By page** is new: cards in the order they sit in your binder pages, with each card's spot shown (like "Page 5, back"), so you can work through a binder page by page. By binder stays.
+
 ## v3.23 (October 18, 2026)
 
 - **One look for every pop-up:** every window and settings page now follows the same rules:
