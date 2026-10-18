@@ -1725,6 +1725,7 @@ html,body{overscroll-behavior-y:none}
       <div class="ui-group">
         <div class="ui-row ui-static"><span class="conn" role="img" aria-label="Connection"></span><span class="ui-l"><b id="stConnT">Checking&hellip;</b><small id="stConnS"></small></span><button class="btn" type="button" id="stConnBtn">Check connection</button></div>
         <div class="ui-row ui-static"><span class="ui-l"><b>Reload the app</b><small>If something looks stuck. Nothing you've saved is lost, including changes waiting to sync.</small></span><button class="btn" type="button" id="stReload">Reload</button></div>
+        <div class="ui-row ui-static"><span class="ui-l"><b>Clear saved copy</b><small id="stClearS">Deletes the copy of the app and its pictures kept on this device, then downloads a fresh one. Your binders are safe on <span class="srv">the server</span>, and changes waiting to sync stay.</small></span><button class="btn" type="button" id="stClear">Clear</button></div>
         <div class="ui-row ui-static" id="stPendRow" hidden><span class="ui-l"><b id="stPendT"></b><small>Added on this phone while offline. They're sent to <span class="srv">the server</span> after you confirm.</small></span><button class="btn primary" type="button" id="stPendBtn">Review &amp; sync</button></div>
         <div class="ui-row ui-static" id="stUndoRow" hidden><span class="ui-l"><b>Last sync</b><small id="stUndoS"></small></span><button class="btn" type="button" id="stUndoBtn">Undo last sync</button></div>
       </div>
@@ -5212,6 +5213,18 @@ $("hmPriv").onclick=()=>{ setPrivate(!isPrivate()); if(atHome()) drawHome(); };
 $("hmCog").onclick=()=>$("cog").click();
 $("hmShows").onclick=()=>$("showsBtn").click();
 $("stReload").onclick=()=>location.reload();
+// Clear saved copy: the phone app's offline copy (page, binder data, pictures) is deleted and downloaded again.
+// Nothing on the server changes, and changes waiting to sync (kept separately) stay. Only while connected,
+// so the app can't be left with nothing to open.
+$("stClear").onclick=async()=>{
+  if(isOffline()){ toast("Clearing needs a connection to "+srv()+", so the app can download a fresh copy."); return; }
+  const ok=await askConfirm("Clear the saved copy?", "This device downloads a fresh copy of the app, your binder data and card pictures from "+srv()+". Your binders, purchases and photos stay on "+srv()+(pendingList().length?", and "+(pendingList().length===1?"the change waiting to sync stays":"the "+pendingList().length+" changes waiting to sync stay")+" on this phone.":"."), "Clear", {safe:true});
+  if(!ok) return;
+  try{ if(window.caches) for(const k of await caches.keys()) if(k.startsWith("binder-")) await caches.delete(k); }catch(_){}
+  try{ if(navigator.serviceWorker) for(const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); }catch(_){}
+  store("nd-warm");   // save the offline copy again soon
+  location.reload();
+};
 $("hmMenu").onclick=()=>{ showAdd(false); drawSets(); openDrawer(); loadSets().then(drawSets); };
 $("hmEdit").onclick=()=>{ showAdd(false); drawSets(); openDrawer(); loadSets().then(drawSets).then(()=>setEdit(true)); };
 $("hmFind").onsubmit=e=>{ e.preventDefault(); openFind($("hmQ").value.trim()); };

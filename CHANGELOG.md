@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Clear saved copy:** Settings → Server → **Clear saved copy** deletes the copy of the app, binder data and card pictures kept on that phone or computer, then downloads a fresh one. Use it if the app seems stuck on old information. Your binders stay on the server, changes waiting to sync stay on the phone, and it only works while connected so the app always has something to open.
+
 ## v3.21.1 (October 18, 2026)
 
 - **Card show mode moved to the ☰ menu:** the top of the menu now switches between **My binders** and **Card show**. Card show mode has the same ☰ button at its top left, so you can switch back either way. The button in the Card shows (calendar) window is gone.
