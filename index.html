@@ -976,6 +976,10 @@ body.at-show > .wrap:not(.show){display:none}
 #swBuy .sb-seller .chip[aria-pressed="true"]{border-color:var(--dark);background:var(--dark-soft)}
 #swBuy .sb-seller .chip svg{width:16px;height:16px}
 #swBuy .sb-save{height:52px;font-size:16px}
+#swBuy .sb-manual{display:flex;gap:8px}
+#swBuy .sb-manual select{flex:0 0 132px;height:44px}
+#swBuy .sb-manual input{flex:1;min-width:0;height:44px}
+#swBuy #sbLink a{color:var(--dark)}
 #swPick .sp-list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
 #swPick .sp-list label{display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:56px;cursor:pointer}
 #swPick .sp-list label+label{border-top:1px solid var(--line)}
@@ -1353,6 +1357,11 @@ html,body{overscroll-behavior-y:none}
     <label class="f">Where (remembered for today)<input class="field" id="sbWhere" maxlength="60" autocomplete="off" placeholder="Card show, table 14"></label>
     <div class="f"><span>Seller (optional)</span>
       <div class="sb-seller" id="sbSeller"></div>
+      <div class="sb-manual">
+        <select class="field" id="sbPlat" aria-label="Seller's site or app"></select>
+        <input class="field" id="sbHandle" maxlength="100" autocomplete="off" placeholder="@username or paste their link" aria-label="Seller's username">
+      </div>
+      <div class="note" id="sbLink"></div>
       <input type="file" id="sbQr" accept="image/*" capture="environment" hidden>
       <div class="note" id="sbQrMsg"></div>
     </div>
@@ -1436,6 +1445,9 @@ html,body{overscroll-behavior-y:none}
             <option value="x">X (Twitter)</option>
             <option value="whatnot">Whatnot</option>
             <option value="ebay">eBay seller</option>
+            <option value="venmo">Venmo</option>
+            <option value="cashapp">Cash App</option>
+            <option value="paypal">PayPal</option>
             <option value="web">Website</option>
             <option value="shop">Card shop / other</option>
           </select>
@@ -2557,7 +2569,7 @@ function cleanHandle(p, raw){
       if(seg.length) h=seg[seg.length-1];
     }catch(_){}
   }
-  return h.replace(/^@+/,"").replace(/[\s/?#]+/g,"");
+  return h.replace(/^[@$]+/,"").replace(/[\s/?#]+/g,"");
 }
 function sellerEl(sel){
   if(!sel || !sel.h) return null;
@@ -5021,14 +5033,33 @@ function parseVendorQr(text){
   if(host==="ebay.com" && seg[0]==="usr") return pick("ebay", seg[1]);
   return pick("web","");
 }
+const SELLER_PLATS=["instagram","tiktok","facebook","x","whatnot","ebay","venmo","cashapp","paypal","web","shop"];
+function setSeller(sel){   // fill the dropdown and username box from a chip or a scanned code
+  buySeller=sel && sel.h ? sel : null;
+  $("sbPlat").value=buySeller ? buySeller.p : "instagram";
+  $("sbHandle").value=buySeller ? buySeller.h : "";
+  sellerHint(); drawSeller();
+}
+function sellerHint(){
+  const box=$("sbLink"); box.replaceChildren();
+  const p=$("sbPlat").value;
+  $("sbHandle").placeholder = p==="web" ? "theirshop.com" : p==="shop" ? "Shop or person's name" : p==="cashapp" ? "$cashtag or paste their link" : "@username or paste their link";
+  if(!buySeller) return;
+  const P=PLAT[buySeller.p], href=P && P.url ? P.url(buySeller.h) : null;
+  if(href){ const a=document.createElement("a"); a.href=href; a.target="_blank"; a.rel="noopener noreferrer"; a.textContent=href.replace(/^https?:\/\/(www\.)?/,"")+" ↗"; box.append("Links to ", a); }
+}
+function readSeller(){
+  const p=$("sbPlat").value, h=cleanHandle(p, $("sbHandle").value);
+  buySeller=h ? {p, h:h.slice(0,100)} : null;
+  sellerHint(); drawSeller();
+}
 function drawSeller(){
   const box=$("sbSeller"); box.replaceChildren();
   const today=(todayKey("nd-show-sellers")||[]).filter(x=>x && x.p && x.h);
   const same=(a,b)=>a && b && a.p===b.p && a.h===b.h;
-  const list=[...today]; if(buySeller && !list.some(x=>same(x,buySeller))) list.unshift(buySeller);
-  for(const sel of list){
+  for(const sel of today){
     const b=document.createElement("button"); b.type="button"; b.className="chip"; b.textContent=sellerLabel(sel);
-    b.setAttribute("aria-pressed", same(sel,buySeller)); b.onclick=()=>{ buySeller=same(sel,buySeller)?null:sel; drawSeller(); };
+    b.setAttribute("aria-pressed", same(sel,buySeller)); b.onclick=()=>setSeller(same(sel,buySeller)?null:sel);
     box.append(b);
   }
   const scan=document.createElement("button"); scan.type="button"; scan.className="chip";
@@ -5036,6 +5067,13 @@ function drawSeller(){
   scan.append("Scan vendor QR"); scan.onclick=()=>$("sbQr").click();
   box.append(scan);
 }
+for(const k of SELLER_PLATS){ const o=document.createElement("option"); o.value=k; o.textContent=PLAT[k].label; $("sbPlat").append(o); }
+$("sbPlat").onchange=()=>{ if($("sbHandle").value.trim()) readSeller(); else sellerHint(); };
+$("sbHandle").oninput=readSeller;
+$("sbHandle").addEventListener("paste",()=>setTimeout(()=>{   // a pasted profile link picks the right site by itself
+  const v=$("sbHandle").value.trim(); if(!/^https?:\/\/|\.(com|me|app|net|org|tv)\//i.test(v)) return;
+  const sel=parseVendorQr(v); if(sel && sel.p!=="shop") setSeller(sel);
+},0));
 $("sbQr").onchange=async e=>{
   const f=e.target.files && e.target.files[0]; e.target.value=""; if(!f) return;
   const msg=$("sbQrMsg");
@@ -5046,11 +5084,11 @@ $("sbQr").onchange=async e=>{
     const codes=await new BarcodeDetector({formats:["qr_code"]}).detect(img);
     const sel=codes.length ? parseVendorQr(codes[0].rawValue) : null;
     if(!sel){ msg.textContent="No QR code found in that photo. Try again a little closer."; return; }
-    buySeller=sel;
-    const today=(todayKey("nd-show-sellers")||[]).filter(x=>!(x.p===sel.p && x.h===sel.h)); today.unshift(sel); setTodayKey("nd-show-sellers", today.slice(0,8));
-    msg.textContent="Seller added. They stay on this list for the rest of today."; drawSeller();
+    rememberSeller(sel); setSeller(sel);
+    msg.textContent="Seller added. They stay on this list for the rest of today.";
   }catch(_){ msg.textContent="Couldn't read that photo. Try again, or add the seller later in the card's details."; }
 };
+function rememberSeller(sel){ const today=(todayKey("nd-show-sellers")||[]).filter(x=>!(x.p===sel.p && x.h===sel.h)); today.unshift(sel); setTodayKey("nd-show-sellers", today.slice(0,8)); }
 function openBuy(c){
   buyCard=c; buySeller=null; buyCond=recall("nd-show-cond")||"";
   showThumb(c, $("sbTh"));
@@ -5060,7 +5098,7 @@ function openBuy(c){
   $("sbWhere").value=todayKey("nd-show-where")||"";
   const cb=$("sbCond"); cb.replaceChildren();
   for(const k of ["NM","LP","MP","HP","DMG"]){ const b=document.createElement("button"); b.type="button"; b.textContent=k; b.setAttribute("aria-pressed", k===buyCond); b.onclick=()=>{ buyCond=buyCond===k?"":k; [...cb.children].forEach(x=>x.setAttribute("aria-pressed", x.textContent===buyCond)); }; cb.append(b); }
-  drawSeller();
+  setSeller(null);
   $("sbNote").textContent=isOffline() ? "No signal: this is saved on the phone and synced after you confirm, once you're back online." : "Adds a copy to "+c.set+" with today's date.";
   $("sbSave").disabled=false;
   $("swBuy").showModal();
@@ -5080,7 +5118,7 @@ $("sbSave").onclick=async()=>{
   const where=$("sbWhere").value.trim().slice(0,60); setTodayKey("nd-show-where", where);
   if(buyCond) store("nd-show-cond", buyCond);
   const purchase={id:newId(), d:todayStr(), price, where};
-  if(buySeller) purchase.seller=buySeller;
+  if(buySeller){ purchase.seller=buySeller; rememberSeller(buySeller); }
   const keepOnPhone=()=>{
     const pend=pendingList(); pend.push({sid:c.sid, n:c.n, name:c.name, set:c.set, at:new Date().toISOString(), purchase, cond:buyCond||undefined}); setPending(pend);
   };

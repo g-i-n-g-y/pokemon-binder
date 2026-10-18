@@ -10,6 +10,11 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Type a seller in card show mode:** under Seller on the Got it screen, pick the site or app (Instagram, TikTok, Facebook, X, Whatnot, eBay, Venmo, Cash App, PayPal, a website or a card shop) and type their username. It shows the link it will save so you can check it. Pasting their profile link picks the right site by itself. Sellers you type are remembered for the rest of the day, like scanned ones.
+- Fixed: Venmo, Cash App and PayPal were missing from the seller list when adding a purchase in a card's details.
+
 ## v3.21.2 (October 18, 2026)
 
 - **Clear saved copy:** Settings → Server → **Clear saved copy** deletes the copy of the app, binder data and card pictures kept on that phone or computer, then downloads a fresh one. Use it if the app seems stuck on old information. Your binders stay on the server, changes waiting to sync stay on the phone, and it only works while connected so the app always has something to open.
