@@ -929,6 +929,8 @@ body.at-home > .wrap:not(.home){display:none}
 body.at-show > .wrap:not(.show){display:none}
 /* ---------- card show mode ---------- */
 .show{gap:14px}
+.dr-mode{display:flex;width:100%;margin-bottom:4px}
+.dr-mode button{flex:1;padding:10px 12px;font-size:15px}
 .show>*{align-self:stretch}
 @media (min-width:760px){.show .sw-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr))}.sw-more{grid-column:1/-1}.sw-empty{grid-column:1/-1}.sw-stats{max-width:560px}}
 .sw-pick{height:44px;display:flex;align-items:center;gap:6px;padding:0 14px;white-space:nowrap}
@@ -1315,7 +1317,7 @@ html,body{overscroll-behavior-y:none}
 
 <main class="wrap show" id="showView" hidden aria-labelledby="swTitle">
   <header class="hm-top">
-    <button class="icon-btn" type="button" id="swBack" aria-label="Back to My binders" title="My binders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <button class="icon-btn" type="button" id="swBack" aria-label="Menu: My binders or Card show" title="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
     <h1 id="swTitle"><span class="l">Card</span><span class="d"> show</span></h1>
     <button class="btn sw-pick" type="button" id="swPickBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/></svg><span id="swPickLbl">Binders</span></button>
   </header>
@@ -1529,10 +1531,11 @@ html,body{overscroll-behavior-y:none}
       <button class="fclose" type="button" id="drClose" aria-label="Close" title="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <div id="drSets">
+      <div class="seg dr-mode" id="drMode" role="group" aria-label="Mode"><button type="button" data-m="binders" aria-pressed="true">My binders</button><button type="button" data-m="show" aria-pressed="false">Card show</button></div>
       <div class="allsum" id="allSum" hidden></div>
       <div class="ui-group setlist" id="setList"></div>
       <div id="rmList" class="rm-list" hidden></div>
-      <div class="ui-group"><button class="ui-row" type="button" id="findOpen"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></span><span class="ui-l"><b>Find a card</b><small>Search every English card and set</small></span><span class="ui-chev" aria-hidden="true"></span></button><button class="ui-row" type="button" id="showOpen"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/><path d="M14 6v12" stroke-dasharray="2 2"/></svg></span><span class="ui-l"><b>Card show mode</b><small>The cards you still need, for buying at a show</small></span><span class="ui-chev" aria-hidden="true"></span></button><button class="ui-row" type="button" id="addOpen"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span class="ui-l"><b>Add a binder</b><small>A set, every card of a Pokémon, or your own</small></span><span class="ui-chev" aria-hidden="true"></span></button></div>
+      <div class="ui-group"><button class="ui-row" type="button" id="findOpen"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></span><span class="ui-l"><b>Find a card</b><small>Search every English card and set</small></span><span class="ui-chev" aria-hidden="true"></span></button><button class="ui-row" type="button" id="addOpen"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span class="ui-l"><b>Add a binder</b><small>A set, every card of a Pokémon, or your own</small></span><span class="ui-chev" aria-hidden="true"></span></button></div>
       <button class="verline" type="button" id="verLine" title="What's new">Pokémon Binder <span id="verNum"></span></button>
     </div>
     <div id="drAdd" hidden>
@@ -1587,7 +1590,6 @@ html,body{overscroll-behavior-y:none}
   <div class="sheet">
     <button class="close" type="button" id="shClose">Close ✕</button>
     <h2 id="shTitle">Card shows</h2>
-    <button class="btn primary" type="button" id="shMode">Start card show mode</button>
     <div class="note" id="shInfo">Loading…</div>
     <div class="pbar" id="shBar" role="progressbar" aria-label="Checking for shows" hidden><i></i></div>
     <div class="row" style="align-items:center">
@@ -3680,6 +3682,7 @@ const wideNav = () => matchMedia("(min-width: 900px)").matches;
 const drawerEl=$("drawer"), dialogClose=HTMLDialogElement.prototype.close;
 function openDrawer(){
   if(drawerEl.open) return;
+  $("drMode").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed", String((b.dataset.m==="show")===atShow())));
   const push=wideNav();
   drawerEl.classList.toggle("pushed", push);
   push ? drawerEl.show() : drawerEl.showModal();
@@ -4988,9 +4991,10 @@ function drawShowView(err){
 }
 $("swSort").onclick=e=>{ const b=e.target.closest("button"); if(!b) return; showSort=b.dataset.s; store("nd-show-sort",showSort); drawShowView(); };
 $("swQ").oninput=()=>{ showLimit=150; drawShowView(); };
-$("swBack").onclick=()=>goHome();
-$("showOpen").onclick=()=>openShow();
-$("shMode").onclick=()=>openShow();
+$("swBack").onclick=()=>{ showAdd(false); drawSets(); openDrawer(); loadSets().then(drawSets); };
+$("drMode").onclick=e=>{ const b=e.target.closest("button"); if(!b) return;
+  if(b.dataset.m==="show"){ if(atShow()) drawerEl.close(); else openShow(); }
+  else { if(atShow()) goHome(); else drawerEl.close(); } };
 
 // the buy sheet
 let buyCard=null, buyCond="", buySeller=null;

@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Card show mode moved to the ☰ menu:** the top of the menu now switches between **My binders** and **Card show**. Card show mode has the same ☰ button at its top left, so you can switch back either way. The button in the Card shows (calendar) window is gone.
+
 ## v3.21 (October 18, 2026)
 
 - **Card show mode:** one list of every card you still need from the binders you're working on, with prices, search by name or number, and sorting by cheapest, priciest or binder. Tap **Got it** to log a buy: the price you paid (it tells you how far over or under the price you are), condition, and where. Where and condition are remembered for the day. Open it from **Card shows → Start card show mode** or the ☰ menu on My binders.
