@@ -10,6 +10,11 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## v3.27 (October 19, 2026)
+
+- **Binder cover backgrounds:** **Edit** on My binders opens a **Binder covers** window where you pick the background behind every cover's Pokémon: Sunburst (the original), Spotlight, Poké Ball, Holo or Halftone. Each choice shows as a preview of your own cover. It applies to the home page covers and the inside cover in Pages, and is saved on that device like the app's colors.
+- Reordering, renaming and removing binders is still one tap away, under **Reorder, rename or remove binders** in the same window.
+
 ## v3.26 (October 18, 2026)
 
 - **Backups take much less space:** automatic backups made before an update, a phone sync or a spreadsheet import no longer include a copy of your card photos, since those never change photos. Backups before a restore or a fresh start still include them, and so does one daily backup a week. **Download backup** in Settings still includes everything. Restoring a backup without photos keeps the photos you have. The backups list says which ones are "without photos".

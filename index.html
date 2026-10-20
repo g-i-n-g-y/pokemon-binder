@@ -8,7 +8,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" id="themeColor" content="#111213">
 <link rel="stylesheet" href="fonts.css?v=1">
-<script>try{var s=localStorage.getItem("nd-skin");if(s)document.documentElement.dataset.skin=s;if(localStorage.getItem("nd-private")==="on")document.documentElement.dataset.private="";}catch(e){}</script>
+<script>try{var s=localStorage.getItem("nd-skin");if(s)document.documentElement.dataset.skin=s;if(localStorage.getItem("nd-private")==="on")document.documentElement.dataset.private="";var cv=localStorage.getItem("nd-cover");if(cv)document.documentElement.dataset.cover=cv;}catch(e){}</script>
 <style>
 /* Layout: a binder page. Summary strip, filter bar, then a grid of card sleeves; side sheets for one card and for settings. Dark themes only. */
 :root{
@@ -1063,6 +1063,22 @@ body.at-show > .wrap:not(.show){display:none}
   background:repeating-conic-gradient(from 8deg at 50% 50%,rgba(255,255,255,.5) 0 2deg,transparent 2deg 9deg,rgba(255,255,255,.25) 9deg 12deg,transparent 12deg 21deg);
   -webkit-mask:radial-gradient(circle,#000 0 12%,transparent 60%);mask:radial-gradient(circle,#000 0 12%,transparent 60%)}
 .bk:focus-visible{outline:3px solid var(--dark);outline-offset:2px}
+/* ---------- binder cover backgrounds: Edit on My binders picks one (this device) ----------
+   Sunburst is the original; the rest swap the rays for a different background. Previews in the picker use .cvp.cv-<style>. */
+:root[data-cover="spot"] .bk:not(.add):not(.cvp),:root[data-cover="spot"] .pg-side.cover.vb-cover,.bk.cvp.cv-spot{background:radial-gradient(120% 90% at 50% 38%,color-mix(in srgb,var(--v1) 70%,#fff) 0%,var(--v1) 32%,var(--v2) 100%)!important}
+:root[data-cover="spot"] .bk:not(.add):not(.cvp)::before,:root[data-cover="spot"] .pg-side.cover.vb-cover::before,.bk.cvp.cv-spot::before{display:none!important}
+:root[data-cover="ball"] .bk:not(.add):not(.cvp),:root[data-cover="ball"] .pg-side.cover.vb-cover,.bk.cvp.cv-ball{background:linear-gradient(160deg,var(--v1),var(--v2))!important}
+:root[data-cover="ball"] .bk:not(.add):not(.cvp)::before,:root[data-cover="ball"] .pg-side.cover.vb-cover::before,.bk.cvp.cv-ball::before{inset:auto!important;left:50%!important;top:43%!important;width:118%!important;aspect-ratio:1;transform:translate(-50%,-50%)!important;border-radius:50%;-webkit-mask:none!important;mask:none!important;background:radial-gradient(circle,transparent 0 11%,rgba(255,255,255,.34) 11% 16%,transparent 16% 100%),linear-gradient(transparent calc(50% - 5px),rgba(255,255,255,.34) calc(50% - 5px) calc(50% + 5px),transparent calc(50% + 5px))!important;box-shadow:inset 0 0 0 11px rgba(255,255,255,.34)}
+:root[data-cover="holo"] .bk:not(.add):not(.cvp),:root[data-cover="holo"] .pg-side.cover.vb-cover,.bk.cvp.cv-holo{background:linear-gradient(160deg,var(--v1) 10%,var(--v2) 95%)!important}
+:root[data-cover="holo"] .bk:not(.add):not(.cvp)::before,:root[data-cover="holo"] .pg-side.cover.vb-cover::before,.bk.cvp.cv-holo::before{inset:0!important;transform:none!important;-webkit-mask:none!important;mask:none!important;background:linear-gradient(115deg,transparent 25%,rgba(255,255,255,.38) 42%,rgba(255,255,255,.08) 50%,transparent 62%),radial-gradient(90% 60% at 50% 40%,rgba(255,255,255,.35),transparent 70%)!important}
+:root[data-cover="dots"] .bk:not(.add):not(.cvp),:root[data-cover="dots"] .pg-side.cover.vb-cover,.bk.cvp.cv-dots{background:linear-gradient(160deg,var(--v1),var(--v2))!important}
+:root[data-cover="dots"] .bk:not(.add):not(.cvp)::before,:root[data-cover="dots"] .pg-side.cover.vb-cover::before,.bk.cvp.cv-dots::before{inset:0!important;transform:none!important;background:radial-gradient(rgba(255,255,255,.55) 1.8px,transparent 2.3px) 0 0/11px 11px!important;-webkit-mask:radial-gradient(85% 65% at 50% 40%,#000 0,transparent 75%)!important;mask:radial-gradient(85% 65% at 50% 40%,#000 0,transparent 75%)!important}
+.cover-opts{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:12px}
+.cover-opt{display:flex;flex-direction:column;gap:6px;align-items:stretch;border:2px solid transparent;border-radius:14px;padding:4px;background:none;color:var(--ink);font:inherit;font-size:13px;cursor:pointer;text-align:center}
+.cover-opt[aria-pressed="true"]{border-color:var(--dark)}
+.cover-opt .bk{pointer-events:none}
+.cover-opt .bk .ring,.cover-opt .bk .bk-work{display:none}
+.cover-opt .bk .bk-nm span{display:none}
 .bk .bk-mon{position:absolute;left:50%;top:43%;width:86%;height:62%;transform:translate(-50%,-50%);object-fit:contain;
   filter:drop-shadow(0 0 2px #fff) drop-shadow(0 6px 8px rgba(0,0,0,.35));transition:transform .2s ease}
 .bk:hover .bk-mon{transform:translate(-50%,-52%) scale(1.03)}
@@ -1473,6 +1489,17 @@ html,body{overscroll-behavior-y:none}
       <div class="note" id="slNewLink"></div>
     </div>
     <div class="row-end"><button class="btn" type="button" id="slNone">No seller</button></div>
+  </div>
+</dialog>
+<dialog id="coverDlg" class="float" aria-labelledby="cvTitle">
+  <div class="sheet">
+    <button class="close" type="button" id="cvClose">Close ✕</button>
+    <h2 id="cvTitle">Binder covers</h2>
+    <h3 class="ui-h">Background</h3>
+    <div class="cover-opts" id="cvOpts" role="group" aria-label="Cover background"></div>
+    <div class="note">Used for every binder cover and the inside cover in Pages. Saved on this device, like the app's colors.</div>
+    <h3 class="ui-h">Your binders</h3>
+    <div class="ui-group"><button class="ui-row" type="button" id="cvEdit"><span class="ui-l"><b>Reorder, rename or remove binders</b></span><span class="ui-chev" aria-hidden="true"></span></button></div>
   </div>
 </dialog>
 <dialog id="zoom" aria-label="Card picture"><img id="zoomImg" alt=""><span class="note">Tap anywhere to close</span></dialog>
@@ -5461,7 +5488,25 @@ $("stClear").onclick=async()=>{
   reloadHome();
 };
 $("hmMenu").onclick=()=>{ showAdd(false); drawSets(); openDrawer(); loadSets().then(drawSets); };
-$("hmEdit").onclick=()=>{ showAdd(false); drawSets(); openDrawer(); loadSets().then(drawSets).then(()=>setEdit(true)); };
+// Edit on My binders: the Binder covers window (background style), with the old reorder/rename/remove one tap away.
+const COVER_STYLES=[["rays","Sunburst"],["spot","Spotlight"],["ball","Poké Ball"],["holo","Holo"],["dots","Halftone"]];
+const coverBg = () => document.documentElement.dataset.cover || "rays";
+function setCoverBg(k){ if(k==="rays"){ delete document.documentElement.dataset.cover; store("nd-cover"); } else { document.documentElement.dataset.cover=k; store("nd-cover",k); } drawCoverOpts(); }
+function drawCoverOpts(){
+  const box=$("cvOpts"); box.replaceChildren();
+  const sample=document.querySelector("#hmShelf .bk:not(.add)");
+  for(const [k,label] of COVER_STYLES){
+    const b=document.createElement("button"); b.type="button"; b.className="cover-opt"; b.setAttribute("aria-pressed", k===coverBg());
+    let t; if(sample){ t=sample.cloneNode(true); t.removeAttribute("aria-label"); t.tabIndex=-1; } else { t=document.createElement("div"); t.className="bk"; t.style.setProperty("--v1","#ffe24d"); t.style.setProperty("--v2","#e8407a"); }
+    t.classList.add("cvp","cv-"+k);
+    const l=document.createElement("span"); l.textContent=label;
+    b.append(t,l); b.setAttribute("aria-label", label+" background"); b.onclick=()=>setCoverBg(k); box.append(b);
+  }
+}
+$("hmEdit").onclick=()=>{ drawCoverOpts(); $("coverDlg").showModal(); };
+$("cvClose").onclick=()=>$("coverDlg").close();
+$("coverDlg").addEventListener("click",e=>{ if(e.target===$("coverDlg")) $("coverDlg").close(); });
+$("cvEdit").onclick=()=>{ $("coverDlg").close(); showAdd(false); drawSets(); openDrawer(); loadSets().then(drawSets).then(()=>setEdit(true)); };
 $("hmFind").onsubmit=e=>{ e.preventDefault(); openFind($("hmQ").value.trim()); };
 $("drawer").addEventListener("close",()=>{ if(atHome()) loadHome(); });
 
