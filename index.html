@@ -5008,7 +5008,12 @@ $("pgView").addEventListener("pointerdown",e=>{
 // Phones: swipe left or right to turn the page (not while arranging).
 (()=>{
   let x0=null, y0=0;
-  $("pgView").addEventListener("touchstart",e=>{ if(pg.arr || pagesWide()) return; const t=e.touches[0]; x0=t.clientX; y0=t.clientY; },{passive:true});
+  $("pgView").addEventListener("touchstart",e=>{
+    x0=null;
+    if(pg.arr || pagesWide()) return;
+    if(e.target.closest(".pg-strip, .pg-pager")) return;   // swiping the page-number row only scrolls it; it never turns the page
+    const t=e.touches[0]; x0=t.clientX; y0=t.clientY;
+  },{passive:true});
   $("pgView").addEventListener("touchend",e=>{
     if(x0==null) return; const t=e.changedTouches[0], dx=t.clientX-x0, dy=t.clientY-y0; x0=null;
     if(Math.abs(dx)<60 || Math.abs(dx)<Math.abs(dy)*1.5) return;
