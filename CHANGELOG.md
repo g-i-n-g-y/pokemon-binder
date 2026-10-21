@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v3.27.1 (October 21, 2026)
 
 - **Pages are numbered 1, 2, 3, 4…:** every side of a sheet now has its own page number instead of "Page 1, front / Page 1, back". This shows in the Pages view, the page buttons on phones (one per page now), a card's binder spot ("Page 3, row 1, pocket 2") and card show mode's By page headings.
 
