@@ -4726,7 +4726,7 @@ function pageLayout(){
   } else slots=ordered;
   return {pk, order, slots, custom};
 }
-const sideName = i => "Page "+(Math.floor(i/2)+1)+", "+(i%2 ? "back" : "front");
+const sideName = i => "Page "+(i+1);   // every side of a sheet is its own page number: 1, 2, 3, 4… (page 1 is the front of the first sheet)
 function cardSpot(n){
   const L=pageLayout(), i=L.slots.indexOf(n); if(i<0) return null;
   const side=Math.floor(i/L.pk), k=i%L.pk, cols=PK_COLS[L.pk];
@@ -4881,16 +4881,16 @@ function drawPages(){
   const allColor=!!(state.layout && state.layout.allColor);
   $("pgColor").setAttribute("aria-pressed", allColor); $("pgColor").hidden=isPrivate(); V.classList.toggle("all-color", allColor);
   $("pgArr").setAttribute("aria-pressed", pg.arr); $("pgArr").textContent=pg.arr ? "Done arranging" : "Arrange";
-  const pages=Math.ceil(sides/2), cards=L.slots.filter(Boolean).length;
+  const sheets=Math.ceil(sides/2), cards=L.slots.filter(Boolean).length;
   $("pgSum").textContent = !cards ? "No cards yet." :
-    cards+" card"+(cards===1?"":"s")+" fill "+pages+" page"+(pages===1?"":"s")+" ("+sides+" side"+(sides===1?"":"s")+" of "+L.pk+" pockets). Page 1 starts on the right, after the inside cover."
+    cards+" card"+(cards===1?"":"s")+" fill "+sides+" page"+(sides===1?"":"s")+" of "+L.pk+" pockets ("+sheets+" sheet"+(sheets===1?"":"s")+", front and back). Page 1 is on the right, after the inside cover."
     +(L.custom ? " You've moved some cards: new cards go at the end." : "")
     +(pg.arr ? " Tap a card, then tap where it should go"+(matchMedia("(pointer:fine)").matches ? ", or drag it there." : ".") : "");
   V.replaceChildren(); V.classList.toggle("pg-arr", pg.arr);
   pg.at=Math.max(pagesWide() ? 0 : -1, Math.min(pg.at, sides-1));   // phones: -1 is the inside cover
   if(pagesWide()){
     const wrap=document.createElement("div"); wrap.className="pg-spreads";
-    for(let s=-1; s<sides; s+=2){   // [inside cover | page 1 front], [page 1 back | page 2 front], ...
+    for(let s=-1; s<sides; s+=2){   // [inside cover | page 1], [page 2 | page 3], ...
       const sp=document.createElement("div"); sp.className="pg-spread";
       if(s<0) sp.append(coverEl());
       else sp.append(sideEl(s, L));
@@ -4902,25 +4902,25 @@ function drawPages(){
   } else {
     V.append(pg.at<0 ? coverEl() : sideEl(pg.at, L));
     const nav=document.createElement("div"); nav.className="pg-pager";
-    const prev=document.createElement("button"); prev.type="button"; prev.className="icon-btn"; prev.setAttribute("aria-label","Previous side"); prev.disabled=pg.at===0;
+    const prev=document.createElement("button"); prev.type="button"; prev.className="icon-btn"; prev.setAttribute("aria-label","Previous page"); prev.disabled=pg.at===0;
     prev.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>';
-    const next=document.createElement("button"); next.type="button"; next.className="icon-btn"; next.setAttribute("aria-label","Next side"); next.disabled=pg.at>=sides-1;
+    const next=document.createElement("button"); next.type="button"; next.className="icon-btn"; next.setAttribute("aria-label","Next page"); next.disabled=pg.at>=sides-1;
     prev.disabled=pg.at<0;
     next.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
-    // where you are, then one button per page (tap to go to its front; tap again for the back)
+    // where you are, then one button per page
     const lab=document.createElement("div"); lab.className="pg-where"; lab.setAttribute("aria-live","polite");
-    const lb=document.createElement("b"); lb.textContent=pg.at<0 ? "Inside cover" : sideName(pg.at); const ls=document.createElement("span"); ls.textContent=pg.at<0 ? sides+" sides after this" : (pg.at+1)+" of "+sides+" sides";
+    const lb=document.createElement("b"); lb.textContent=pg.at<0 ? "Inside cover" : sideName(pg.at); const ls=document.createElement("span"); ls.textContent=pg.at<0 ? sides+" page"+(sides===1?"":"s")+" after this" : (pg.at+1)+" of "+sides;
     lab.append(lb,ls);
     prev.onclick=()=>{ pg.at--; drawPages(); }; next.onclick=()=>{ pg.at++; drawPages(); };
     nav.append(prev,lab,next); V.append(nav);
     const strip=document.createElement("div"); strip.className="pg-strip"; strip.setAttribute("role","group"); strip.setAttribute("aria-label","Pages");
     const cb=document.createElement("button"); cb.type="button"; cb.className="cv"; cb.textContent="Cover"; if(pg.at<0) cb.setAttribute("aria-current","true");
     cb.onclick=()=>{ pg.at=-1; drawPages(); }; strip.append(cb);
-    for(let p=0;p<Math.ceil(sides/2);p++){
+    for(let p=0;p<sides;p++){
       const b=document.createElement("button"); b.type="button"; b.textContent=p+1;
-      const here=Math.floor(pg.at/2)===p; if(here) b.setAttribute("aria-current","true");
-      b.setAttribute("aria-label","Page "+(p+1)+(here?", "+(pg.at%2?"back":"front")+" showing":""));
-      b.onclick=()=>{ pg.at = here && p*2+1<sides ? (pg.at%2 ? p*2 : p*2+1) : p*2; drawPages(); };
+      const here=pg.at===p; if(here) b.setAttribute("aria-current","true");
+      b.setAttribute("aria-label","Page "+(p+1)+(here?", showing":""));
+      b.onclick=()=>{ pg.at=p; drawPages(); };
       strip.append(b);
     }
     V.append(strip);
