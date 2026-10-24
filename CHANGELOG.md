@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Server name example:** the help text under Settings → Server name now uses a made-up example name instead of the name of the server this binder was built on.
+
 ## v3.27.2 (October 21, 2026)
 
 - **Scrolling the page numbers no longer turns the page:** on phones, swiping the row of page-number buttons sideways in Pages only scrolls the row. Before, the swipe also counted as "turn the page" and flipped pages while you scrolled. Swiping on the page itself still turns pages.
@@ -392,7 +396,7 @@ The binder shows these in **Settings → About → Check for updates**.
 
 - **New Settings layout:** a short list of sections (Appearance, Prices, Daily refresh, Backup and import, Server, About), each showing its current value. On a phone, tap one to open it full screen and use the back arrow (or your phone's back gesture) to return. On a computer the list stays on the left. On/off switches replace checkboxes, themes are small color chips, and the help text is shorter.
 - On phones, card details, Settings, card shows, What's new and Add a card now fill the whole screen.
-- **Name your server:** Settings → Server name. Type what you call the computer the binder runs on (like "BEN") and messages use it: "Saved on BEN", "Can't reach BEN". Left empty, they say "the server", so the binder makes sense for anyone running it.
+- **Name your server:** Settings → Server name. Type what you call the computer the binder runs on (like "Attic") and messages use it: "Saved on Attic", "Can't reach Attic". Left empty, they say "the server", so the binder makes sense for anyone running it.
 
 ## v3.0 (October 13, 2026)
 

@@ -1858,7 +1858,7 @@ html,body{overscroll-behavior-y:none}
       <div class="ui-group">
         <label class="ui-row ui-static ui-stack" for="stSrv"><span class="ui-l"><b>Server name</b><small>What the binder calls the computer it runs on</small></span><input class="field" id="stSrv" maxlength="24" autocomplete="off" placeholder="the server"></label>
       </div>
-      <div class="note" id="stSrvMsg">Used in messages like &ldquo;Saved on BEN&rdquo;. Leave it empty to say &ldquo;the server&rdquo;.</div>
+      <div class="note" id="stSrvMsg">Used in messages like &ldquo;Saved on Attic&rdquo;. Leave it empty to say &ldquo;the server&rdquo;.</div>
       <h3 class="ui-h">Connection</h3>
       <div class="ui-group">
         <div class="ui-row ui-static"><span class="conn" role="img" aria-label="Connection"></span><span class="ui-l"><b id="stConnT">Checking&hellip;</b><small id="stConnS"></small></span><button class="btn" type="button" id="stConnBtn">Check connection</button></div>
@@ -2950,7 +2950,7 @@ async function saveSlots(slots){
 function getSlots(){
   return fetch("api/settings").then(r=>r.json()).then(s=>{ if(s.options) state.slotOpts=s.options; setServerName(s.serverName); state.lastSync=s.lastSync||null; pendUI(); if($("stHosts") && document.activeElement!==$("stHosts")) $("stHosts").value=(s.otherHosts||[]).join(", "); return s; }).catch(()=>null);
 }
-// The server's name from Settings (like "BEN"), or "the server" when none is set.
+// The server's name from Settings (like "Attic"), or "the server" when none is set.
 const srv = () => state.serverName || "the server";
 const Srv = () => state.serverName || "The server";
 function setServerName(name){
