@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **What changed, after each update:** the first time you open the binder on a new version, a short **Updated to v…** window lists the headline of each change since the version that device last had. **Full notes** opens What's new. Close it with ✕, **Got it**, or a tap outside the window. Each phone and computer shows it once.
+
 ## v3.28 (October 24, 2026)
 
 - **No more ALL-CAPS labels:** headings and small labels like "Your binders", "Cards owned", "Unlimited" and the Owned/Need tags now use normal capitals, so they're calmer and easier to read.

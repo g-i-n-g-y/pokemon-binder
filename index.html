@@ -525,6 +525,8 @@ dialog.float .sheet::-webkit-scrollbar-thumb:hover{background:var(--muted)}
 .fclose{flex:none;width:36px;height:36px;display:grid;place-items:center;border-radius:9px;border:1px solid transparent;background:none;color:var(--muted);cursor:pointer;padding:0}
 .fclose:hover{background:var(--bg);border-color:var(--line);color:var(--ink)}
 .fclose svg{width:18px;height:18px}
+/* After an update: the short list of what changed */
+.up-list{margin:6px 0 10px;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:15px}
 /* What's new */
 .relnote{border-bottom:1px solid var(--line)}
 .relnote summary{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;padding:12px 4px;cursor:pointer;list-style:none}
@@ -1733,6 +1735,18 @@ html,body{overscroll-behavior-y:none}
     <div class="upd-banner" id="nwUpd" hidden><span id="nwUpdText"></span><button class="btn primary" type="button" id="nwInstall">Install update</button></div>
     <div class="rel-list" id="nwList"></div>
     <div class="sheet-foot"><a id="nwAll" target="_blank" rel="noopener">All releases on GitHub ↗</a><button class="btn primary" type="button" id="nwDone">Close</button></div>
+  </div>
+</dialog>
+
+<dialog id="updated" class="float" aria-labelledby="upTitle">
+  <div class="sheet">
+    <button class="close" type="button" id="upClose">Close ✕</button>
+    <div>
+      <h2 id="upTitle">Updated</h2>
+      <div class="note" id="upSub"></div>
+    </div>
+    <div id="upList"></div>
+    <div class="sheet-foot"><button class="btn" type="button" id="upMore">Full notes</button><button class="btn primary" type="button" id="upDone">Got it</button></div>
   </div>
 </dialog>
 
@@ -3396,7 +3410,35 @@ function inlineMd(t){   // **bold** and `code` from the changelog, everything el
   return frag;
 }
 function loadNews(){
-  return fetch("api/changelog").then(r=>r.json()).then(j=>{ news=j; showUpdateDot(); return j; }).catch(()=>null);
+  return fetch("api/changelog").then(r=>r.json()).then(j=>{ news=j; showUpdateDot(); showUpdated(); return j; }).catch(()=>null);
+}
+// After an update: once per device, a short list of what changed since the version this device last saw.
+async function showUpdated(){
+  const j=news; if(!j || !j.running || !j.entries || !j.entries.length) return;
+  let seen=recall("nd-seen-ver");
+  if(!seen){   // this device never saved a version: use the one the server ran before an install in the last 2 days
+    try{
+      const v=await fetch("api/version",{cache:"no-store"}).then(r=>r.json()), p=(v.previous||[])[0];
+      if(v.installed && Date.now()-new Date(v.installed)<2*86400e3 && p && p.version) seen=p.version;
+    }catch(_){}
+  }
+  if(!seen || cmpV(vt(j.running),vt(seen))<=0){ store("nd-seen-ver", j.running); return; }   // first visit or a rollback: nothing to show
+  if(!vtReady || document.querySelector("dialog[open]")){ setTimeout(showUpdated, 1500); return; }   // wait for the splash and any open window
+  const list=j.entries.filter(e=>cmpV(vt(e.v),vt(seen))>0 && cmpV(vt(e.v),vt(j.running))<=0);
+  store("nd-seen-ver", j.running);
+  if(!list.length) return;
+  $("upTitle").textContent="Updated to v"+j.running;
+  $("upSub").textContent="What changed since v"+seen+":";
+  const L=$("upList"); L.replaceChildren();
+  // just the bold headline of each change ("**Smaller Add a binder button:** ..." → "Smaller Add a binder button")
+  const headline=t=>{ const m=t.match(/^\*\*(.+?)\*\*/); return (m ? m[1] : t.replace(/\*\*|`/g,"")).replace(/:$/,""); };
+  list.forEach(e=>{
+    if(list.length>1){ const h=document.createElement("div"); h.className="rel-head"; h.textContent="v"+e.v; L.append(h); }
+    const ul=document.createElement("ul"); ul.className="up-list";
+    e.items.forEach(it=>{ const li=document.createElement("li"); li.textContent=headline(it.t); ul.append(li); });
+    L.append(ul);
+  });
+  $("updated").showModal();
 }
 function showUpdateDot(){
   const j=news; if(!j) return;
@@ -3451,6 +3493,9 @@ const cmpV = (a,b) => { for(let i=0;i<Math.max(a.length,b.length);i++){ const x=
 $("verLine").onclick=()=>{ $("drawer").close(); drawNews(); $("news").showModal(); loadNews().then(drawNews); };
 $("nwClose").onclick=$("nwDone").onclick=()=>$("news").close();
 $("news").addEventListener("click",e=>{ if(e.target===$("news")) $("news").close(); });
+$("upClose").onclick=$("upDone").onclick=()=>$("updated").close();
+$("updated").addEventListener("click",e=>{ if(e.target===$("updated")) $("updated").close(); });   // tap outside the window closes it
+$("upMore").onclick=()=>{ $("updated").close(); drawNews(); $("news").showModal(); };
 $("nwInstall").onclick=()=>{ $("news").close(); loadSettings(); loadVersion(); $("settings").showModal(); setTimeout(()=>$("stUpdate").click(),150); };
 loadNews(); setInterval(loadNews, 3*3600*1000);
 
