@@ -52,6 +52,14 @@ This repository is public. Never commit:
   show "Saved on BEN". That's fine. But examples, help text, the changelog
   and screenshots use "the server" or a made-up name (like "Attic").
 
+## Screen sizes
+- Every change that touches the page must work and fit, with nothing cut
+  off or overlapping, on:
+  - a 1080p desktop (1920×1080)
+  - a 4K desktop (3840×2160)
+  - the owner's phone, a Pixel 11 Pro (about 412×915 in the browser)
+- Before saving a page change, run the app and check all three.
+
 ## Program files
 - `APP_FILES` in `server.py` lists the files an update installs. When you add
   a new program file, add it there too, or updates won't deliver it.
