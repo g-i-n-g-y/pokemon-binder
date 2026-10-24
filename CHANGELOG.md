@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **No more ALL-CAPS labels:** headings and small labels like "Your binders", "Cards owned", "Unlimited" and the Owned/Need tags now use normal capitals, so they're calmer and easier to read.
+
 ## v3.27.3 (October 24, 2026)
 
 - **Server name example:** the help text under Settings → Server name now uses a made-up example name instead of the name of the server this binder was built on.
