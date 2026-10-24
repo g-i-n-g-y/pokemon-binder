@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v3.28 (October 24, 2026)
 
 - **No more ALL-CAPS labels:** headings and small labels like "Your binders", "Cards owned", "Unlimited" and the Owned/Need tags now use normal capitals, so they're calmer and easier to read.
 - **Smaller Add a binder button:** on My binders, **Add a binder** is now a small button next to Edit instead of a big empty tile on the shelf. With no binders yet, the big tile still shows so you know where to start.
