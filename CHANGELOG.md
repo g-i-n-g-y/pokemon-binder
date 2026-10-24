@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **"Updated to" window floats on phones:** the short list shown after an update is now a card in the middle of the screen with the page dimmed behind it, instead of filling the whole screen. A long list scrolls inside the card.
+
 ## v3.29 (October 24, 2026)
 
 - **What changed, after each update:** the first time you open the binder on a new version, a short **Updated to v…** window lists the headline of each change since the version that device last had. **Full notes** opens What's new. Close it with ✕, **Got it**, or a tap outside the window. Each phone and computer shows it once.

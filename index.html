@@ -723,6 +723,11 @@ dialog.float .ui-chips{display:grid;grid-template-columns:repeat(auto-fill,minma
   dialog.float .sheet>*{flex:0 0 auto}   /* the window has a fixed height now: nothing inside may stretch to fill it */
   .ui-split .ui-nav[hidden]{display:none!important}
   dialog.float .sheet-foot{margin:4px -16px -28px;border-radius:0}
+  /* short notices (like "Updated to v…") float as a card over the page instead of filling the screen */
+  dialog.float.pop{width:calc(100% - 32px);max-width:440px;height:fit-content;max-height:min(80dvh,640px);margin:auto;border:1px solid var(--line);border-radius:16px}
+  dialog.float.pop .fbar{padding-top:12px}
+  dialog.float.pop .sheet{padding:16px;overflow-y:auto}
+  dialog.float.pop .sheet-foot{margin:4px -16px -16px;border-radius:0 0 16px 16px}
 }
 
 /* ---------- sets menu (built from the shared blocks) ---------- */
@@ -1738,7 +1743,7 @@ html,body{overscroll-behavior-y:none}
   </div>
 </dialog>
 
-<dialog id="updated" class="float" aria-labelledby="upTitle">
+<dialog id="updated" class="float pop" aria-labelledby="upTitle">
   <div class="sheet">
     <button class="close" type="button" id="upClose">Close ✕</button>
     <div>
