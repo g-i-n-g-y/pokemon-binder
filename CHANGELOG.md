@@ -13,6 +13,7 @@ The binder shows these in **Settings → About → Check for updates**.
 ## Unreleased
 
 - **No more ALL-CAPS labels:** headings and small labels like "Your binders", "Cards owned", "Unlimited" and the Owned/Need tags now use normal capitals, so they're calmer and easier to read.
+- **Smaller Add a binder button:** on My binders, **Add a binder** is now a small button next to Edit instead of a big empty tile on the shelf. With no binders yet, the big tile still shows so you know where to start.
 
 ## v3.27.3 (October 24, 2026)
 

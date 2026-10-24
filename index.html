@@ -1053,6 +1053,8 @@ body.at-show > .wrap:not(.show){display:none}
 .hm-find .btn{height:46px;border-radius:12px;padding:0 18px}
 .hm-h{display:flex;align-items:center;gap:12px;margin:6px 0 10px}
 .hm-h h2{flex:1;margin:0}
+.hm-h .hm-add{padding:6px 12px;font-size:13px;min-height:36px}   /* small button by "Your binders"; the big tile only shows with no binders */
+.hm-add svg{width:14px;height:14px}
 .hm-link{border:0;background:none;padding:4px 0;font:inherit;font-size:13px;color:var(--muted);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .hm-shelf{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 @media (min-width:640px){.hm-shelf{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -1401,6 +1403,7 @@ html,body{overscroll-behavior-y:none}
   <form class="hm-find" id="hmFind" role="search"><input type="search" class="field" id="hmQ" placeholder="Find a card: name, or 80/111" aria-label="Find a card" enterkeyhint="search"><button class="btn primary" type="submit">Search</button></form>
   <section aria-labelledby="hmBindersH">
     <div class="hm-h"><h2 class="eyebrow" id="hmBindersH">Your binders</h2>
+      <button class="btn hm-add" type="button" id="hmAdd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add a binder</button>
       <button class="hm-link" type="button" id="hmEdit">Edit</button></div>
     <div class="hm-shelf" id="hmShelf"></div>
   </section>
@@ -5456,9 +5459,9 @@ function drawHome(){
   }
   const add=document.createElement("button"); add.type="button"; add.className="bk add";
   add.innerHTML='<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add a binder</span>';
-  add.onclick=()=>{ showAdd(true); openDrawer(); };
-  shelf.append(add);
-  $("hmEdit").hidden=!list.length;
+  add.onclick=$("hmAdd").onclick=()=>{ showAdd(true); openDrawer(); };
+  if(!list.length) shelf.append(add);   // with binders, the small button by "Your binders" adds one
+  $("hmEdit").hidden=$("hmAdd").hidden=!list.length;
   const rec=(homeData && homeData.recent)||[], box=$("hmRecent");
   $("hmRecentBox").hidden=!rec.length; box.replaceChildren();
   for(const r of rec){
