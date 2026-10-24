@@ -247,8 +247,11 @@ dialog.cele::backdrop{background:transparent}
 .slotrow .sels{display:flex;flex-wrap:wrap;gap:6px}
 .slotrow select{font:inherit;font-size:15px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
 .slotmsg{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:20px;font-size:13px;color:var(--muted)}
-.box .comb{border-top:1px solid var(--line);padding-top:8px}
-.box .comb b{font-family:var(--f-mono);font-weight:500;color:var(--ink)}
+.box .px-main{font-size:32px;font-weight:500;line-height:1.15;margin:2px 0}   /* the one number the Prices tab leads with */
+.px-more{border-top:1px solid var(--line);margin-top:10px;padding-top:8px}
+.px-more summary{cursor:pointer;font-size:13px;color:var(--muted);padding:4px 0}
+.px-more[open] summary{margin-bottom:8px}
+.px-more .lpmp{margin-bottom:4px}
 label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
 label.f select,label.f input{font:inherit;font-size:15px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
 .step{display:flex;align-items:center;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--bg)}
@@ -1530,14 +1533,18 @@ html,body{overscroll-behavior-y:none}
     </div>
     <div class="tabpane" id="tabInfo">
     <div class="box">
-      <div class="lpmp" id="dBoxes">
-        <div class="half"><span class="k" id="dS0k">LP average</span><span class="v" id="dS0">–</span><span class="s" id="dS0s"></span></div>
-        <div class="half" id="dS1box"><span class="k" id="dS1k">MP average</span><span class="v" id="dS1">–</span><span class="s" id="dS1s"></span></div>
-      </div>
-      <span class="s comb"><span id="dPk">Combined LP/MP</span> <b id="dP"></b> · <span id="dPsrc"></span></span>
+      <span class="k">Price to buy one</span>
+      <b class="v px-main" id="dP"></b>
+      <span class="s"><span id="dPk">Combined LP/MP</span>, <span id="dPsrc"></span></span>
       <span class="s yours" id="dYours" hidden></span>
-      <span class="s mkt" id="dMkt" hidden></span>
-      <div class="spark" id="dSpark"></div></div>
+      <div class="spark" id="dSpark"></div>
+      <details class="px-more"><summary>How this price is worked out</summary>
+        <div class="lpmp" id="dBoxes">
+          <div class="half"><span class="k" id="dS0k">LP average</span><span class="v" id="dS0">–</span><span class="s" id="dS0s"></span></div>
+          <div class="half" id="dS1box"><span class="k" id="dS1k">MP average</span><span class="v" id="dS1">–</span><span class="s" id="dS1s"></span></div>
+        </div>
+        <span class="s mkt" id="dMkt" hidden></span>
+      </details></div>
     <div class="links links-tab" id="dLinks2"></div>
     <div class="cedit" id="dExtra" hidden><button class="btn" type="button" id="dXDel">Remove from this binder</button></div>
     <div class="cedit" id="dCustom" hidden><button class="btn" type="button" id="dCEdit">Edit custom card</button><button class="btn" type="button" id="dCDel">Delete custom card</button></div>

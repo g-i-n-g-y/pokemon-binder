@@ -18,6 +18,7 @@ The binder shows these in **Settings → About → Check for updates**.
   - When filters or a search hide every card, the binder says why (like "You haven't marked any cards owned here yet") with a **Show all cards** or **Clear filters** button.
   - A card marked owned without a price shows **Price not added yet** instead of "$0.00 total", and "· 2 without a price" when only some purchases have one.
   - An empty purchase list, the Upgrades tab and the value chart in Stats now say what fills them in.
+- **Prices tab leads with one number:** a card's Prices tab opens with a big **Price to buy one** and where it comes from, then the price chart. The LP and MP averages and the TCGdex market prices moved under **How this price is worked out**, which opens with a tap.
 
 ## v3.27.3 (October 24, 2026)
 
