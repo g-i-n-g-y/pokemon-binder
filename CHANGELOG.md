@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v3.27.3 (October 24, 2026)
 
 - **Server name example:** the help text under Settings → Server name now uses a made-up example name instead of the name of the server this binder was built on.
 
