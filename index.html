@@ -131,6 +131,8 @@ button.tag.own{background:var(--ink)}
 button.tag:not(.own):hover{border-color:var(--ink);color:var(--ink)}
 .sleeve .ed{font-family:var(--f-mono);font-size:11px;color:var(--muted);margin-top:-2px}
 .empty{padding:40px 16px;text-align:center;color:var(--muted)}
+.empty p{margin:0 auto 14px;max-width:46ch}
+#grid .empty{grid-column:1/-1}
 dialog{border:0;padding:0;margin:0 0 0 auto;height:100%;max-height:100%;width:min(440px,100%);background:var(--surface);color:var(--ink)}
 dialog::backdrop{background:rgba(5,4,8,.6)}
 .sheet{display:flex;flex-direction:column;gap:18px;padding:22px 20px 28px}
@@ -2164,7 +2166,15 @@ function render(){
     const sr=document.createElement("p"); sr.className="sr-only"; sr.textContent="Loading cards…"; g.append(sr);
     for(let i=0;i<12;i++){ const k=document.createElement("div"); k.className="sleeve skel"; k.setAttribute("aria-hidden","true"); k.innerHTML='<span class="sk-art"></span><span class="sk-line"></span><span class="sk-line short"></span>'; g.append(k); }
   }
-  else if(!list.length){ const e=document.createElement("div"); e.className="empty"; e.textContent=state.cards.length ? "No cards match these filters." : (state.ready ? (isOwn(state.sid) ? "This binder is empty. Add cards with Find a card." : "This set has no cards yet.") : "Loading cards…"); g.append(e); }
+  else if(!list.length && state.cards.length){   // filters hide everything: say why, with a way back to all cards
+    const owned=state.cards.filter(c=>qty(c.n)>0).length, only=!state.q && !state.rar;
+    const text = only && state.filter==="own" && !owned ? "You haven't marked any cards owned here yet. Tap Need on a card to mark it owned."
+      : only && state.filter==="need" && owned===state.cards.length ? "You own every card in this binder."
+      : state.q ? "No cards match “"+state.q+"”."+(state.filter!=="all"||state.rar ? " Some filters are on too." : "")
+      : "No cards match these filters.";
+    g.append(emptyNote(text, only ? "Show all cards" : "Clear filters", clearFilters));
+  }
+  else if(!list.length){ const e=document.createElement("div"); e.className="empty"; e.textContent=state.ready ? (isOwn(state.sid) ? "This binder is empty. Add cards with Find a card." : "This set has no cards yet.") : "Loading cards…"; g.append(e); }
   let anyStale=false;
   for(const c of list){
     const b=document.createElement("div");
@@ -2210,6 +2220,17 @@ function filterSummary(shown){
   else if(badge) badge.remove();
   $("fBtn").setAttribute("aria-label","Filters"+(n?" ("+n+" on)":""));
   if($("fsheet").open) drawFilterSheet(shown);
+}
+// An empty spot: what's going on, plus one button that gets you out of it.
+function emptyNote(text, label, onClick){
+  const d=document.createElement("div"); d.className="empty";
+  const p=document.createElement("p"); p.textContent=text; d.append(p);
+  if(label){ const b=document.createElement("button"); b.type="button"; b.className="btn"; b.textContent=label; b.onclick=onClick; d.append(b); }
+  return d;
+}
+function clearFilters(){
+  state.q=""; $("fQ").value=""; state.rar=""; $("fRar").value="";
+  setOwnFilter("all");
 }
 function setOwnFilter(v){ state.filter=v; [...$("fOwn").children].forEach(x=>x.setAttribute("aria-pressed",x.dataset.v===v)); render(); }
 function chip(label, on, fn){ const b=document.createElement("button"); b.type="button"; b.className="chip"; b.textContent=label; b.setAttribute("aria-pressed",on); b.onclick=fn; return b; }
@@ -2778,7 +2799,7 @@ function whereOptions(){
 function drawBuys(n){
   const ul=$("dBuys"); ul.replaceChildren();
   const list=buys(n);
-  if(!list.length){ const li=document.createElement("li"); const sp=document.createElement("span"); sp.className="empty"; sp.textContent="No purchases logged yet."; li.append(sp); li.style.display="block"; ul.append(li); }
+  if(!list.length){ const li=document.createElement("li"); const sp=document.createElement("span"); sp.className="empty"; sp.textContent="No purchases yet. Add what you paid and where below, now or later."; li.append(sp); li.style.display="block"; ul.append(li); }
   list.forEach((b,i)=>{
     const li=document.createElement("li");
     const d=document.createElement("span"); d.className="d"; d.textContent=fmtDay(b.d);
@@ -2805,7 +2826,9 @@ function drawBuys(n){
     li.append(d,w,pr,ed,x); ul.append(li);
   });
   const total=paidFor(n);
-  $("dPaid").textContent = list.length ? money(total)+" total" : "";
+  const unpriced=list.filter(b=>b.price==null || b.price==="").length;   // marked owned on the fly, price still to add
+  $("dPaid").textContent = !list.length ? "" : unpriced===list.length ? "Price not added yet"
+    : money(total)+" total"+(unpriced ? " · "+unpriced+" without a price" : "");
   whereOptions(); handleOptions();
 }
 $("dBuyForm").addEventListener("submit",e=>{
@@ -4232,7 +4255,7 @@ function drawUpg(){
   }
   if(!rows.length){
     const tr=document.createElement("tr"); const td=document.createElement("td"); td.colSpan=6; td.className="empty";
-    td.textContent = !owned.length ? "You don't own any cards in this binder yet." : !p.from.length ? "Pick at least one condition to upgrade." : "No cards to upgrade with these choices.";
+    td.textContent = !owned.length ? "You don't own any cards in this binder yet. Mark the ones you have on the Cards tab, and better copies to look for show up here." : !p.from.length ? "Pick at least one condition to upgrade." : "No cards to upgrade with these choices.";
     tr.append(td); body.append(tr);
   }
   $("upgMsg").textContent = priced ? rows.length+" card"+(rows.length===1?"":"s")+" to upgrade · "+money(run)+" for "+p.to+" copies, or about "+money(net)+" after selling yours." : "";
@@ -4269,7 +4292,7 @@ function niceMax(v){ return niceStep(v/4)*4; }  // 4 even gridline steps
 const shortMoney = v => v>=1000 ? "$"+(v/1000).toFixed(v>=10000?0:1)+"k" : "$"+Math.round(v);
 function drawLine(tl){
   const box=$("chLine"); box.replaceChildren();
-  if(!tl || !tl.length){ box.append(note("No data yet.")); return; }
+  if(!tl || !tl.length){ box.append(note("Nothing to chart yet. This fills in as you add cards and prices are checked each night.")); return; }
   const legend=document.createElement("div"); legend.className="legend";
   legend.innerHTML='<span><i></i>Collection value</span><span><i class="dash"></i>Total spent</span>';
   if(tl.length<2){

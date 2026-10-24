@@ -14,6 +14,10 @@ The binder shows these in **Settings → About → Check for updates**.
 
 - **No more ALL-CAPS labels:** headings and small labels like "Your binders", "Cards owned", "Unlimited" and the Owned/Need tags now use normal capitals, so they're calmer and easier to read.
 - **Smaller Add a binder button:** on My binders, **Add a binder** is now a small button next to Edit instead of a big empty tile on the shelf. With no binders yet, the big tile still shows so you know where to start.
+- **Empty spots tell you what to do:**
+  - When filters or a search hide every card, the binder says why (like "You haven't marked any cards owned here yet") with a **Show all cards** or **Clear filters** button.
+  - A card marked owned without a price shows **Price not added yet** instead of "$0.00 total", and "· 2 without a price" when only some purchases have one.
+  - An empty purchase list, the Upgrades tab and the value chart in Stats now say what fills them in.
 
 ## v3.27.3 (October 24, 2026)
 
