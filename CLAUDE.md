@@ -48,7 +48,18 @@ This repository is public. Never commit:
 
 ## Wording in the app
 - Text in the app says "the server", never "BEN" (the owner's server name).
+- Settings → Server name lets the owner type a name, so their own app may
+  show "Saved on BEN". That's fine. But examples, help text, the changelog
+  and screenshots use "the server" or a made-up name (like "Attic").
 
-## Before a release
-- Run `python3 tests/smoke_test.py`, and after feature releases also run
-  `python3 tests/cleanup_check.py`.
+## Program files
+- `APP_FILES` in `server.py` lists the files an update installs. When you add
+  a new program file, add it there too, or updates won't deliver it.
+
+## Releasing (only when the owner says "release" or "push it")
+1. Set `APP_VERSION` in `server.py` to the new version.
+2. Rename `## Unreleased` in `CHANGELOG.md` to `## v<version> (<date>)`.
+   The app only reads headings in that form.
+3. Run `python3 tests/smoke_test.py` (on Windows: `python tests/smoke_test.py`),
+   and after feature releases also `tests/cleanup_check.py`. All must pass.
+4. Merge `next` into `main` and push.
