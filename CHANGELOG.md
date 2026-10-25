@@ -10,6 +10,11 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Clearer PSA slab check errors:** when PSA turns a check away, the message now says why (a wrong access code, PSA's firewall, or the daily limit) and shows PSA's error number. It's also listed under Recent problems in Settings → About.
+- **PSA slab check asks PSA more plainly:** the server now names itself as the binder app instead of posing as a web browser, which firewalls are less likely to block.
+
 ## v3.32.1 (October 25, 2026)
 
 - **Slab scanning works better:** Scan the label now opens a live camera view in the pop-up that keeps trying as you aim, so you can just move closer to the small barcode on the label. Photos are also read in enlarged pieces, so a barcode that's small in the photo can still be found.

@@ -1269,17 +1269,31 @@ def psa_call(path):
     tok = (get_settings().get("psaToken") or "").strip()
     if not tok:
         raise PsaError("Add your PSA access code in Settings → Prices first.", 400)
-    req = urllib.request.Request(PSA_API + path, headers={"Authorization": "bearer " + tok, "Accept": "application/json", "User-Agent": UA})
+    # a plain app name, not a browser's: PSA's firewall can turn away requests that claim to be a browser but aren't
+    req = urllib.request.Request(PSA_API + path, headers={"Authorization": "bearer " + tok, "Accept": "application/json",
+                                                          "User-Agent": f"PokemonBinder/{APP_VERSION}"})
     try:
         with urllib.request.urlopen(req, timeout=20) as r:
             body = r.read()
     except urllib.error.HTTPError as e:
+        try:
+            snip = e.read(400).decode("utf-8", "replace")
+        except Exception:
+            snip = ""
+        short = re.sub(r"\s+", " ", snip)[:200]
+        log(f"PSA slab check failed: error {e.code}: {short}")
+        html = bool(re.search(r"<html|cloudflare|just a moment|attention required", snip, re.I))
         if e.code == 429:
-            raise PsaError("PSA's daily limit is used up. Try again tomorrow, or type the number on psacard.com.", 429)
-        if e.code in (401, 403, 500):   # PSA answers a wrong or expired access code with 500
-            raise PsaError("PSA didn't accept the access code, or today's free lookups are used up. Check the code in Settings → Prices.", 502)
+            raise PsaError("PSA's daily limit is used up (error 429). Try again tomorrow.", 429)
+        if html and e.code in (403, 503):
+            raise PsaError(f"PSA's website turned away the server's request (error {e.code}). That's PSA's firewall, not your code.", 502)
+        if e.code in (401, 403):
+            raise PsaError(f"PSA says the access code isn't valid (error {e.code}). Copy it again from psacard.com/publicapi into Settings → Prices.", 502)
+        if e.code == 500:   # PSA's docs: a 500 usually means a wrong or expired access code
+            raise PsaError("PSA didn't accept the access code (error 500). Copy it again from psacard.com/publicapi into Settings → Prices.", 502)
         raise PsaError(f"PSA's lookup isn't answering right now (error {e.code}). Try again in a bit.")
-    except (urllib.error.URLError, OSError, TimeoutError):
+    except (urllib.error.URLError, OSError, TimeoutError) as e:
+        log(f"PSA slab check failed: couldn't reach PSA: {e}")
         raise PsaError("Couldn't reach PSA from the server. Check the server's internet and try again.")
     if not body.strip():
         return {}
@@ -4202,7 +4216,7 @@ class Handler(BaseHTTPRequestHandler):
                 if "otherHosts" in new:
                     st["otherHosts"] = clean_hosts(new["otherHosts"])
                 if "psaToken" in new:   # PSA slab check access code
-                    tok = re.sub(r"^\s*bearer\s+", "", str(new["psaToken"] or ""), flags=re.I).strip()
+                    tok = re.sub(r"^\s*bearer\s+", "", str(new["psaToken"] or "").strip().strip('"\''), flags=re.I).strip()
                     if len(tok) > 3000 or not re.fullmatch(r"[\w\-.~+/=]*", tok):
                         raise ValueError("That doesn't look like a PSA access code. Copy the whole code from psacard.com/publicapi")
                     st["psaToken"] = tok
