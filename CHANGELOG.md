@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v3.30 (October 25, 2026)
 
 - **Bigger on 4K screens:** on very wide screens the binder uses much more of the width, with bigger cards, a wider shelf of binders on My binders, and bigger binder pages that still fit the window's height. 1080p screens and phones look the same as before.
 
