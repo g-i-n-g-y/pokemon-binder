@@ -3420,7 +3420,8 @@ def _xlsx(sheets):
 def export_collection(only=None):
     """Every binder (or just the ones in `only`) in one Excel file: an "All binders" sheet plus one sheet per binder."""
     sl = sets_list()
-    header = ["Binder", "Set", "Number", "Card", "Rarity", "Status", "Copies", "Condition", "Paid", "Price each", "Value", "First owned", "Notes"]
+    header = ["Binder", "Set", "Number", "Card", "Rarity", "Status", "Copies", "Condition", "Paid", "Price each", "Value",
+              "7-day change %", "30-day change %", "90-day change %", "Last sale", "First owned", "Notes"]
     money = {8, 9, 10}
     every, per = [], []
     for sid in sl["order"]:
@@ -3429,7 +3430,9 @@ def export_collection(only=None):
         meta = sl["meta"].get(sid, {})
         bname = meta.get("name", sid)
         coll = read_json(sdir(sid, "collection.json"), {})
-        prices = (read_json(sdir(sid, "prices.json"), {}) or {}).get("p") or {}
+        pr = read_json(sdir(sid, "prices.json"), {}) or {}
+        prices, info = pr.get("p") or {}, pr.get("info") or {}
+        trends = set_trends(sid, today_local())["cards"]   # price changes, for spotting cards that are climbing
         rows = []
         cards = read_json(sdir(sid, "cards.json"), None)
         cards = (cards or []) + extra_list(sid) + custom_cards(sid)
@@ -3439,11 +3442,16 @@ def export_collection(only=None):
             paid = round(sum(b.get("price") or 0 for b in rec.get("purchases") or [] if isinstance(b, dict) and isinstance(b.get("price"), (int, float))), 2)
             each = (prices.get(c["n"]) or [0])[0] or 0
             first = (rec.get("got") or "")[:10] or min((b.get("d") or "" for b in rec.get("purchases") or [] if isinstance(b, dict) and b.get("d")), default="")
+            t = trends.get(c["n"]) or {}
+            def change(days, t=t):
+                was, now = (t.get("at") or {}).get(str(days)), t.get("last")
+                return round((now[1] - was[1]) / was[1] * 100, 1) if was and now and was[1] else ""
+            last_sale = str((info.get(c["n"]) or {}).get("last") or "")[:10]
             setname = c.get("set") or (bname if not (is_multi(sid) or c.get("extra")) else "")
             num = c.get("num") or c["n"]
             rows.append([bname, setname, num, c.get("name", ""), c.get("rarity", ""), "Owned" if qty > 0 else "Need", qty,
                          rec.get("cond") or "", paid or "", round(each, 2) if each else "", round(each * qty, 2) if each and qty else "",
-                         first if qty > 0 else "", rec.get("note") or ""])
+                         change(7), change(30), change(90), last_sale, first if qty > 0 else "", rec.get("note") or ""])
         every += rows
         per.append((bname, header, rows, money))
     if len(per) == 1:   # one binder: just its own sheet
