@@ -20,7 +20,7 @@ Also: custom cards for anything the card database is missing, upcoming card show
 
 ![The home page with a shelf of binders](screenshots/home.png)
 
-**The binder.** Owned cards in color, cards you still need in greyscale, with totals at the top and each card's price trend.
+**The binder.** Owned cards in color, cards you still need in greyscale, with totals at the top and each card's price trend. Under the totals, a map of every binder page shows where the gaps are; tap a page to open it.
 
 ![The binder's main page](screenshots/binder.png)
 
