@@ -1276,12 +1276,15 @@ def show_data():
             was = (t.get("at", {}).get("30") or t.get("first") or [None, 0])[1]
             now = (prices.get(c["n"]) or [0])[0] or 0
             t30 = round((now - was) / was * 100, 1) if _is_num(was) and was and now and t.get("count", 0) >= 2 else None
+            was7 = (t.get("at", {}).get("7") or t.get("first") or [None, 0])[1]
+            t7 = round((now - was7) / was7 * 100, 1) if _is_num(was7) and was7 and now and t.get("count", 0) >= 2 else None
             cards_out.append({"sid": sid, "set": meta.get("name", sid), "n": c["n"], "name": c.get("name", ""),
                               "num": c.get("num", c["n"]),
                               "pt": c.get("pt") or ("" if is_multi(sid) or c.get("extra") or c.get("custom") else meta.get("printedTotal") or ""), "rarity": c.get("rarity", ""),
                               "custom": bool(c.get("custom")), "price": (prices.get(c["n"]) or [0])[0] or 0,
                               "src": i.get("src", ""), "last": i.get("last", ""), "slot": slot.get(c["n"], 0),
-                              "cond": i.get("cond") or {}, "recent": i.get("recent") or {}, "t30": t30})
+                              "cond": i.get("cond") or {}, "recent": i.get("recent") or {}, "t30": t30, "t7": t7,
+                              "h90": t.get("h90")})
         binders.append({"id": sid, "name": meta.get("name", sid), "need": need, "pk": pk})
     return {"picked": picked, "binders": binders, "cards": cards_out, "today": today,
             "bought": bought, "spent": round(spent, 2), "sellers": all_sellers(), "habit": pay_habit()}
@@ -2632,9 +2635,10 @@ def set_trends(sid, today):
     1, 7, 30, 90 and 365 days before `today`. Stays the same size however long history grows."""
     base = datetime.strptime(today, "%Y-%m-%d").date()
     cuts = [(str(p), (base - timedelta(days=p)).isoformat()) for p in TREND_DAYS]
+    since90 = (base - timedelta(days=90)).isoformat()
     hist = read_json(sdir(sid, "history.json"), {})
     hist = hist if isinstance(hist, dict) else {}
-    cards, first = {}, ""
+    cards, first, last90 = {}, "", {}
     for d in sorted(hist):
         first = first or d
         day = hist[d]
@@ -2651,6 +2655,15 @@ def set_trends(sid, today):
             for p, cut in cuts:
                 if d <= cut:
                     c["at"][p] = [d, v]
+            if since90 <= d <= today:
+                last90.setdefault(n, []).append((d, v))
+    # for the vendor price check: the lowest and middle (median) saved price over the last 90 days,
+    # how many days that is, and the first of those days
+    for n, pts in last90.items():
+        vals = sorted(v for _, v in pts)
+        m = len(vals) // 2
+        med = vals[m] if len(vals) % 2 else (vals[m - 1] + vals[m]) / 2
+        cards[n]["h90"] = [round(vals[0], 2), round(med, 2), len(vals), pts[0][0]]
     return {"first": first, "today": today, "cards": cards}
 
 

@@ -1041,6 +1041,8 @@ body.at-show > .wrap:not(.show){display:none}
 .of-nums .s{font-size:12px;color:var(--muted)}
 .of-note{font-size:12px;color:var(--muted);line-height:1.4}
 .of-note.warn{color:var(--bad)}
+.of-tag{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.of-plan{font-size:13px;color:var(--ink)}
 #swBuy .sb-seller{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 #swBuy .sb-seller .chip{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;font-size:13px;cursor:pointer}
 #swBuy .sb-seller .chip[aria-pressed="true"]{border-color:var(--dark);background:var(--dark-soft)}
@@ -2760,21 +2762,61 @@ function offerRef(cond, avg, recent, base){
   return null;
 }
 const offerRound = v => v>=100 ? Math.round(v/5)*5 : v>=20 ? Math.round(v) : Math.max(0.25, Math.round(v*4)/4);
-function offerAdvice(ask, ref, t30){
-  const up=t30!=null && t30>=5, down=t30!=null && t30<=-5;
-  const openF=up?0.90:down?0.80:0.85, walkF=up?1.20:down?1.05:1.15;
-  const walk=offerRound(ref.p*walkF); let open=offerRound(ref.p*openF);
-  if(open>=ask) open=null;   // the sticker is already below where you'd start
-  const good=ask<=ref.p*0.95, high=ask>walk;
+// The card's saved price history, for the vendor price check. h90 = [lowest, middle, days, first day] over the last
+// 90 days (from the server), cur = today's price, t7 = 7-day change. Needs 5+ saved days across 2+ weeks, else null.
+function offerHist(h90, cur, t7){
+  if(!Array.isArray(h90) || !(cur>0) || !(h90[0]>0) || !(h90[1]>0) || h90[2]<5) return null;
+  const span=Math.round((new Date(todayStr())-new Date(h90[3]))/864e5);
+  if(!(span>=14)) return null;
+  const vsUsual=cur/h90[1];
+  const tag = (vsUsual>=1.15 || (t7!=null && t7>=15)) ? "wait" : vsUsual<=0.95 ? "dip" : "";
+  return {low:h90[0]/cur, usual:h90[1]/cur, lowP:h90[0], usualP:h90[1], days:h90[2], span, vsUsual, t7, tag};
+}
+// ask can be empty (no price typed yet): then only the open and walk-away numbers matter.
+function offerAdvice(ask, ref, t30, hist){
+  let open, walk, fair=ref.p, up=false, down=false;
+  if(hist){
+    // Based on the card's own history: open near its 90-day low, walk away a little over its usual price
+    // (or today's, if that's lower), so a short spike never sets what you pay.
+    fair=Math.min(ref.p, ref.p*hist.usual);
+    open=offerRound(Math.min(0.90, Math.max(0.75, hist.low))*ref.p);
+    walk=offerRound(Math.max(fair*1.10, open));
+  }else{
+    up=t30!=null && t30>=5; down=t30!=null && t30<=-5;
+    const openF=up?0.90:down?0.80:0.85, walkF=up?1.20:down?1.05:1.15;
+    walk=offerRound(ref.p*walkF); open=offerRound(ref.p*openF);
+  }
+  if(ask>0 && open>=ask) open=null;   // the sticker is already below where you'd start
+  const good=ask<=fair*0.95, high=ask>walk;
   return {pct:(ask-ref.p)/ref.p*100, open, walk, up, down, verdict:good?"Good deal":high?"High":"Fair", cls:good?"good":high?"high":"fair"};
 }
-// Fills `box` with the advice. o = {ask, ref, t30, stale}. Shows nothing until a price is typed.
+// The Wait / Good time to buy tag from the card's history (nothing when there isn't enough of it).
+function offerTag(box, hist){
+  if(!hist || !hist.tag) return;
+  const d=document.createElement("div"); d.className="of-tag "+hist.tag;
+  const p=document.createElement("span"); p.className="of-pill "+(hist.tag==="dip"?"good":"high");
+  p.textContent = hist.tag==="dip" ? "Good time to buy" : "Wait if you can";
+  const s=document.createElement("span"); s.className="of-pct";
+  s.textContent = hist.tag==="dip" ? Math.round((1-hist.vsUsual)*100)+"% under its usual price ("+money(hist.usualP)+")" :
+    hist.t7!=null && hist.t7>=15 && hist.vsUsual<1.15 ? "Jumped "+Math.round(hist.t7)+"% this week, likely a short spike" :
+    Math.round((hist.vsUsual-1)*100)+"% over its usual price ("+money(hist.usualP)+"), likely a short spike";
+  d.append(p,s); box.append(d);
+}
+// Fills `box` with the advice. o = {ask, ref, t30, stale, hist}. Before a price is typed it shows just what to
+// aim for and when to walk away, so you know your numbers before you ask.
 function drawOffer(box, o){
   box.replaceChildren();
-  if(!(o.ask>0)) return;
   const line=(cls,txt)=>{ const d=document.createElement("div"); d.className=cls; d.textContent=txt; box.append(d); return d; };
+  if(!(o.ask>0)){
+    if(!o.ref) return;
+    const a=offerAdvice(0, o.ref, o.t30, o.hist);
+    offerTag(box, o.hist);
+    line("of-note of-plan", "Before you ask: aim for "+money(a.open)+", walk away above "+money(a.walk)+".");
+    return;
+  }
   if(!o.ref){ line("of-note","No price for this card yet, so there's nothing to compare with."); return; }
-  const a=offerAdvice(o.ask, o.ref, o.t30);
+  const a=offerAdvice(o.ask, o.ref, o.t30, o.hist);
+  offerTag(box, o.hist);
   const top=document.createElement("div"); top.className="of-top";
   const pill=document.createElement("span"); pill.className="of-pill "+a.cls; pill.textContent=a.verdict;
   const pc=document.createElement("span"); pc.className="of-pct";
@@ -2787,7 +2829,8 @@ function drawOffer(box, o){
   num("Walk away above", money(a.walk), a.cls==="high" ? "The sticker is past this" : "");
   box.append(nums);
   line("of-note", "Recent sales = "+o.ref.how+".");
-  if(o.t30!=null) line("of-note", a.up ? "Up "+Math.round(o.t30)+"% in 30 days, so prices are climbing: the counter sits closer to the sticker." :
+  if(o.hist) line("of-note", "From "+o.hist.days+" days of saved prices: usually "+money(o.hist.usualP)+", lowest "+money(o.hist.lowP)+". You open near the low and walk away a little over the usual price.");
+  else if(o.t30!=null) line("of-note", a.up ? "Up "+Math.round(o.t30)+"% in 30 days, so prices are climbing: the counter sits closer to the sticker." :
     a.down ? "Down "+Math.round(Math.abs(o.t30))+"% in 30 days, so you can push lower." : "Steady over 30 days.");
   if(o.stale) line("of-note warn", "Old price: "+o.stale+". Check eBay sold before you trust these numbers.");
   const h=!isPrivate() && habit && habit[o.ref.p<OFFER_SPLIT?"cheap":"dear"];
@@ -2804,13 +2847,14 @@ function offerConds(n){
 }
 function drawCardOffer(n){
   const i=state.info[n]||{}, ask=parseFloat($("oAsk").value.replace(/^\$/,""));
-  const t=trend(n,30);
-  drawOffer($("oOut"), {ask, ref:offerRef(offerCond, (i.cond||{})[offerCond], (i.recent||{})[offerCond], basePrice(n)), t30:t?t.pct:null, stale:staleWhy(n)});
+  const t=trend(n,30), t7=trend(n,7);
+  drawOffer($("oOut"), {ask, ref:offerRef(offerCond, (i.cond||{})[offerCond], (i.recent||{})[offerCond], basePrice(n)), t30:t?t.pct:null, stale:staleWhy(n),
+    hist:offerHist((state.trends[n]||{}).h90, basePrice(n), t7?t7.pct:null)});
 }
 function resetCardOffer(n){
   const raw=activeSlots().find(sl=>sl.t==="raw");
   offerCond = recall("nd-offer-cond") || (raw && raw.c) || "LP";
-  $("oAsk").value=""; $("oOut").replaceChildren(); offerConds(n);
+  $("oAsk").value=""; offerConds(n); drawCardOffer(n);
   loadHabit();
 }
 $("oAsk").addEventListener("input",()=>{ if(state.open!=null) drawCardOffer(state.open); });
@@ -5884,6 +5928,7 @@ function openBuy(c){
   setSeller(null);
   $("sbNote").textContent=isOffline() ? "No signal: this is saved on the phone and synced after you confirm, once you're back online." : "Adds a copy to "+c.set+" with today's date.";
   $("sbSave").disabled=false;
+  drawBuyOffer();
   $("swBuy").showModal();
 }
 // The vendor price check in the Got it sheet: type their price to see what to counter with, then change it
@@ -5892,7 +5937,8 @@ function drawBuyOffer(){
   const c=buyCard; if(!c) return;
   if(showData && showData.habit) habit=showData.habit;
   const ask=parseFloat($("sbPrice").value.trim().replace(/^\$/,""));
-  drawOffer($("sbOffer"), {ask, ref:offerRef(buyCond, (c.cond||{})[buyCond], (c.recent||{})[buyCond], c.price), t30:c.t30, stale:showStale(c)});
+  drawOffer($("sbOffer"), {ask, ref:offerRef(buyCond, (c.cond||{})[buyCond], (c.recent||{})[buyCond], c.price), t30:c.t30, stale:showStale(c),
+    hist:offerHist(c.h90, c.price, c.t7)});
 }
 $("sbPrice").oninput=()=>{ $("sbDelta").textContent=""; $("sbDelta").className="sb-delta"; drawBuyOffer(); };
 $("sbClose").onclick=()=>$("swBuy").close();
