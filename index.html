@@ -1161,7 +1161,7 @@ dialog .sheet .seg:not(.dtabs) button{flex:1;text-align:center}
 @media (max-width:640px){.home .hm-top{padding-top:10px}}   /* phones: the binder header has its own top spacing; match it */
 /* Launch screen for the installed app: the app icon until the binder is ready (v3.15.2) */
 #splash{display:none}
-/* pulling down at the top of the page doesn't reload it (use Settings > Server > Reload the app instead) */
+/* pulling down at the top of the page doesn't reload it (use Settings > About > Reload the app instead) */
 html,body{overscroll-behavior-y:none}
 @media (display-mode: standalone){
   #splash{display:grid;place-items:center;position:fixed;inset:0;z-index:1000;background:var(--bg);transition:opacity .35s ease}
@@ -1907,7 +1907,6 @@ html,body{overscroll-behavior-y:none}
       <h3 class="ui-h">Connection</h3>
       <div class="ui-group">
         <div class="ui-row ui-static"><span class="conn" role="img" aria-label="Connection"></span><span class="ui-l"><b id="stConnT">Checking&hellip;</b><small id="stConnS"></small></span><button class="btn" type="button" id="stConnBtn">Check connection</button></div>
-        <div class="ui-row ui-static"><span class="ui-l"><b>Reload the app</b><small>If something looks stuck. Nothing you've saved is lost, including changes waiting to sync.</small></span><button class="btn" type="button" id="stReload">Reload</button></div>
         <div class="ui-row ui-static"><span class="ui-l"><b>Clear saved copy</b><small id="stClearS">Deletes the copy of the app and its pictures kept on this device, then downloads a fresh one. Your binders are safe on <span class="srv">the server</span>, and changes waiting to sync stay.</small></span><button class="btn" type="button" id="stClear">Clear</button></div>
         <div class="ui-row ui-static" id="stPendRow" hidden><span class="ui-l"><b id="stPendT"></b><small>Added on this phone while offline. They're sent to <span class="srv">the server</span> after you confirm.</small></span><button class="btn primary" type="button" id="stPendBtn">Review &amp; sync</button></div>
         <div class="ui-row ui-static" id="stUndoRow" hidden><span class="ui-l"><b>Last sync</b><small id="stUndoS"></small></span><button class="btn" type="button" id="stUndoBtn">Undo last sync</button></div>
@@ -1921,7 +1920,7 @@ html,body{overscroll-behavior-y:none}
 
     <section class="ui-page" data-page="about" data-title="About">
       <div class="ver" id="stVersion">Checking installed version&hellip;</div>
-      <div class="upd"><button class="btn" type="button" id="stUpdate">Check for updates</button><span class="note" id="stUpdMsg" aria-live="polite"></span></div>
+      <div class="upd"><button class="btn" type="button" id="stUpdate">Check for updates</button><button class="btn" type="button" id="stReload" title="If something looks stuck. Nothing you've saved is lost, including changes waiting to sync.">Reload the app</button><span class="note" id="stUpdMsg" aria-live="polite"></span></div>
       <div class="pbar" id="stUpdBar" role="progressbar" aria-label="Price check progress" hidden><i></i></div>
       <h3 class="ui-h">Status</h3>
       <div class="ui-group" id="stStatus"><div class="ui-row ui-static"><span class="ui-l"><small>Checking&hellip;</small></span></div></div>

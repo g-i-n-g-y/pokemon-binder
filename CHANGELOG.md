@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Reload the app moved:** the Reload button is now in **Settings → About**, next to Check for updates.
+
 ## v3.31.1 (October 25, 2026)
 
 - **Set map removed:** the tiny binder pages above the search box on the Cards tab are gone, so the cards start higher up. The Pages tab still shows every page.
