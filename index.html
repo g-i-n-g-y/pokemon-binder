@@ -5588,23 +5588,33 @@ function psaDrawManual(box, d){
   const h=document.createElement("h3"); h.className="ui-h"; h.textContent="Recent sales";
   const f=document.createElement("div"); f.className="psa-man";
   const card=document.createElement("input"); card.className="field"; card.id="psaManCard"; card.autocomplete="off"; card.placeholder="Card, like Neo Destiny Dark Espeon 4"; card.setAttribute("aria-label","The card on the label");
-  card.value=psaManCard; 
+  card.value=psaManCard; card.setAttribute("list","psaManList"); card.enterKeyHint="done";
+  const dl=document.createElement("datalist"); dl.id="psaManList";   // suggestions from every English card, as you type
+  let sugT=0, sugQ="";
+  card.addEventListener("input",()=>{ clearTimeout(sugT); const v=card.value.trim(); if(v.length<3 || v===sugQ) return;
+    sugT=setTimeout(()=>{ sugQ=v; fetch("api/find?q="+enc(v)).then(r=>r.json()).then(j=>{ if(card.value.trim()!==v) return; dl.replaceChildren();
+      for(const c of (j.cards||[]).slice(0,8)){ const o=document.createElement("option");
+        o.value=[String(c.date||"").slice(0,4), (c.set||"").replace(/ Base Set$/,""), c.name, c.num ? c.num+(c.pt ? "/"+c.pt : "") : ""].filter(Boolean).join(" "); dl.append(o); }
+    }).catch(()=>{}); },300); });
+
   const gl=document.createElement("div"); gl.className="note"; gl.textContent="Grade on the label";
   const chips=document.createElement("div"); chips.className="psa-grades"; chips.setAttribute("role","group"); chips.setAttribute("aria-label","Grade");
   for(const g of ["10","9","8.5","8","7","6","5","4","3","2","1"]){ const b=document.createElement("button"); b.type="button"; b.className="chip"; b.textContent=g; b.setAttribute("aria-pressed", String(g===psaManGrade));
-    b.onclick=()=>{ psaManGrade=g; chips.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", String(x===b))); links(); }; chips.append(b); }
+    b.onclick=()=>{ psaManGrade=g; chips.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", String(x===b))); links(); if(!card.value.trim()) card.focus(); }; chips.append(b); }
   const ed=document.createElement("label"); ed.className="psa-ed"; const cb=document.createElement("input"); cb.type="checkbox"; cb.checked=psaManFirst; ed.append(cb, " 1st Edition");
   cb.onchange=()=>{ psaManFirst=cb.checked; links(); };
   const g=document.createElement("div"); g.className="ui-group";
   const links=()=>{
     psaManCard=card.value.trim(); g.replaceChildren();
-    if(!psaManCard || !psaManGrade){ const r=document.createElement("div"); r.className="ui-row ui-static"; r.innerHTML='<span class="ui-l"><small>Type the card and pick the grade to see recent sales.</small></span>'; g.append(r); return; }
+    if(!psaManCard || !psaManGrade){ const r=document.createElement("div"); r.className="ui-row ui-static"; const l=document.createElement("span"); l.className="ui-l"; const t=document.createElement("small");
+      t.textContent = !psaManCard && psaManGrade ? "Now type the card name from the label (PSA "+psaManGrade+" is picked). The server couldn't read PSA's page, so it doesn't know the card." : psaManCard ? "Now tap the grade on the label." : "Type the card name from the label and tap its grade to see recent sales.";
+      l.append(t); r.append(l); g.append(r); return; }
     const words=psaManCard+" PSA "+psaManGrade+(psaManFirst ? " 1st Edition" : " -1st");
     g.append(psaLinkRow("https://www.ebay.com/sch/i.html?_nkw="+enc(words)+"&LH_Sold=1&LH_Complete=1&_sop=13", "eBay sold · PSA "+psaManGrade, (psaManFirst ? "1st Edition" : "Unlimited")+" PSA "+psaManGrade+" sales, newest first"),
              psaLinkRow("https://www.pricecharting.com/search-products?type=prices&q="+q(psaManCard), "PriceCharting", "Prices for every grade · opens in a new tab"));
   };
   card.oninput=links;
-  f.append(card, gl, chips, ed);
+  f.append(card, dl, gl, chips, ed);
   const row=document.createElement("div"); row.className="row-end";
   const again=document.createElement("button"); again.className="btn"; again.type="button"; again.textContent="Check another"; again.onclick=psaShow; row.append(again);
   box.append(ban, go, n, h, f, g, row); links();

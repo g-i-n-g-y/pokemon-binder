@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **PSA slab check backup screen is easier:** tapping a grade before typing the card now jumps to the card box and says what's missing, instead of doing nothing. The card box also suggests cards as you type.
+
 ## v3.32.3 (October 25, 2026)
 
 - **PSA slab check works without PSA's approval:** PSA only lets approved customers use its lookup service, so the server now reads PSA's public cert page instead (the one anyone can open). The access code in Settings → Prices is now optional, for when PSA approves you.
