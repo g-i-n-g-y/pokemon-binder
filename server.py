@@ -1287,6 +1287,8 @@ def psa_call(path):
             raise PsaError("PSA's daily limit is used up (error 429). Try again tomorrow.", 429)
         if html and e.code in (403, 503):
             raise PsaError(f"PSA's website turned away the server's request (error {e.code}). That's PSA's firewall, not your code.", 502)
+        if e.code == 403 and "approved customers" in snip:
+            raise PsaError("PSA only lets approved customers use its lookup service (error 403).", 502)
         if e.code in (401, 403):
             raise PsaError(f"PSA says the access code isn't valid (error {e.code}). Copy it again from psacard.com/publicapi into Settings → Prices.", 502)
         if e.code == 500:   # PSA's docs: a 500 usually means a wrong or expired access code
@@ -1325,18 +1327,137 @@ def psa_images(cert):
     return out
 
 
-def psa_lookup(cert):
+PSA_WEB = os.environ.get("PSA_WEB") or "https://www.psacard.com"   # PSA_WEB is only for testing
+psa_state = {"denied": 0}   # when PSA last said the access code isn't approved (it's asked again a day later)
+
+
+def psa_entry(cert, f, imgs, source):
+    num, words = psa_grade(f.get("grade"))
+    def count(v):
+        m = re.search(r"\d[\d,]*", str(v if v is not None else ""))
+        return int(m.group(0).replace(",", "")) if m else None
+    return {"cert": cert, "grade": num, "gradeText": words or str(f.get("grade") or ""), "desc": str(f.get("grade") or ""),
+            "year": str(f.get("year") or ""), "brand": str(f.get("brand") or ""), "subject": str(f.get("subject") or ""),
+            "num": str(f.get("num") or "").lstrip("#"), "variety": str(f.get("variety") or ""), "category": str(f.get("category") or ""),
+            "pop": count(f.get("pop")), "higher": count(f.get("higher")), "dna": False,
+            "imgs": imgs, "source": source, "at": now_iso()}
+
+
+def psa_api_lookup(cert):
     j = psa_call(f"/cert/GetByCertNumber/{cert}")
     c = j.get("PSACert") if isinstance(j, dict) else None
     if not isinstance(c, dict) or not (c.get("CertNumber") or c.get("Subject")):
         return None
-    num, words = psa_grade(c.get("CardGrade") or c.get("GradeDescription"))
-    return {"cert": cert, "grade": num, "gradeText": words or str(c.get("GradeDescription") or ""),
-            "desc": str(c.get("GradeDescription") or ""),
-            "year": str(c.get("Year") or ""), "brand": str(c.get("Brand") or ""), "subject": str(c.get("Subject") or ""),
-            "num": str(c.get("CardNumber") or ""), "variety": str(c.get("Variety") or ""), "category": str(c.get("Category") or ""),
-            "pop": c.get("TotalPopulation"), "higher": c.get("PopulationHigher"), "dna": bool(c.get("IsPSADNA")),
-            "imgs": psa_images(cert), "at": now_iso()}
+    f = {"grade": c.get("CardGrade") or c.get("GradeDescription"), "year": c.get("Year"), "brand": c.get("Brand"),
+         "subject": c.get("Subject"), "num": c.get("CardNumber"), "variety": c.get("Variety"), "category": c.get("Category"),
+         "pop": c.get("TotalPopulation"), "higher": c.get("PopulationHigher")}
+    return psa_entry(cert, f, psa_images(cert), "api")
+
+
+# Reading PSA's public cert page (the one anyone can open). Its layout isn't documented, so this tries the
+# page's built-in data first, then its visible "label / value" text.
+PSA_JSON_KEYS = {"grade": ("CardGrade", "GradeDescription", "ItemGrade", "cardGrade", "gradeDescription", "itemGrade"),
+                 "year": ("Year", "year"), "brand": ("Brand", "brand", "BrandTitle", "brandTitle"),
+                 "subject": ("Subject", "subject"), "num": ("CardNumber", "cardNumber"),
+                 "variety": ("Variety", "variety", "VarietyPedigree", "varietyPedigree"), "category": ("Category", "category"),
+                 "pop": ("TotalPopulation", "totalPopulation", "Population", "population"),
+                 "higher": ("PopulationHigher", "populationHigher", "PopHigher", "popHigher")}
+PSA_LABELS = {"item grade": "grade", "grade": "grade", "card grade": "grade", "year": "year", "brand/title": "brand",
+              "brand": "brand", "subject": "subject", "card number": "num", "card #": "num", "category": "category",
+              "variety/pedigree": "variety", "variety": "variety", "population": "pop", "psa population": "pop",
+              "pop higher": "higher", "pop. higher": "higher", "population higher": "higher"}
+
+
+def _psa_from_json(html):
+    for text in (html, html.replace('\\"', '"')):
+        if not re.search(r'"(?:Cert|cert)Number"', text):
+            continue
+        f = {}
+        for field, keys in PSA_JSON_KEYS.items():
+            for k in keys:
+                m = re.search(r'"' + k + r'"\s*:\s*("(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?)', text)
+                if m:
+                    try:
+                        v = json.loads(m.group(1))
+                    except ValueError:
+                        v = m.group(1).strip('"')
+                    if v not in ("", None):
+                        f[field] = v
+                        break
+        if f.get("subject") and f.get("grade"):
+            return f
+    return None
+
+
+def _psa_lines(html):
+    t = re.sub(r"(?is)<(script|style|noscript)\b.*?</\1>", " ", html)
+    t = re.sub(r"(?s)<[^>]+>", "\n", t)
+    return [x for x in (re.sub(r"\s+", " ", unescape(line)).strip() for line in t.split("\n")) if x]
+
+
+def _psa_from_text(lines):
+    f = {}
+    for i, line in enumerate(lines[:-1]):
+        field = PSA_LABELS.get(line.lower().rstrip(":").strip())
+        nxt = lines[i + 1]
+        if field and field not in f and nxt.lower().rstrip(":") not in PSA_LABELS and len(nxt) < 120:
+            f[field] = nxt
+    return f if f.get("subject") and f.get("grade") else None
+
+
+def _psa_page_imgs(html):
+    urls = []
+    for u in re.findall(r'https://[^"\'\s<>()]+?\.(?:jpe?g|png|webp)(?:\?[^"\'\s<>()]*)?', html.replace("\\/", "/"), re.I):
+        if re.search(r"logo|icon|sprite|badge|avatar|placeholder|banner", u, re.I) or u in urls:
+            continue
+        if re.search(r"cloudfront|cert|/images?/", u, re.I):
+            urls.append(u)
+    return {k: v for k, v in zip(("front", "back"), urls[:2])}
+
+
+def psa_page_lookup(cert):
+    """PSA's public cert page. Returns the details, None when PSA says there's no such cert, or "blocked"."""
+    req = urllib.request.Request(f"{PSA_WEB}/cert/{cert}/psa", headers={
+        "User-Agent": UA, "Accept": "text/html,application/xhtml+xml", "Accept-Language": "en-US,en;q=0.9"})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            html = r.read(4_000_000).decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return None
+        log(f"PSA slab check failed: PSA's cert page answered with error {e.code}")
+        return "blocked"
+    except (urllib.error.URLError, OSError, TimeoutError) as e:
+        log(f"PSA slab check failed: couldn't reach PSA's cert page: {e}")
+        return "blocked"
+    f = _psa_from_json(html)
+    lines = _psa_lines(html)
+    f = f or _psa_from_text(lines)
+    if f:
+        return psa_entry(cert, f, _psa_page_imgs(html), "page")
+    text = " ".join(lines)
+    if re.search(r"not a valid cert|no record|could not be found|cert(?:ification)? (?:number )?not found|invalid cert", text, re.I):
+        return None
+    title = re.search(r"(?is)<title[^>]*>(.*?)</title>", html)
+    blocked = re.search(r"just a moment|attention required|cf-chl|captcha|access denied", html, re.I)
+    why = "blocked by its firewall" if blocked else "layout not recognized"
+    ttl = re.sub(r"\s+", " ", title.group(1)).strip()[:80] if title else "none"
+    log(f"PSA slab check failed: couldn't read PSA's cert page ({why}; title: {ttl})")
+    return "blocked"
+
+
+def psa_lookup(cert):
+    """PSA's lookup service when your access code is approved, otherwise PSA's public cert page.
+    Returns the details, None for no such cert, or {"manual": True} when neither could be read."""
+    tok = (get_settings().get("psaToken") or "").strip()
+    if tok and time.time() - psa_state["denied"] > 86400:
+        try:
+            return psa_api_lookup(cert)
+        except PsaError as e:
+            if "approved customers" in str(e):
+                psa_state["denied"] = time.time()
+    e = psa_page_lookup(cert)
+    return {"manual": True, "cert": cert} if e == "blocked" else e
 
 
 PSA_SKIP = {"holo", "rev", "reverse", "foil", "1st", "edition", "ed", "shadowless", "pokemon", "card", "game"}
@@ -1400,6 +1521,8 @@ def psa_check(cert):
         e = psa_lookup(cert)
         if not e:
             return {"found": False, "cert": cert}
+        if e.get("manual"):
+            return {"found": None, "manual": True, "cert": cert}
         with psa_lock:
             cache = read_file_json(PSA_FILE, {})
             cache = cache if isinstance(cache, dict) else {}
@@ -4220,6 +4343,7 @@ class Handler(BaseHTTPRequestHandler):
                     if len(tok) > 3000 or not re.fullmatch(r"[\w\-.~+/=]*", tok):
                         raise ValueError("That doesn't look like a PSA access code. Copy the whole code from psacard.com/publicapi")
                     st["psaToken"] = tok
+                    psa_state["denied"] = 0   # a new code gets tried right away
                 if "showBinders" in new:   # card show mode: the binders you're working on
                     order = sets_list()["order"]
                     st["showBinders"] = [x for x in dict.fromkeys(new["showBinders"] or []) if isinstance(x, str) and x in order]

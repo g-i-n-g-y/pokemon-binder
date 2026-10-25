@@ -1044,6 +1044,13 @@ body.at-show > .wrap:not(.show){display:none}
 #psaMsg:empty{display:none}
 .psa-ban{display:flex;gap:12px;align-items:center;border-radius:12px;padding:12px 14px;border:1px solid}
 .psa-ban.ok{border-color:color-mix(in srgb,var(--good) 45%,transparent);background:color-mix(in srgb,var(--good) 12%,transparent)}
+.psa-ban.info{border-color:var(--line);background:var(--surface)}.psa-ban.info svg{color:var(--muted)}
+.psa-man{display:flex;flex-direction:column;gap:10px}.psa-man .field{height:44px}
+.psa-grades{display:flex;flex-wrap:wrap;gap:6px}
+.psa-grades .chip{min-width:44px;height:38px;padding:0 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:14px;cursor:pointer}
+.psa-grades .chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.psa-ed{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--muted)}
+a.psa-scan{text-decoration:none}
 .psa-ban.no{border-color:color-mix(in srgb,var(--bad) 45%,transparent);background:color-mix(in srgb,var(--bad) 12%,transparent)}
 .psa-ban svg{width:26px;height:26px;flex:none}.psa-ban.ok svg{color:var(--good)}.psa-ban.no svg{color:var(--bad)}
 .psa-ban b{display:block;font-size:15px}.psa-ban small{color:var(--muted);font-size:13px}
@@ -1543,7 +1550,6 @@ html,body{overscroll-behavior-y:none}
       <input type="file" id="psaCam" accept="image/*" capture="environment" hidden>
       <div class="note psa-or-t">or type the cert number</div>
       <div class="psa-or"><input class="field" id="psaNum" inputmode="numeric" autocomplete="off" placeholder="Cert number, like 12345678" aria-label="PSA cert number"><button class="btn" type="button" id="psaGo">Check</button></div>
-      <div class="ui-group" id="psaSetup" hidden><div class="ui-row ui-static"><span class="ui-l"><b>Add your PSA access code first</b><small>It's free. One-time setup in Settings → Prices.</small></span><button class="btn" type="button" id="psaSetupBtn">Set up</button></div></div>
     </div>
     <div class="psa-live" id="psaLive" hidden>
       <div class="psa-view"><video id="psaVideo" playsinline muted autoplay></video><div class="psa-aim" aria-hidden="true"></div></div>
@@ -1919,7 +1925,7 @@ html,body{overscroll-behavior-y:none}
       </div>
       <h3 class="ui-h">PSA slab check</h3>
       <div class="ui-group">
-        <label class="ui-row ui-static ui-stack" for="stPsa"><span class="ui-l"><b>PSA access code</b><small>Free: sign in at <a href="https://www.psacard.com/publicapi" target="_blank" rel="noopener noreferrer">psacard.com/publicapi</a> and copy your access token. It's kept only on <span class="srv">the server</span>. PSA allows about 100 slab checks a day.</small></span><input class="field" id="stPsa" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your code"></label>
+        <label class="ui-row ui-static ui-stack" for="stPsa"><span class="ui-l"><b>PSA access code (optional)</b><small>Slab checks work without it by reading PSA's public cert page. PSA only lets approved customers use its lookup service, so a code helps only once PSA approves you. Get one at <a href="https://www.psacard.com/publicapi" target="_blank" rel="noopener noreferrer">psacard.com/publicapi</a>. It's kept only on <span class="srv">the server</span>.</small></span><input class="field" id="stPsa" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your code"></label>
       </div>
       <div class="row-msg"><span class="note" id="stPsaMsg" aria-live="polite"></span><button class="hm-link" type="button" id="stPsaRm" hidden>Remove code</button></div>
       <div class="note" id="setPrices">Each price is the average of the newest matching Unlimited English sales (up to 5 per condition). 1st Edition, Shadowless, Japanese and lots are skipped.</div>
@@ -5478,12 +5484,11 @@ const psaTitle = t => String(t||"").toLowerCase().replace(/(^|[\s\-(\/])([a-z])/
 function psaShow(){
   psaStopLive();
   $("psaBody").hidden=true; $("psaStart").hidden=false; $("psaMsg").textContent=""; $("psaMsg").className="note";
-  $("psaNum").value=""; $("psaSetup").hidden=psaReady!==false;
+  $("psaNum").value="";
 }
 function openPsa(){
   if($("drawer").open) $("drawer").close();
   psaShow(); $("psaDlg").showModal();
-  fetch("api/settings").then(r=>r.json()).then(s=>{ psaReady=!!s.psa; $("psaSetup").hidden=psaReady; }).catch(()=>{});
 }
 function psaEbayUrl(d){
   const m=d.match, grade="PSA "+(d.grade||"");
@@ -5514,6 +5519,7 @@ function psaLinkRow(href, title, sub){
 function psaDraw(d){
   const box=$("psaBody"); box.replaceChildren(); box.hidden=false; $("psaStart").hidden=true; $("psaMsg").textContent="";
   const ban=document.createElement("div");
+  if(d.manual){ psaDrawManual(box, d); return; }
   if(!d.found){
     ban.className="psa-ban no"; ban.innerHTML=PSA_WARN+'<div><b>No PSA record found</b><small></small></div>';
     ban.querySelector("small").textContent="Cert "+d.cert;
@@ -5572,6 +5578,38 @@ function psaDraw(d){
   const again=document.createElement("button"); again.className="btn primary"; again.type="button"; again.textContent="Check another"; again.onclick=psaShow;
   row.append(again); box.append(row);
 }
+// When the server can't read PSA (PSA hasn't approved the access code and its cert page couldn't be read),
+// PSA's page opens on the phone instead, and the sales links are built from the grade and card you pick.
+function psaDrawManual(box, d){
+  const ban=document.createElement("div"); ban.className="psa-ban info"; ban.innerHTML=PSA_SHIELD+'<div><b>Check it on PSA\'s site</b><small></small></div>';
+  ban.querySelector("small").textContent="The server couldn't read PSA's records for cert "+d.cert+", so open PSA's page on your phone.";
+  const go=document.createElement("a"); go.className="btn primary psa-scan"; go.href="https://www.psacard.com/cert/"+d.cert+"/psa"; go.target="_blank"; go.rel="noopener noreferrer"; go.textContent="Open PSA's page for this slab ↗";
+  const n=document.createElement("div"); n.className="note"; n.textContent="It shows the card, grade and PSA's photos. If PSA has no record, or the photos don't match the slab in your hand, treat it as fake.";
+  const h=document.createElement("h3"); h.className="ui-h"; h.textContent="Recent sales";
+  const f=document.createElement("div"); f.className="psa-man";
+  const card=document.createElement("input"); card.className="field"; card.id="psaManCard"; card.autocomplete="off"; card.placeholder="Card, like Neo Destiny Dark Espeon 4"; card.setAttribute("aria-label","The card on the label");
+  card.value=psaManCard; 
+  const gl=document.createElement("div"); gl.className="note"; gl.textContent="Grade on the label";
+  const chips=document.createElement("div"); chips.className="psa-grades"; chips.setAttribute("role","group"); chips.setAttribute("aria-label","Grade");
+  for(const g of ["10","9","8.5","8","7","6","5","4","3","2","1"]){ const b=document.createElement("button"); b.type="button"; b.className="chip"; b.textContent=g; b.setAttribute("aria-pressed", String(g===psaManGrade));
+    b.onclick=()=>{ psaManGrade=g; chips.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", String(x===b))); links(); }; chips.append(b); }
+  const ed=document.createElement("label"); ed.className="psa-ed"; const cb=document.createElement("input"); cb.type="checkbox"; cb.checked=psaManFirst; ed.append(cb, " 1st Edition");
+  cb.onchange=()=>{ psaManFirst=cb.checked; links(); };
+  const g=document.createElement("div"); g.className="ui-group";
+  const links=()=>{
+    psaManCard=card.value.trim(); g.replaceChildren();
+    if(!psaManCard || !psaManGrade){ const r=document.createElement("div"); r.className="ui-row ui-static"; r.innerHTML='<span class="ui-l"><small>Type the card and pick the grade to see recent sales.</small></span>'; g.append(r); return; }
+    const words=psaManCard+" PSA "+psaManGrade+(psaManFirst ? " 1st Edition" : " -1st");
+    g.append(psaLinkRow("https://www.ebay.com/sch/i.html?_nkw="+enc(words)+"&LH_Sold=1&LH_Complete=1&_sop=13", "eBay sold · PSA "+psaManGrade, (psaManFirst ? "1st Edition" : "Unlimited")+" PSA "+psaManGrade+" sales, newest first"),
+             psaLinkRow("https://www.pricecharting.com/search-products?type=prices&q="+q(psaManCard), "PriceCharting", "Prices for every grade · opens in a new tab"));
+  };
+  card.oninput=links;
+  f.append(card, gl, chips, ed);
+  const row=document.createElement("div"); row.className="row-end";
+  const again=document.createElement("button"); again.className="btn"; again.type="button"; again.textContent="Check another"; again.onclick=psaShow; row.append(again);
+  box.append(ban, go, n, h, f, g, row); links();
+}
+let psaManCard="", psaManGrade="", psaManFirst=false;
 async function psaCheck(cert){
   const msg=$("psaMsg"); msg.className="note";
   if(!/^\d{5,12}$/.test(cert||"")){ msg.textContent="Type the cert number from the label (5 to 12 digits)."; return; }
@@ -5579,7 +5617,7 @@ async function psaCheck(cert){
   msg.textContent="Asking PSA…"; $("psaGo").disabled=$("psaScan").disabled=true;
   try{
     const r=await fetch("api/psa/"+cert); const j=await r.json();
-    if(!r.ok){ msg.className="err"; msg.textContent=j.error||"Couldn't check that slab."; if(r.status===400 && /Settings/.test(j.error||"")){ psaReady=false; $("psaSetup").hidden=false; } return; }
+    if(!r.ok){ msg.className="err"; msg.textContent=j.error||"Couldn't check that slab."; return; }
     psaDraw(j);
   }catch(_){ msg.className="err"; msg.textContent="Couldn't reach "+srv()+". Try again."; }
   finally{ $("psaGo").disabled=$("psaScan").disabled=false; }
@@ -5590,7 +5628,6 @@ $("psaClose").onclick=()=>$("psaDlg").close();
 $("psaDlg").addEventListener("click",e=>{ if(e.target===$("psaDlg")) $("psaDlg").close(); });
 $("psaGo").onclick=()=>psaCheck(psaCertFrom($("psaNum").value));
 $("psaNum").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); $("psaGo").click(); } });
-$("psaSetupBtn").onclick=()=>{ $("psaDlg").close(); $("cog").click(); setTimeout(()=>{ const b=document.querySelector('#settings [data-go="prices"]'); if(b) b.click(); setTimeout(()=>$("stPsa").focus(),200); },120); };
 // Reading the label. A live camera view inside the pop-up keeps trying as you move closer (best for the small
 // barcode on PSA labels). Where the browser can't show a live camera, a photo is used, read in pieces and enlarged.
 const PSA_FORMATS=["code_128","qr_code","code_39","code_93","codabar","itf","ean_13","data_matrix","pdf417"];
@@ -5683,13 +5720,13 @@ function loadPsaSetting(){
 function drawPsaSetting(){
   $("stPsa").value=""; $("stPsa").placeholder=psaReady ? "Saved · paste a new code to replace it" : "Paste your code";
   $("stPsaRm").hidden=!psaReady;
-  if(!$("stPsaMsg").dataset.keep) $("stPsaMsg").textContent=psaReady ? "A code is saved. Slab checks are ready." : "";
+  if(!$("stPsaMsg").dataset.keep) $("stPsaMsg").textContent=psaReady ? "A code is saved." : "";
   delete $("stPsaMsg").dataset.keep;
 }
 function savePsa(v){
   fetch("api/settings",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({psaToken:v})})
     .then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error||"Couldn't save"); return j; }))
-    .then(()=>{ psaReady=!!v; $("stPsaMsg").textContent=v ? "Saved. Slab checks are ready." : "Removed. Slab checks are off until you add a code."; $("stPsaMsg").dataset.keep=1; drawPsaSetting(); })
+    .then(()=>{ psaReady=!!v; $("stPsaMsg").textContent=v ? "Saved." : "Removed."; $("stPsaMsg").dataset.keep=1; drawPsaSetting(); })
     .catch(e=>{ $("stPsaMsg").textContent=e.message+"."; });
 }
 $("stPsa").addEventListener("change",()=>{ const v=$("stPsa").value.trim(); if(v) savePsa(v); });
