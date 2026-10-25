@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v3.32 (October 25, 2026)
 
 - **Check a PSA slab:** scan the barcode or QR code on a PSA slab's label (or type the cert number) to see if it's real. It shows the card, grade, how many PSA has graded at that grade and higher, and PSA's own photos of the slab, so you can compare them with the one in your hand. Find it in the ☰ menu, or the scan button next to the search box in card show mode.
 - **Recent sales for that grade:** after a check, one tap opens eBay sold listings for that exact card and grade (newest first, 1st Edition or Unlimited to match the slab), PriceCharting's prices for every grade in a new tab, or PSA's page for the slab.
