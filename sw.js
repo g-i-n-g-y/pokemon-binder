@@ -51,7 +51,7 @@ self.addEventListener("fetch", e => {
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;             // other websites: leave alone
   const p = url.pathname;
-  if (p.endsWith("/api/health") || p.includes("/api/update") || p.includes("/api/backup") || p.includes("/api/refresh") || p.includes("/api/status")) return;
+  if (p.endsWith("/api/health") || p.includes("/api/update") || p.includes("/api/backup") || p.includes("/api/refresh") || p.includes("/api/status") || p.includes("/api/psa/")) return;
   if (req.mode === "navigate") { e.respondWith(networkFirst(req, SHELL, new Request("./"))); return; }
   if (p.includes("/api/")) { e.respondWith(networkFirst(req, DATA)); return; }
   if (/\/(img|photo)\//.test(p) || /\/(art|unown)\//.test(p) || /\/(logo|sprite)\.png$/.test(p)) { e.respondWith(cacheFirst(req)); return; }

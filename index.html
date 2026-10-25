@@ -1027,6 +1027,33 @@ body.at-show > .wrap:not(.show){display:none}
 #swBuy .sb-manual select{flex:0 0 124px;height:44px;min-width:0}
 #swBuy .sb-scan{flex:none;width:44px;height:44px}
 #swBuy .sb-scan svg{width:20px;height:20px}
+.sw-find .sw-psa{flex:none;width:44px;height:44px}
+.sw-find .sw-psa svg{width:20px;height:20px}
+#psaDlg .sheet{display:flex;flex-direction:column;gap:14px}
+.psa-start,.psa-body{display:flex;flex-direction:column;gap:14px}
+.psa-start[hidden],.psa-body[hidden]{display:none}
+.psa-scan{width:100%;height:52px;display:flex;gap:10px;align-items:center;justify-content:center;font-size:16px}
+.psa-scan svg{width:20px;height:20px}
+.psa-or-t{text-align:center}
+.psa-or{display:flex;gap:8px}.psa-or .field{flex:1;min-width:0;height:44px}.psa-or .btn{flex:none;height:44px}
+#psaMsg:empty{display:none}
+.psa-ban{display:flex;gap:12px;align-items:center;border-radius:12px;padding:12px 14px;border:1px solid}
+.psa-ban.ok{border-color:color-mix(in srgb,var(--good) 45%,transparent);background:color-mix(in srgb,var(--good) 12%,transparent)}
+.psa-ban.no{border-color:color-mix(in srgb,var(--bad) 45%,transparent);background:color-mix(in srgb,var(--bad) 12%,transparent)}
+.psa-ban svg{width:26px;height:26px;flex:none}.psa-ban.ok svg{color:var(--good)}.psa-ban.no svg{color:var(--bad)}
+.psa-ban b{display:block;font-size:15px}.psa-ban small{color:var(--muted);font-size:13px}
+.psa-card{display:flex;gap:14px;align-items:center}
+.psa-th{flex:none;padding:0;border:0;background:none;cursor:zoom-in;border-radius:6px}
+.psa-th img{display:block;width:72px;max-height:124px;object-fit:contain;border-radius:6px;border:1px solid var(--line)}
+.psa-info{flex:1;min-width:0}
+.psa-info .nm{font-weight:600;font-size:16px;overflow-wrap:anywhere}.psa-info small{display:block;color:var(--muted);font-size:13px;margin-top:2px}
+.psa-grade{flex:none;text-align:center;border:1px solid var(--line);border-radius:10px;padding:6px 12px;background:var(--surface);min-width:58px}
+.psa-grade b{display:block;font:700 24px var(--f-display)}.psa-grade small{display:block;font:600 10px var(--f-mono);color:var(--muted);letter-spacing:.06em;max-width:90px}
+.psa-back{align-self:flex-start;margin-top:-6px}
+#psaDlg a.ui-row{text-decoration:none;color:inherit}
+#psaDlg .psa-go{color:var(--muted);font-size:16px}
+#psaDlg .ui-h{margin:4px 0 -6px}
+.row-msg{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
 .sel-hide{display:none!important}
 .sel-field{display:flex;gap:8px}
 .sel-btn{flex:1;min-width:0;height:44px;text-align:left;cursor:pointer;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font:inherit;font-size:15px}
@@ -1459,6 +1486,7 @@ html,body{overscroll-behavior-y:none}
   </div>
   <div class="sw-find">
     <input class="field" type="search" id="swQ" placeholder="Name or number, like 107" aria-label="Find a needed card" enterkeyhint="search" autocomplete="off">
+    <button class="icon-btn sw-psa" type="button" id="swPsa" aria-label="Check a PSA slab" title="Check a PSA slab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><path d="M7 9v6M10 9v6M13 9v6M16 9v6"/></svg></button>
     <div class="seg" id="swSort" role="group" aria-label="Sort">
       <button type="button" data-s="price" aria-pressed="true" id="swPriceBtn">Price ↑</button>
       <button type="button" data-s="set" aria-pressed="false">By binder</button>
@@ -1497,6 +1525,23 @@ html,body{overscroll-behavior-y:none}
     <div class="sp-list" id="spList"></div>
     <div class="err" id="spErr" aria-live="polite"></div>
     <div class="row-end"><button class="btn primary" type="button" id="spDone">Done</button></div>
+  </div>
+</dialog>
+
+<dialog id="psaDlg" class="float" aria-labelledby="psaTitle">
+  <div class="sheet">
+    <button class="close" type="button" id="psaClose">Close ✕</button>
+    <h2 id="psaTitle">Check a PSA slab</h2>
+    <div class="psa-start" id="psaStart">
+      <div class="note">Take a photo of the barcode or QR code on the slab's label.</div>
+      <button class="btn primary psa-scan" type="button" id="psaScan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><path d="M7 9v6M10 9v6M13 9v6M16 9v6"/></svg>Scan the label</button>
+      <input type="file" id="psaCam" accept="image/*" capture="environment" hidden>
+      <div class="note psa-or-t">or type the cert number</div>
+      <div class="psa-or"><input class="field" id="psaNum" inputmode="numeric" autocomplete="off" placeholder="Cert number, like 12345678" aria-label="PSA cert number"><button class="btn" type="button" id="psaGo">Check</button></div>
+      <div class="ui-group" id="psaSetup" hidden><div class="ui-row ui-static"><span class="ui-l"><b>Add your PSA access code first</b><small>It's free. One-time setup in Settings → Prices.</small></span><button class="btn" type="button" id="psaSetupBtn">Set up</button></div></div>
+    </div>
+    <div class="note" id="psaMsg" aria-live="polite"></div>
+    <div class="psa-body" id="psaBody" hidden></div>
   </div>
 </dialog>
 
@@ -1708,7 +1753,7 @@ html,body{overscroll-behavior-y:none}
       <div class="allsum" id="allSum" hidden></div>
       <div class="ui-group setlist" id="setList"></div>
       <div id="rmList" class="rm-list" hidden></div>
-      <div class="ui-group"><button class="ui-row" type="button" id="findOpen"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></span><span class="ui-l"><b>Find a card</b><small>Search every English card and set</small></span><span class="ui-chev" aria-hidden="true"></span></button><button class="ui-row" type="button" id="addOpen"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span class="ui-l"><b>Add a binder</b><small>A set, every card of a Pokémon, or your own</small></span><span class="ui-chev" aria-hidden="true"></span></button></div>
+      <div class="ui-group"><button class="ui-row" type="button" id="findOpen"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></span><span class="ui-l"><b>Find a card</b><small>Search every English card and set</small></span><span class="ui-chev" aria-hidden="true"></span></button><button class="ui-row" type="button" id="psaOpen"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="ui-l"><b>Check a PSA slab</b><small>Scan the label to see if it's real</small></span><span class="ui-chev" aria-hidden="true"></span></button><button class="ui-row" type="button" id="addOpen"><span class="ui-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span class="ui-l"><b>Add a binder</b><small>A set, every card of a Pokémon, or your own</small></span><span class="ui-chev" aria-hidden="true"></span></button></div>
       <button class="verline" type="button" id="verLine" title="What's new">Pokémon Binder <span id="verNum"></span></button>
     </div>
     <div id="drAdd" hidden>
@@ -1862,6 +1907,11 @@ html,body{overscroll-behavior-y:none}
       <div class="ui-group">
         <label class="ui-row" for="stBackup"><span class="ui-l"><b>Use the market price when there are no recent sales</b><small id="stBackupMsg">TCGplayer's market price from TCGdex, for every binder</small></span><input type="checkbox" class="ui-switch" id="stBackup" checked></label>
       </div>
+      <h3 class="ui-h">PSA slab check</h3>
+      <div class="ui-group">
+        <label class="ui-row ui-static ui-stack" for="stPsa"><span class="ui-l"><b>PSA access code</b><small>Free: sign in at <a href="https://www.psacard.com/publicapi" target="_blank" rel="noopener noreferrer">psacard.com/publicapi</a> and copy your access token. It's kept only on <span class="srv">the server</span>. PSA allows about 100 slab checks a day.</small></span><input class="field" id="stPsa" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your code"></label>
+      </div>
+      <div class="row-msg"><span class="note" id="stPsaMsg" aria-live="polite"></span><button class="hm-link" type="button" id="stPsaRm" hidden>Remove code</button></div>
       <div class="note" id="setPrices">Each price is the average of the newest matching Unlimited English sales (up to 5 per condition). 1st Edition, Shadowless, Japanese and lots are skipped.</div>
     </section>
 
@@ -3132,6 +3182,7 @@ $("icUp").onchange=e=>{
 };
 $("icReset").onclick=()=>fetch("api/icon",{method:"DELETE"}).then(()=>{ setIcon(); $("icMsg").textContent="Back to the default icon."; });
 function loadSettings(){
+  loadPsaSetting();
   $("stSaved").textContent=""; $("slotMsg").textContent=""; drawSlots(); setIcon(Date.now()); loadAutoBackups(); importSetup();
   $("slotSet").textContent=state.set.name ? "for "+state.set.name : "";
   getSlots().then(s=>{ if(!s) throw 0; drawSlots(); return s; }).then(s=>{
@@ -5399,6 +5450,170 @@ $("slQr").onchange=async e=>{
     slDone(sel);
   }catch(_){ msg.textContent="Couldn't read that photo. Try again, or type their name."; }
 };
+// ---------- PSA slab check ----------
+// Scan the barcode or QR code on a PSA slab's label (or type the cert number). The server asks PSA, then this shows
+// the card, grade and PSA's photos, the matching card in your binders, and links to recent sales of that grade.
+const PSA_SHIELD='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>';
+const PSA_WARN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/></svg>';
+let psaReady=null;   // is a PSA access code saved on the server? (null = not known yet)
+function psaCertFrom(raw){
+  const t=String(raw||"").trim();
+  let m=t.match(/psacard\.com\/cert\/(\d{5,12})/i); if(m) return m[1];
+  if(/^[\d\s-]{5,20}$/.test(t)){ const d=t.replace(/\D/g,""); if(d.length>=5 && d.length<=12) return d; }
+  m=t.match(/(?:^|\D)(\d{7,10})(?:\D|$)/); return m ? m[1] : "";
+}
+const psaSet = d => d.brand.replace(/^pokemon\s+/i,"").replace(/^game$/i,"Base Set");   // PSA calls Base Set "Pokemon Game"
+const psaName = d => psaTitle(d.subject.replace(/-holo$/i,""));
+const psaTitle = t => String(t||"").toLowerCase().replace(/(^|[\s\-(\/])([a-z])/g,(a,b,c)=>b+c.toUpperCase());
+function psaShow(){
+  $("psaBody").hidden=true; $("psaStart").hidden=false; $("psaMsg").textContent=""; $("psaMsg").className="note";
+  $("psaNum").value=""; $("psaSetup").hidden=psaReady!==false;
+}
+function openPsa(){
+  if($("drawer").open) $("drawer").close();
+  psaShow(); $("psaDlg").showModal();
+  fetch("api/settings").then(r=>r.json()).then(s=>{ psaReady=!!s.psa; $("psaSetup").hidden=psaReady; }).catch(()=>{});
+}
+function psaEbayUrl(d){
+  const m=d.match, grade="PSA "+(d.grade||"");
+  const first=/1st/i.test(d.variety);
+  let words;
+  if(m){
+    const no=m.cardNum ? "#"+String(m.cardNum).replace(/^0+(?=\d)/,"")+(m.pt ? "/"+m.pt : "") : "";
+    const set=(m.set||"").replace(/ Base Set$/,"");
+    words=[d.year||m.year, set==="Base" ? "Base Set" : set, m.name, /Holo/.test(m.rarity||"") ? "Holo" : "", no];
+  } else {
+    words=[d.year, psaTitle(psaSet(d)), psaName(d), /holo/i.test(d.subject) ? "Holo" : "", d.num ? "#"+d.num : ""];
+  }
+  words.push(d.grade ? grade : "PSA", first ? "1st Edition" : "-1st");
+  return "https://www.ebay.com/sch/i.html?_nkw="+enc(words.filter(Boolean).join(" "))+"&LH_Sold=1&LH_Complete=1&_sop=13";
+}
+function psaPcUrl(d){
+  const m=d.match;
+  if(m && m.pc) return m.pc;
+  const s=m ? (m.set||"").replace(/ Base Set$/,"")+" "+m.name+" "+(m.cardNum||"") : psaSet(d)+" "+psaName(d)+" "+d.num;
+  return "https://www.pricecharting.com/search-products?type=prices&q="+q(s);
+}
+function psaLinkRow(href, title, sub){
+  const a=document.createElement("a"); a.className="ui-row"; a.href=href; a.target="_blank"; a.rel="noopener noreferrer";
+  const l=document.createElement("span"); l.className="ui-l"; const b=document.createElement("b"); b.textContent=title; const s=document.createElement("small"); s.textContent=sub;
+  l.append(b,s); const ar=document.createElement("span"); ar.className="psa-go"; ar.setAttribute("aria-hidden","true"); ar.textContent="↗";
+  a.append(l,ar); return a;
+}
+function psaDraw(d){
+  const box=$("psaBody"); box.replaceChildren(); box.hidden=false; $("psaStart").hidden=true; $("psaMsg").textContent="";
+  const ban=document.createElement("div");
+  if(!d.found){
+    ban.className="psa-ban no"; ban.innerHTML=PSA_WARN+'<div><b>No PSA record found</b><small></small></div>';
+    ban.querySelector("small").textContent="Cert "+d.cert;
+    const n=document.createElement("div"); n.className="note"; n.textContent="Double-check the number on the label. If it's right and PSA has no record, treat the slab as fake.";
+    const row=document.createElement("div"); row.className="row-end"; const again=document.createElement("button"); again.className="btn primary"; again.type="button"; again.textContent="Try again"; again.onclick=psaShow; row.append(again);
+    box.append(ban,n,row); again.focus(); return;
+  }
+  ban.className="psa-ban ok"; ban.innerHTML=PSA_SHIELD+'<div><b>Real PSA cert</b><small></small></div>';
+  ban.querySelector("small").textContent="Cert "+d.cert+" is in PSA's records";
+  const m=d.match;
+  // the card: PSA's photo of the slab when it has one, else the binder's picture
+  const card=document.createElement("div"); card.className="psa-card";
+  const th=document.createElement("button"); th.type="button"; th.className="psa-th";
+  const im=document.createElement("img"); im.alt="";
+  const sides=d.imgs||[];
+  const src=sides.includes("front") ? "api/psa/"+d.cert+"/front.jpg" : m ? "set/"+enc(m.sid)+"/img/"+enc(m.n)+".png" : "";
+  if(src){ im.src=src; im.onerror=()=>th.remove(); th.append(im); th.setAttribute("aria-label","Show the picture bigger");
+    th.onclick=()=>{ $("zoomImg").src=sides.includes("front") ? "api/psa/"+d.cert+"/front.jpg" : "set/"+enc(m.sid)+"/img/"+enc(m.n)+".png?full=1"; $("zoom").showModal(); }; }
+  const info=document.createElement("div"); info.className="psa-info";
+  const nm=document.createElement("div"); nm.className="nm"; nm.textContent=m ? m.name : psaName(d);
+  const s1=document.createElement("small"); s1.textContent=[m ? m.set : psaTitle(psaSet(d)), d.num ? "#"+d.num : "", psaTitle(d.variety)].filter(Boolean).join(" · ");
+  const s2=document.createElement("small"); s2.textContent=[d.year, d.pop!=null && d.pop!=="" ? "PSA has graded "+d.pop+" at this grade"+(Number(d.higher)>0 ? ", "+d.higher+" higher" : "") : ""].filter(Boolean).join(" · ");
+  info.append(nm,s1,s2);
+  const gr=document.createElement("div"); gr.className="psa-grade"; const gb=document.createElement("b"); gb.textContent=d.grade||"A"; const gs=document.createElement("small"); gs.textContent=(d.gradeText||"").toUpperCase(); gr.append(gb,gs);
+  card.append(th,info,gr);
+  const warn=document.createElement("div"); warn.className="note";
+  warn.textContent=(sides.includes("front") ? "This is PSA's own photo of this slab. " : "")+"Make sure the slab in your hand shows the same card and grade. Fake slabs sometimes copy a real cert number.";
+  box.append(ban,card,warn);
+  if(sides.includes("back")){ const bk=document.createElement("button"); bk.type="button"; bk.className="hm-link psa-back"; bk.textContent="See PSA's photo of the back";
+    bk.onclick=()=>{ $("zoomImg").src="api/psa/"+d.cert+"/back.jpg"; $("zoom").showModal(); }; box.append(bk); }
+  // recent sales: eBay sold listings for this exact grade, and PriceCharting's prices by grade
+  const h=document.createElement("h3"); h.className="ui-h"; h.textContent="Recent sales";
+  const g=document.createElement("div"); g.className="ui-group";
+  const gname=d.grade ? "PSA "+d.grade : "PSA";
+  g.append(psaLinkRow(psaEbayUrl(d), "eBay sold · "+gname, (/1st/i.test(d.variety) ? "1st Edition" : "Unlimited")+" "+gname+" sales, newest first"),
+           psaLinkRow(psaPcUrl(d), "PriceCharting", "Prices for every grade · opens in a new tab"),
+           psaLinkRow("https://www.psacard.com/cert/"+d.cert+"/psa", "PSA's page for this slab", "Cert details and PSA's auction prices"));
+  box.append(h,g);
+  // your binders
+  const h2=document.createElement("h3"); h2.className="ui-h"; h2.textContent="Your binders";
+  const g2=document.createElement("div"); g2.className="ui-group";
+  if(m){
+    const r=document.createElement("button"); r.type="button"; r.className="ui-row";
+    const l=document.createElement("span"); l.className="ui-l"; const b=document.createElement("b"); const s=document.createElement("small");
+    b.textContent=isPrivate() ? "In your "+m.binder+" binder" : m.owned ? "You own this card" : "You need this card";
+    s.textContent=[m.binder+(m.page ? ", page "+m.page : ""), m.price ? "raw price "+money(m.price) : "", m.sure ? "" : "best guess"].filter(Boolean).join(" · ");
+    l.append(b,s); const c=document.createElement("span"); c.className="ui-chev"; c.setAttribute("aria-hidden","true"); r.append(l,c);
+    r.onclick=()=>{ $("psaDlg").close(); goBinder(m.sid, ()=>{ if(state.sid===m.sid) openCard(m.n); }); };
+    g2.append(r);
+  } else {
+    const r=document.createElement("div"); r.className="ui-row ui-static"; r.innerHTML='<span class="ui-l"><b>Not in your binders</b><small>None of your binders has this card.</small></span>'; g2.append(r);
+  }
+  box.append(h2,g2);
+  if(m && /1st/i.test(d.variety)){ const n=document.createElement("div"); n.className="note"; n.textContent="This slab is 1st Edition. Your binder's prices are for Unlimited cards."; box.append(n); }
+  const row=document.createElement("div"); row.className="row-end";
+  const again=document.createElement("button"); again.className="btn primary"; again.type="button"; again.textContent="Check another"; again.onclick=psaShow;
+  row.append(again); box.append(row);
+}
+async function psaCheck(cert){
+  const msg=$("psaMsg"); msg.className="note";
+  if(!/^\d{5,12}$/.test(cert||"")){ msg.textContent="Type the cert number from the label (5 to 12 digits)."; return; }
+  if(!navigator.onLine){ msg.textContent="You're offline. Checking a slab needs a connection to "+srv()+"."; return; }
+  msg.textContent="Asking PSA…"; $("psaGo").disabled=$("psaScan").disabled=true;
+  try{
+    const r=await fetch("api/psa/"+cert); const j=await r.json();
+    if(!r.ok){ msg.className="err"; msg.textContent=j.error||"Couldn't check that slab."; if(r.status===400 && /Settings/.test(j.error||"")){ psaReady=false; $("psaSetup").hidden=false; } return; }
+    psaDraw(j);
+  }catch(_){ msg.className="err"; msg.textContent="Couldn't reach "+srv()+". Try again."; }
+  finally{ $("psaGo").disabled=$("psaScan").disabled=false; }
+}
+$("psaOpen").onclick=openPsa;
+$("swPsa").onclick=openPsa;
+$("psaClose").onclick=()=>$("psaDlg").close();
+$("psaDlg").addEventListener("click",e=>{ if(e.target===$("psaDlg")) $("psaDlg").close(); });
+$("psaGo").onclick=()=>psaCheck(psaCertFrom($("psaNum").value));
+$("psaNum").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); $("psaGo").click(); } });
+$("psaSetupBtn").onclick=()=>{ $("psaDlg").close(); $("cog").click(); setTimeout(()=>{ const b=document.querySelector('#settings [data-go="prices"]'); if(b) b.click(); setTimeout(()=>$("stPsa").focus(),200); },120); };
+$("psaScan").onclick=()=>$("psaCam").click();
+$("psaCam").onchange=async e=>{
+  const f=e.target.files && e.target.files[0]; e.target.value=""; if(!f) return;
+  const msg=$("psaMsg"); msg.className="note";
+  if(!("BarcodeDetector" in window)){ msg.textContent="This browser can't read barcodes. Chrome on Android can. Type the cert number instead."; return; }
+  msg.textContent="Reading the label…";
+  try{
+    const img=await createImageBitmap(f);
+    const want=["qr_code","code_128","code_39","code_93","codabar","itf","ean_13","data_matrix","pdf417"];
+    const have=BarcodeDetector.getSupportedFormats ? await BarcodeDetector.getSupportedFormats() : want;
+    const codes=await new BarcodeDetector({formats:want.filter(x=>have.includes(x))}).detect(img);
+    const cert=codes.map(c=>psaCertFrom(c.rawValue)).find(Boolean);
+    if(!cert){ msg.textContent=codes.length ? "That code isn't a PSA cert number. Try the barcode on the label, or type the number." : "No barcode found in that photo. Try again a little closer, with the label filling the photo."; return; }
+    $("psaNum").value=cert; psaCheck(cert);
+  }catch(_){ msg.textContent="Couldn't read that photo. Try again, or type the cert number."; }
+};
+// Settings > Prices: the PSA access code (only "saved or not" ever comes back from the server)
+function loadPsaSetting(){
+  fetch("api/settings").then(r=>r.json()).then(s=>{ psaReady=!!s.psa; drawPsaSetting(); }).catch(()=>{});
+}
+function drawPsaSetting(){
+  $("stPsa").value=""; $("stPsa").placeholder=psaReady ? "Saved · paste a new code to replace it" : "Paste your code";
+  $("stPsaRm").hidden=!psaReady;
+  if(!$("stPsaMsg").dataset.keep) $("stPsaMsg").textContent=psaReady ? "A code is saved. Slab checks are ready." : "";
+  delete $("stPsaMsg").dataset.keep;
+}
+function savePsa(v){
+  fetch("api/settings",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({psaToken:v})})
+    .then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error||"Couldn't save"); return j; }))
+    .then(()=>{ psaReady=!!v; $("stPsaMsg").textContent=v ? "Saved. Slab checks are ready." : "Removed. Slab checks are off until you add a code."; $("stPsaMsg").dataset.keep=1; drawPsaSetting(); })
+    .catch(e=>{ $("stPsaMsg").textContent=e.message+"."; });
+}
+$("stPsa").addEventListener("change",()=>{ const v=$("stPsa").value.trim(); if(v) savePsa(v); });
+$("stPsaRm").onclick=()=>savePsa("");
 // card show mode's seller button
 function setSeller(sel){
   buySeller=sel && sel.h ? {p:sel.p, h:sel.h} : null;

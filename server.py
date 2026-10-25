@@ -1248,6 +1248,179 @@ def show_data():
             "bought": bought, "spent": round(spent, 2), "sellers": all_sellers()}
 
 
+# ---------- PSA slab check ----------
+# Looks up a PSA cert number with PSA's free public service (needs your own access code from psacard.com/publicapi,
+# saved in Settings > Prices). PSA allows about 100 lookups a day, so each slab is looked up once and kept in
+# data/psa/ (the newest PSA_KEEP slabs). That folder is a cache: it isn't backed up and can be deleted any time.
+PSA_API = os.environ.get("PSA_API") or "https://api.psacard.com/publicapi"   # PSA_API is only for testing
+PSA_DIR = os.path.join(DATA, "psa")
+PSA_FILE = os.path.join(PSA_DIR, "checks.json")
+PSA_KEEP = 60
+psa_lock = threading.Lock()
+
+
+class PsaError(Exception):
+    def __init__(self, msg, code=502):
+        super().__init__(msg)
+        self.code = code
+
+
+def psa_call(path):
+    tok = (get_settings().get("psaToken") or "").strip()
+    if not tok:
+        raise PsaError("Add your PSA access code in Settings → Prices first.", 400)
+    req = urllib.request.Request(PSA_API + path, headers={"Authorization": "bearer " + tok, "Accept": "application/json", "User-Agent": UA})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            body = r.read()
+    except urllib.error.HTTPError as e:
+        if e.code == 429:
+            raise PsaError("PSA's daily limit is used up. Try again tomorrow, or type the number on psacard.com.", 429)
+        if e.code in (401, 403, 500):   # PSA answers a wrong or expired access code with 500
+            raise PsaError("PSA didn't accept the access code, or today's free lookups are used up. Check the code in Settings → Prices.", 502)
+        raise PsaError(f"PSA's lookup isn't answering right now (error {e.code}). Try again in a bit.")
+    except (urllib.error.URLError, OSError, TimeoutError):
+        raise PsaError("Couldn't reach PSA from the server. Check the server's internet and try again.")
+    if not body.strip():
+        return {}
+    try:
+        return json.loads(body)
+    except ValueError:
+        raise PsaError("PSA sent back something unexpected. Try again in a bit.")
+
+
+def psa_grade(text):
+    """'NM-MT 8' -> ('8', 'NM-MT'); 'GEM MT 10' -> ('10', 'GEM MT'); 'AUTHENTIC' -> ('', 'AUTHENTIC')."""
+    t = re.sub(r"\s+", " ", str(text or "")).strip()
+    m = re.search(r"(\d{1,2}(?:\.5)?)\b", t)
+    if not m:
+        return "", t
+    return m.group(1), (t[:m.start()] + t[m.end():]).strip(" -")
+
+
+def psa_images(cert):
+    out = {}
+    try:
+        j = psa_call(f"/cert/GetImagesByCertNumber/{cert}")
+    except PsaError:
+        return out
+    items = j if isinstance(j, list) else next((v for v in j.values() if isinstance(v, list)), []) if isinstance(j, dict) else []
+    for it in items:
+        if isinstance(it, dict) and str(it.get("ImageURL") or "").startswith("https://"):
+            out["front" if it.get("IsFrontImage") else "back"] = it["ImageURL"]
+    return out
+
+
+def psa_lookup(cert):
+    j = psa_call(f"/cert/GetByCertNumber/{cert}")
+    c = j.get("PSACert") if isinstance(j, dict) else None
+    if not isinstance(c, dict) or not (c.get("CertNumber") or c.get("Subject")):
+        return None
+    num, words = psa_grade(c.get("CardGrade") or c.get("GradeDescription"))
+    return {"cert": cert, "grade": num, "gradeText": words or str(c.get("GradeDescription") or ""),
+            "desc": str(c.get("GradeDescription") or ""),
+            "year": str(c.get("Year") or ""), "brand": str(c.get("Brand") or ""), "subject": str(c.get("Subject") or ""),
+            "num": str(c.get("CardNumber") or ""), "variety": str(c.get("Variety") or ""), "category": str(c.get("Category") or ""),
+            "pop": c.get("TotalPopulation"), "higher": c.get("PopulationHigher"), "dna": bool(c.get("IsPSADNA")),
+            "imgs": psa_images(cert), "at": now_iso()}
+
+
+PSA_SKIP = {"holo", "rev", "reverse", "foil", "1st", "edition", "ed", "shadowless", "pokemon", "card", "game"}
+
+
+def _psa_words(t):
+    return set(re.findall(r"[a-z0-9]+", _fold(t))) - PSA_SKIP
+
+
+def psa_match(e):
+    """The card in your binders that this slab is: same card number, every word of the card's name in PSA's
+    description, and the binder's set name in PSA's set name when it can tell. None when nothing matches."""
+    num = _num_fold(e.get("num"))
+    if not num:
+        return None
+    subj, brand = _psa_words(e.get("subject")), _psa_words(e.get("brand"))
+    sl = sets_list()
+    best, best_score = None, 0
+    for sid in sl["order"]:
+        meta = sl["meta"].get(sid, {})
+        cards = read_json(sdir(sid, "cards.json"), None)
+        cards = (cards or []) + extra_list(sid) + custom_cards(sid) if cards is not None or is_own(sid) else []
+        set_words = _psa_words(meta.get("name", ""))
+        for c in cards:
+            if _num_fold(c.get("num", c["n"])) != num:
+                continue
+            nm = _psa_words(c.get("name", ""))
+            if not nm or not nm <= subj:
+                continue
+            cset = _psa_words(c["set"]) if c.get("set") else set_words
+            score = 2 + (1 if cset and cset <= brand else 0)
+            if score > best_score:
+                best, best_score = (sid, meta, c, cards), score
+    if not best:
+        return None
+    sid, meta, c, cards = best
+    coll = read_json(sdir(sid, "collection.json"), {})
+    rec = coll.get(c["n"]) if isinstance(coll.get(c["n"]), dict) else {}
+    pr = read_json(sdir(sid, "prices.json"), {}) or {}
+    info = (pr.get("info") or {}).get(c["n"]) or {}
+    lay = read_json(sdir(sid, "layout.json"), {}) or {}
+    pk = lay.get("pockets") if lay.get("pockets") in POCKETS else 9
+    order = [x for x in lay["slots"] if isinstance(x, str)] if isinstance(lay.get("slots"), list) else []
+    order += [x["n"] for x in cards if x["n"] not in order]
+    page = order.index(c["n"]) // pk + 1 if c["n"] in order else 0
+    return {"sid": sid, "set": c.get("set") or meta.get("name", sid), "binder": meta.get("name", sid), "n": c["n"],
+            "name": c.get("name", ""), "cardNum": c.get("num", c["n"]),
+            "pt": c.get("pt") or ("" if is_multi(sid) or c.get("custom") else meta.get("printedTotal") or ""),
+            "rarity": c.get("rarity", ""), "year": str(c.get("date") or meta.get("releaseDate") or "")[:4],
+            "owned": _owned(rec), "price": ((pr.get("p") or {}).get(c["n"]) or [0])[0] or 0,
+            "pc": info.get("pc", ""), "tcg": c.get("tcg", ""), "page": page, "sure": best_score == 3}
+
+
+def psa_check(cert):
+    if not re.fullmatch(r"\d{5,12}", cert or ""):
+        raise PsaError("A PSA cert number is 5 to 12 digits.", 400)
+    with psa_lock:
+        cache = read_file_json(PSA_FILE, {})
+    e = cache.get(cert) if isinstance(cache, dict) else None
+    if not isinstance(e, dict):
+        e = psa_lookup(cert)
+        if not e:
+            return {"found": False, "cert": cert}
+        with psa_lock:
+            cache = read_file_json(PSA_FILE, {})
+            cache = cache if isinstance(cache, dict) else {}
+            cache[cert] = e
+            keep = sorted(cache, key=lambda k: cache[k].get("at", ""), reverse=True)[:PSA_KEEP]
+            for k in set(cache) - set(keep):   # forget the oldest slabs and their pictures
+                for side in ("front", "back"):
+                    with contextlib.suppress(OSError):
+                        os.remove(os.path.join(PSA_DIR, f"{k}-{side}.jpg"))
+            os.makedirs(PSA_DIR, exist_ok=True)
+            write_file_json(PSA_FILE, {k: cache[k] for k in keep})
+    out = dict(e)
+    out["imgs"] = sorted((e.get("imgs") or {}).keys())
+    out["found"] = True
+    try:
+        out["match"] = psa_match(e)
+    except Exception as ex:
+        log(f"PSA {cert}: matching to your binders failed: {ex}")
+        out["match"] = None
+    return out
+
+
+def psa_picture(cert, side):
+    """PSA's own photo of the slab, saved in data/psa the first time it's shown."""
+    path = os.path.join(PSA_DIR, f"{cert}-{side}.jpg")
+    if not os.path.isfile(path):
+        with psa_lock:
+            e = (read_file_json(PSA_FILE, {}) or {}).get(cert) or {}
+        url = (e.get("imgs") or {}).get(side)
+        if not url:
+            return None
+        _download(url, path)
+    return path
+
+
 def pokemon_art(num, shiny=False):
     """A Pokémon's official Ken Sugimori artwork (the art the vintage binders used), downloaded once from
     PokeAPI and kept on the server. Shiny colors for Shining cards."""
@@ -3759,6 +3932,7 @@ class Handler(BaseHTTPRequestHandler):
             out["lastSync"] = {"at": ls.get("at", ""), "count": len(ls.get("added") or []), "undone": ls.get("undone", "")} if ls else None
             out["refreshAll"] = bool(st.get("refreshAll"))
             out["showBinders"] = list(st.get("showBinders") or [])
+            out["psa"] = bool((st.get("psaToken") or "").strip())   # only whether it's set; the code itself never leaves the server
             out["options"] = {"raw": RAW_CONDS, "graders": GRADERS, "grades": GRADES}
             out["next"] = next_run(st).isoformat() if st["auto"] else ""
             out["lastAuto"] = st.get("lastAuto", "")
@@ -3789,6 +3963,20 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(400, {"error": "bad date"})
         if path == "/api/sellers":
             return self.send(200, {"sellers": all_sellers()}, cache="no-store")
+        m = re.fullmatch(r"/api/psa/(\d{1,14})", path)
+        if m:
+            try:
+                return self.send(200, psa_check(m.group(1)), cache="no-store")
+            except PsaError as e:
+                return self.send(e.code, {"error": str(e)})
+        m = re.fullmatch(r"/api/psa/(\d{5,12})/(front|back)\.jpg", path)
+        if m:
+            try:
+                f = psa_picture(m.group(1), m.group(2))
+            except Exception as e:
+                log(f"PSA picture {m.group(1)}: {e}")
+                f = None
+            return self.send_file(f, "image/jpeg") if f else self.send(404, b"not found", "text/plain")
         if path == "/api/show":
             return self.send(200, show_data(), cache="no-store")
         if path == "/api/home":
@@ -4013,6 +4201,11 @@ class Handler(BaseHTTPRequestHandler):
                     st["serverName"] = name
                 if "otherHosts" in new:
                     st["otherHosts"] = clean_hosts(new["otherHosts"])
+                if "psaToken" in new:   # PSA slab check access code
+                    tok = re.sub(r"^\s*bearer\s+", "", str(new["psaToken"] or ""), flags=re.I).strip()
+                    if len(tok) > 3000 or not re.fullmatch(r"[\w\-.~+/=]*", tok):
+                        raise ValueError("That doesn't look like a PSA access code. Copy the whole code from psacard.com/publicapi")
+                    st["psaToken"] = tok
                 if "showBinders" in new:   # card show mode: the binders you're working on
                     order = sets_list()["order"]
                     st["showBinders"] = [x for x in dict.fromkeys(new["showBinders"] or []) if isinstance(x, str) and x in order]
