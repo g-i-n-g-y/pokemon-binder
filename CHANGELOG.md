@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v3.35 (October 25, 2026)
 
 - **Vendor price check uses price history:** once the server has saved at least 5 days of prices over 2 weeks or more, the **Open at** and **Walk away above** numbers come from the card's last 90 days instead of a fixed percentage. You open near its lowest price and walk away a little over its usual price, so a short spike never sets what you pay. Cards without enough history keep the old rule.
 - **Wait or buy now:** the check tags a card **Wait if you can** when it's 15% or more over its usual price or jumped 15% this week, and **Good time to buy** when it's under its usual price.
