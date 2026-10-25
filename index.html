@@ -273,6 +273,20 @@ label.f select,label.f input{font:inherit;font-size:15px;color:var(--ink);backgr
 .skin b{font-family:var(--f-display);font-size:17px;display:block}
 .skin span{font-size:13px;color:var(--muted)}
 footer{font-size:13px;color:var(--muted);max-width:70ch}
+/* Set map: one small box per binder page, real card pictures in each pocket */
+.setmap{--pk-w:calc(42px / var(--map-cols, 3));display:flex;flex-wrap:wrap;gap:8px;margin-top:-8px}
+#binderMain[data-view]:not([data-view="cards"]) .setmap{display:none}
+.mp-page{position:relative;display:grid;grid-template-columns:repeat(var(--map-cols, 3),var(--pk-w));gap:2px;align-content:start;padding:4px 4px 17px;border:1px solid var(--line);border-radius:6px;background:var(--surface);cursor:pointer;font:inherit;color:inherit}
+.mp-page:hover{border-color:var(--muted)}
+.mp-page:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.mp-pk{width:var(--pk-w);aspect-ratio:63/88;border-radius:2px;overflow:hidden;background:var(--sleeve)}
+.mp-pk img{width:100%;height:100%;object-fit:cover;display:block}
+.mp-pk.need img{filter:grayscale(1);opacity:.4}
+.mp-pk.gap{background:none;box-shadow:inset 0 0 0 1px var(--line)}
+.mp-no{position:absolute;left:0;right:0;bottom:3px;text-align:center;font-size:11px;line-height:1;color:var(--muted)}
+@media (max-width:640px){.setmap{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}.setmap::-webkit-scrollbar{display:none}.mp-page{flex:none}}   /* phones: one row you swipe sideways */
+@media (min-width:2000px){.setmap{--pk-w:calc(54px / var(--map-cols, 3))}}
+@media (min-width:2800px){.setmap{--pk-w:calc(66px / var(--map-cols, 3));gap:10px}}
 .views{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface);align-self:flex-start}
 .views button{border:0;background:none;padding:10px 16px;font:inherit;font-size:14px;font-weight:500;color:var(--muted);cursor:pointer}
 .views button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
@@ -1269,6 +1283,7 @@ html,body{overscroll-behavior-y:none}
     <div class="stat"><span class="k">Cost to finish</span><span class="v" id="sNeed">–</span><span class="s" id="sNeedN"></span></div>
     <div class="stat"><span class="k">Full set value</span><span class="v" id="sFull">–</span><span class="s" id="sUpd"></span></div>
   </section>
+  <div class="setmap" id="setMap" role="list" aria-label="Your binder's pages at a glance" hidden></div>
 
   <nav class="views" id="views" aria-label="Views">
     <button type="button" data-v="cards" aria-pressed="true"><svg class="vi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg><span>Cards</span></button>
@@ -2183,6 +2198,7 @@ function rarityOptions(){
   sel.value=""; state.rar="";
 }
 function render(){
+  drawSetMap();
   let list=state.cards.filter(c=>{
     if(state.filter==="own" && qty(c.n)===0) return false;
     if(state.filter==="need" && qty(c.n)>0) return false;
@@ -4119,7 +4135,7 @@ function setView(v){
   $("vCards").hidden=v!=="cards"; $("vPages").hidden=v!=="pages"; $("vShop").hidden=v!=="shop"; $("vUpg").hidden=v!=="upg"; $("vStats").hidden=v!=="stats";
   renderView();
 }
-function renderView(){ if(state.view==="pages") drawPages(); else if(state.view==="shop") drawShop(); else if(state.view==="upg") drawUpg(); else if(state.view==="stats") loadStats(); }
+function renderView(){ if(state.view==="cards") drawSetMap(); else if(state.view==="pages") drawPages(); else if(state.view==="shop") drawShop(); else if(state.view==="upg") drawUpg(); else if(state.view==="stats") loadStats(); }
 $("views").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b && b.dataset.v!==state.view) withTransition("fade", ()=>setView(b.dataset.v)); });
 
 // ---------- shopping list ----------
@@ -5119,6 +5135,37 @@ $("pgView").addEventListener("pointerdown",e=>{
   });
 })();
 matchMedia("(min-width:760px)").addEventListener("change",()=>{ if(state.view==="pages") drawPages(); });
+// Set map: every binder page as a tiny 3×3 (or 2×2, 4×4…) of real card pictures, owned in color, needed in grey.
+// Clicking a page opens it in Pages. Redrawn only when what it shows changes.
+var mapKey="";   // var, not let: render() can run before this line on startup
+function drawSetMap(){
+  const M=$("setMap"); if(!M) return;
+  if(!state.ready || !state.cards.length){ M.hidden=true; mapKey=""; return; }
+  const L=pageLayout(), priv=isPrivate(), cols=PK_COLS[L.pk], sides=Math.ceil(L.slots.length/L.pk);
+  const key=[state.sid, L.pk, L.slots.join(","), priv, state.cards.filter(c=>qty(c.n)>0).map(c=>c.n).join(",")].join("|");
+  M.hidden=false; if(key===mapKey) return; mapKey=key;
+  M.replaceChildren(); M.style.setProperty("--map-cols", cols);
+  const byN=new Map(state.cards.map(c=>[c.n,c]));
+  for(let s=0; s<sides; s++){
+    const page=L.slots.slice(s*L.pk, (s+1)*L.pk), got=page.filter(n=>n && qty(n)>0).length, filled=page.filter(Boolean).length;
+    const b=document.createElement("button"); b.type="button"; b.className="mp-page"; b.setAttribute("role","listitem");
+    b.setAttribute("aria-label", sideName(s)+(priv ? "" : ": "+got+" of "+filled+" owned"));
+    b.title=sideName(s)+(priv ? "" : " · "+got+" of "+filled+" owned");
+    for(let k=0; k<L.pk; k++){
+      const n=page[k], c=n ? byN.get(n) : null, p=document.createElement("span"); p.className="mp-pk";
+      if(c){
+        if(!priv && !qty(n)) p.classList.add("need");
+        const im=document.createElement("img"); im.alt=""; im.loading="lazy"; im.decoding="async"; im.src=base()+"/img/"+enc(n)+".png";
+        im.onerror=()=>im.remove(); p.title=c.name+" · "+sideName(s); p.append(im);
+      } else p.classList.add("gap");
+      b.append(p);
+    }
+    const no=document.createElement("span"); no.className="mp-no"; no.textContent=s+1; b.append(no);
+    b.onclick=()=>{ pg.at=s; pg.flash=page.find(Boolean)||null; setView("pages"); };
+    M.append(b);
+  }
+}
+
 // From card details: jump to the card's pocket.
 $("dSpot").onclick=()=>{
   const n=state.open, sp=cardSpot(n); if(!sp) return;
