@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Set map removed:** the tiny binder pages above the search box on the Cards tab are gone, so the cards start higher up. The Pages tab still shows every page.
+
 ## v3.31 (October 25, 2026)
 
 - **Set map:** under the totals on a binder's Cards tab, a row of tiny binder pages shows every pocket with its card's picture, in color if you own it and grey if you still need it. It follows your Pages layout (pockets per page, order, cards you've moved). Point at a pocket to see the card, or tap a page to open it in Pages. On phones it's one row you swipe sideways. In privacy mode every pocket shows in color.
