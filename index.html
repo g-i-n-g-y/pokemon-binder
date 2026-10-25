@@ -1121,6 +1121,19 @@ body.at-show > .wrap:not(.show){display:none}
 /* big screens (like 4K): use more of the width and fit every binder plus Add in one row */
 @media (min-width:1500px){.wrap.home{max-width:1560px}.hm-shelf{grid-template-columns:repeat(6,minmax(0,1fr));gap:16px}.hm-row{gap:14px}
   .hm-row .hm-card b{font-size:13px}.hm-row .hm-card small{font-size:12px}}
+/* 4K and other very wide screens: fill most of the width, with bigger cards and binder pages */
+@media (min-width:2000px){
+  .wrap,.wrap.home{max-width:1840px}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
+  .hm-shelf{grid-template-columns:repeat(7,minmax(0,1fr))}
+  .pg-spread{max-width:min(1500px,calc((100vh - 160px) * 1.45))}
+}
+@media (min-width:2800px){
+  .wrap,.wrap.home{max-width:2560px}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px}
+  .hm-shelf{grid-template-columns:repeat(8,minmax(0,1fr));gap:20px}
+  .pg-spread{max-width:min(2000px,calc((100vh - 160px) * 1.45))}
+}
 .hm-card{flex:none;width:96px;border:0;background:none;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}
 .hm-card .c{display:block;aspect-ratio:63/88;border-radius:6px;overflow:hidden;border:1px solid var(--line);background:var(--sleeve)}
 .hm-card .c img{width:100%;height:100%;object-fit:cover;display:block}

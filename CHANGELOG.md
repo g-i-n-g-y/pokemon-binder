@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Bigger on 4K screens:** on very wide screens the binder uses much more of the width, with bigger cards, a wider shelf of binders on My binders, and bigger binder pages that still fit the window's height. 1080p screens and phones look the same as before.
+
 ## v3.29.1 (October 24, 2026)
 
 - **"Updated to" window floats on phones:** the short list shown after an update is now a card in the middle of the screen with the page dimmed behind it, instead of filling the whole screen. A long list scrolls inside the card.
