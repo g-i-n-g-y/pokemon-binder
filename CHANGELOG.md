@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v3.34 (October 25, 2026)
 
 - **Pick binders for the spreadsheet:** Download spreadsheet (Settings → Backup and import) now lets you pick which binders go in the Excel file, instead of always downloading all of them. A single binder's file is named after it.
 - **Price trends in the spreadsheet:** new columns show each card's price change over 7, 30 and 90 days and the date of its last sale. Handy for spotting cards that are climbing, or for asking an AI to suggest what to buy first.
