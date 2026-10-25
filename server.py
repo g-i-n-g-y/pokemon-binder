@@ -3417,13 +3417,15 @@ def _xlsx(sheets):
     return out.getvalue()
 
 
-def export_collection():
-    """Every binder in one Excel file: an "All binders" sheet plus one sheet per binder."""
+def export_collection(only=None):
+    """Every binder (or just the ones in `only`) in one Excel file: an "All binders" sheet plus one sheet per binder."""
     sl = sets_list()
     header = ["Binder", "Set", "Number", "Card", "Rarity", "Status", "Copies", "Condition", "Paid", "Price each", "Value", "First owned", "Notes"]
     money = {8, 9, 10}
     every, per = [], []
     for sid in sl["order"]:
+        if only and sid not in only:
+            continue
         meta = sl["meta"].get(sid, {})
         bname = meta.get("name", sid)
         coll = read_json(sdir(sid, "collection.json"), {})
@@ -3444,6 +3446,8 @@ def export_collection():
                          first if qty > 0 else "", rec.get("note") or ""])
         every += rows
         per.append((bname, header, rows, money))
+    if len(per) == 1:   # one binder: just its own sheet
+        return _xlsx(per)
     return _xlsx([("All binders", header, every, money)] + per)
 
 
@@ -3970,12 +3974,20 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, {"custom": os.path.exists(ICON_FILE)}, cache="no-store")
         if path == "/api/backups":
             return self.send(200, {"backups": list_auto_backups()}, cache="no-store")
-        if path == "/api/export.xlsx":   # every binder in one spreadsheet
-            body = export_collection()
+        if path == "/api/export.xlsx":   # every binder in one spreadsheet, or just ?b=neo4,neo1
+            want = (urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("b") or [""])[0]
+            order = sets_list()["order"]
+            only = [x for x in want.split(",") if x in order] if want else None
+            if want and not only:
+                return self.send(400, {"error": "None of those binders exist."})
+            body = export_collection(only)
+            name = "pokemon-binder"
+            if only and len(only) == 1:
+                name += "-" + (re.sub(r"[^a-z0-9]+", "-", sets_list()["meta"].get(only[0], {}).get("name", only[0]).lower()).strip("-") or only[0])
             self.send_response(200)
             self.send_header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             self.send_header("Content-Length", str(len(body)))
-            self.send_header("Content-Disposition", f'attachment; filename="pokemon-binder-{time.strftime("%Y-%m-%d")}.xlsx"')
+            self.send_header("Content-Disposition", f'attachment; filename="{name}-{time.strftime("%Y-%m-%d")}.xlsx"')
             self.send_header("Cache-Control", "no-store")
             self.end_headers()
             self.wfile.write(body)

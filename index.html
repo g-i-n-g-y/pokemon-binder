@@ -1112,12 +1112,12 @@ a.psa-scan{text-decoration:none}
 .sel-sug .chip[aria-pressed="true"]{border-color:var(--dark);background:var(--dark-soft)}
 #swBuy .sb-manual input{flex:1;min-width:0;height:44px}
 #swBuy #sbLink a{color:var(--dark)}
-#swPick .sp-list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
-#swPick .sp-list label{display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:56px;cursor:pointer}
-#swPick .sp-list label+label{border-top:1px solid var(--line)}
-#swPick .sp-list span{flex:1;min-width:0}
-#swPick .sp-list small{display:block;color:var(--muted);font-size:12px}
-#swPick .sp-list input{width:22px;height:22px;accent-color:var(--dark);margin:0}
+#swPick .sp-list,#xlDlg .sp-list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+#swPick .sp-list label,#xlDlg .sp-list label{display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:56px;cursor:pointer}
+#swPick .sp-list label+label,#xlDlg .sp-list label+label{border-top:1px solid var(--line)}
+#swPick .sp-list span,#xlDlg .sp-list span{flex:1;min-width:0}
+#swPick .sp-list small,#xlDlg .sp-list small{display:block;color:var(--muted);font-size:12px}
+#swPick .sp-list input,#xlDlg .sp-list input{width:22px;height:22px;accent-color:var(--dark);margin:0}
 .bk .bk-work{position:absolute;top:10px;left:10px;padding:3px 7px;border-radius:6px;background:rgba(0,0,0,.6);color:#fff;font:600 10px var(--f-body);}
 .home{gap:18px}
 .hm-top{display:flex;align-items:center;gap:10px}
@@ -1585,6 +1585,18 @@ html,body{overscroll-behavior-y:none}
   </div>
 </dialog>
 
+<dialog id="xlDlg" class="float" aria-labelledby="xlTitle">
+  <div class="sheet">
+    <button class="close" type="button" id="xlClose">Close ✕</button>
+    <h2 id="xlTitle">Download spreadsheet</h2>
+    <div class="note">Pick the binders to put in the Excel file. Each one gets its own tab.</div>
+    <div class="row-msg"><button class="hm-link" type="button" id="xlAll">Select all</button><button class="hm-link" type="button" id="xlNone">Select none</button></div>
+    <div class="sp-list" id="xlList"></div>
+    <div class="err" id="xlErr" aria-live="polite"></div>
+    <div class="row-end"><button class="btn primary" type="button" id="xlGo">Download</button></div>
+  </div>
+</dialog>
+
 <dialog id="selDlg" class="float" aria-labelledby="slTitle">
   <div class="sheet">
     <button class="close" type="button" id="slClose">Close ✕</button>
@@ -1977,11 +1989,11 @@ html,body{overscroll-behavior-y:none}
       <h3 class="ui-h">Backup</h3>
       <div class="btnrow">
         <a class="btn" href="api/backup" download id="bkDown">Download backup</a>
-        <a class="btn" href="api/export.xlsx" download id="bkXlsx">Download spreadsheet</a>
+        <button class="btn" type="button" id="bkXlsx">Download spreadsheet</button>
         <label class="btn" for="bkUp">Restore from backup</label>
         <input id="bkUp" type="file" accept=".zip,application/zip" hidden>
       </div>
-      <div class="note" id="bkMsg">One file with everything, for every binder. Keep a copy somewhere other than <span class="srv">the server</span>. <b>Download spreadsheet</b> gives you your whole collection as an Excel file (a tab for every binder) to open anywhere.</div>
+      <div class="note" id="bkMsg">One file with everything, for every binder. Keep a copy somewhere other than <span class="srv">the server</span>. <b>Download spreadsheet</b> gives you the binders you pick as an Excel file (a tab for each binder) to open anywhere.</div>
       <div class="prev" id="bkAutoWrap" hidden>
         <h3 class="ui-h">Saved on <span class="srv">the server</span></h3>
         <div class="note">Made automatically before each update, import, restore and phone sync, and before a binder starts fresh. To save space, the ones before updates, imports and syncs leave out your photos (those never change your photos), and restoring one of those keeps the photos you have. One daily backup a week includes them.</div>
@@ -5912,6 +5924,29 @@ $("sbSave").onclick=async()=>{
   toast(online ? c.name+" marked owned"+(price!=null?" · "+money(price):"")+"." : c.name+" saved on this phone. It syncs when you're back online.");
 };
 
+// Download spreadsheet: pick which binders go in the Excel file (all of them to start)
+function openXl(){
+  const box=$("xlList"); box.replaceChildren(); $("xlErr").textContent="";
+  for(const s of state.sets){
+    const l=document.createElement("label"), sp=document.createElement("span"), b=document.createElement("b"), sm=document.createElement("small");
+    b.textContent=s.name; sm.textContent=(s.owned||0)+" of "+(s.count||0)+" owned"; sp.append(b,sm);
+    const cb=document.createElement("input"); cb.type="checkbox"; cb.value=s.id; cb.checked=true; cb.setAttribute("aria-label","Include "+s.name);
+    l.append(sp,cb); box.append(l);
+  }
+  $("xlDlg").showModal();
+}
+$("bkXlsx").onclick=()=>{ (state.sets && state.sets.length ? Promise.resolve() : loadSets()).then(openXl); };
+$("xlClose").onclick=()=>$("xlDlg").close();
+$("xlDlg").addEventListener("click",e=>{ if(e.target===$("xlDlg")) $("xlDlg").close(); });
+$("xlAll").onclick=()=>$("xlList").querySelectorAll("input").forEach(x=>x.checked=true);
+$("xlNone").onclick=()=>$("xlList").querySelectorAll("input").forEach(x=>x.checked=false);
+$("xlGo").onclick=()=>{
+  const all=[...$("xlList").querySelectorAll("input")], ids=all.filter(x=>x.checked).map(x=>x.value);
+  if(!ids.length){ $("xlErr").textContent="Pick at least one binder."; return; }
+  if(isOffline()){ $("xlErr").textContent="Downloading needs a connection to "+srv()+"."; return; }
+  const a=document.createElement("a"); a.href="api/export.xlsx"+(ids.length===all.length ? "" : "?b="+ids.map(enc).join(",")); a.download="";
+  document.body.append(a); a.click(); a.remove(); $("xlDlg").close();
+};
 // which binders you're working on
 function openPick(){
   const box=$("spList"); box.replaceChildren(); $("spErr").textContent="";

@@ -17,6 +17,7 @@ The binder shows these in **Settings → About → Check for updates**.
 - **What you usually pay:** the check also shows how far over (or under) the price you've usually paid, worked out from your purchase log, split into cards under $20 and cards $20 and up. Hidden in privacy mode.
 - Uses the price the server already checks every night, so there's nothing to set up. If a card's price is old, it says so and suggests checking eBay sold first.
 
+- **Pick binders for the spreadsheet:** Download spreadsheet (Settings → Backup and import) now lets you pick which binders go in the Excel file, instead of always downloading all of them. A single binder's file is named after it.
 - **PSA slab check backup screen is easier:** tapping a grade before typing the card now jumps to the card box and says what's missing, instead of doing nothing. The card box also suggests cards as you type.
 
 ## v3.32.3 (October 25, 2026)
