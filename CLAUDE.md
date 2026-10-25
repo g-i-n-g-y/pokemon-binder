@@ -60,6 +60,13 @@ This repository is public. Never commit:
   - the owner's phone, a Pixel 11 Pro (about 412×915 in the browser)
 - Before saving a page change, run the app and check all three.
 
+## README screenshots and the demo binder
+- README screenshots come only from a demo binder: a separate copy of the app
+  with made-up cards, purchases and sellers, outside this repo. Never from the
+  owner's real binder.
+- Keep the demo binder's program files the same as the latest release, and
+  retake the screenshots when a release changes what they show.
+
 ## Program files
 - `APP_FILES` in `server.py` lists the files an update installs. When you add
   a new program file, add it there too, or updates won't deliver it.
