@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v3.33 (October 25, 2026)
 
 - **Vendor price check:** a new **Vendor's price** box in card details (Prices tab). Type what a seller is asking and pick the condition of their copy, and it tells you whether it's a **Good deal**, **Fair** or **High** compared with recent sales, what to **open at** (about 85% of recent sales) and when to **walk away** (about 15% over). If the price has climbed over the last 30 days, both numbers move closer to the sticker; if it's dropped, they go lower.
 - **Works in card show mode too:** in the **Got it** sheet, type the vendor's price and pick the condition to see the same advice, then change the price to what you paid before saving.
