@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v3.31.2 (October 25, 2026)
 
 - **Reload the app moved:** the Reload button is now in **Settings → About**, next to Check for updates.
 
