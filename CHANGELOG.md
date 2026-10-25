@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v3.32.1 (October 25, 2026)
 
 - **Slab scanning works better:** Scan the label now opens a live camera view in the pop-up that keeps trying as you aim, so you can just move closer to the small barcode on the label. Photos are also read in enlarged pieces, so a barcode that's small in the photo can still be found.
 - **Find a card fits on phones:** it now fills the screen like the other pop-ups, instead of leaving a gap on the right.
