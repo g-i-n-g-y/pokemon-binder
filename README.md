@@ -28,7 +28,7 @@ Also: custom cards for anything the card database is missing, upcoming card show
 
 ![The Pages view with the inside cover and page 1](screenshots/pages.png)
 
-**Card details.** The card, its prices from recent sales, market prices, a price chart, and the newest sales for every condition, so you can see whether a different condition is worth it.
+**Card details.** The card and the price to buy one, from recent sales, with how it's worked out a tap away. Below are the newest sales for every condition, so you can see whether a different condition is worth it.
 
 ![Card details with prices and recent sales](screenshots/card-details.png)
 
@@ -95,6 +95,42 @@ Backups live in `backups/` and old versions in `previous/`, both next to `server
 | Variable (optional) | `BINDER_HOSTS`: extra names the binder answers to, like a reverse proxy name (IP addresses, one-word names and Tailscale names already work) |
 
 Without Docker: put the program files in a folder and run `python server.py` (Python 3.9 or newer), then open `http://localhost:8080`.
+
+## Running it with Docker Compose
+
+1. Make a folder for the binder, with a `binder` folder inside it. Put the program files from the table above in `binder` (on GitHub: **Code → Download ZIP**, then copy them out).
+2. Next to the `binder` folder, make a file called `docker-compose.yml`:
+
+   ```yaml
+   services:
+     pokemon-binder:
+       image: python:3.12-alpine
+       container_name: pokemon-binder
+       working_dir: /app
+       command: python -u server.py
+       ports:
+         - "8765:8080"            # open the binder on port 8765
+       volumes:
+         - ./binder:/app          # program files, plus your data/ and backups/ once it runs
+         - /etc/localtime:/etc/localtime:ro   # the server's clock, so the nightly price check runs at night
+       # environment:
+       #   BINDER_HOSTS: binder.example.com   # only if you use a reverse proxy name
+       healthcheck:
+         test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/health"]
+         interval: 2m
+         timeout: 10s
+       restart: unless-stopped
+   ```
+
+3. In that folder, run:
+
+   ```bash
+   docker compose up -d
+   ```
+
+4. Open `http://<your server's address>:8765` (or `http://localhost:8765` on the same computer).
+
+Your collection is saved in `binder/data/` and backups in `binder/backups/`, so they survive `docker compose down` and new images. Updates still only install from **Settings → About**; restarting the container never installs one.
 
 ## Phone app (Android)
 
