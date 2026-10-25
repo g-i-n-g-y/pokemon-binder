@@ -1196,6 +1196,36 @@ def all_sellers(limit=60):
     return sorted(seen.values(), key=lambda e: (e["last"], e["n"]), reverse=True)[:limit]
 
 
+OFFER_SPLIT = 20   # vendor price check: "cheap" cards are under this, the rest are holos and chase cards
+
+
+def _median(vals):
+    s = sorted(vals)
+    if not s:
+        return 0
+    m = len(s) // 2
+    return s[m] if len(s) % 2 else (s[m - 1] + s[m]) / 2
+
+
+def pay_habit():
+    """How much you usually pay compared with a card's price, from every purchase with a price, in every binder.
+    {"cheap": {"r": 1.6, "n": 12}, "dear": {...}}: r is the middle paid/price ratio, n how many purchases.
+    Cheap = cards priced under OFFER_SPLIT. Uses each card's price today, so it's a rough guide."""
+    out = {"cheap": [], "dear": []}
+    for sid in sets_list()["order"]:
+        coll = read_json(sdir(sid, "collection.json"), {})
+        prices = (read_json(sdir(sid, "prices.json"), {}) or {}).get("p") or {}
+        for n, r in (coll.items() if isinstance(coll, dict) else []):
+            mkt = (prices.get(n) or [0])[0] or 0
+            if not isinstance(r, dict) or not _is_num(mkt) or mkt <= 0:
+                continue
+            for b in r.get("purchases") or []:
+                paid = b.get("price") if isinstance(b, dict) else None
+                if _is_num(paid) and paid > 0:
+                    out["cheap" if mkt < OFFER_SPLIT else "dear"].append(paid / mkt)
+    return {k: {"r": round(_median(v), 3), "n": len(v)} for k, v in out.items() if v}
+
+
 def show_data():
     """Card show mode: every card you still need from the binders you're working on (all binders if none
     are picked), with its price and when it last sold, plus what you've bought today."""
@@ -1233,19 +1263,28 @@ def show_data():
                 slot[c["n"]] = nxt
                 nxt += 1
         need = 0
+        try:
+            tr = set_trends(sid, today)["cards"]   # for the vendor price check's 30-day change
+        except Exception:
+            tr = {}
         for c in cards:
             if _owned(coll.get(c["n"])):
                 continue
             need += 1
             i = info.get(c["n"]) or {}
+            t = tr.get(c["n"]) or {}
+            was = (t.get("at", {}).get("30") or t.get("first") or [None, 0])[1]
+            now = (prices.get(c["n"]) or [0])[0] or 0
+            t30 = round((now - was) / was * 100, 1) if _is_num(was) and was and now and t.get("count", 0) >= 2 else None
             cards_out.append({"sid": sid, "set": meta.get("name", sid), "n": c["n"], "name": c.get("name", ""),
                               "num": c.get("num", c["n"]),
                               "pt": c.get("pt") or ("" if is_multi(sid) or c.get("extra") or c.get("custom") else meta.get("printedTotal") or ""), "rarity": c.get("rarity", ""),
                               "custom": bool(c.get("custom")), "price": (prices.get(c["n"]) or [0])[0] or 0,
-                              "src": i.get("src", ""), "last": i.get("last", ""), "slot": slot.get(c["n"], 0)})
+                              "src": i.get("src", ""), "last": i.get("last", ""), "slot": slot.get(c["n"], 0),
+                              "cond": i.get("cond") or {}, "recent": i.get("recent") or {}, "t30": t30})
         binders.append({"id": sid, "name": meta.get("name", sid), "need": need, "pk": pk})
     return {"picked": picked, "binders": binders, "cards": cards_out, "today": today,
-            "bought": bought, "spent": round(spent, 2), "sellers": all_sellers()}
+            "bought": bought, "spent": round(spent, 2), "sellers": all_sellers(), "habit": pay_habit()}
 
 
 # ---------- PSA slab check ----------
@@ -4088,6 +4127,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send(400, {"error": "bad card"})
                 return self.send(200, {"card": card, "points": card_series(m.group(1), card)}, cache="no-store")
             return self.send(200, read_json(sdir(m.group(1), "history.json"), {}), cache="no-store")
+        if path == "/api/habit":   # what you usually pay vs. the price, for the vendor price check
+            return self.send(200, pay_habit(), cache="no-store")
         m = re.fullmatch(rf"/api/set/({SID_RE})/trends", path)
         if m:
             q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)

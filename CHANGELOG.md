@@ -12,6 +12,11 @@ The binder shows these in **Settings → About → Check for updates**.
 
 ## Unreleased
 
+- **Vendor price check:** a new **Vendor's price** box in card details (Prices tab). Type what a seller is asking and pick the condition of their copy, and it tells you whether it's a **Good deal**, **Fair** or **High** compared with recent sales, what to **open at** (about 85% of recent sales) and when to **walk away** (about 15% over). If the price has climbed over the last 30 days, both numbers move closer to the sticker; if it's dropped, they go lower.
+- **Works in card show mode too:** in the **Got it** sheet, type the vendor's price and pick the condition to see the same advice, then change the price to what you paid before saving.
+- **What you usually pay:** the check also shows how far over (or under) the price you've usually paid, worked out from your purchase log, split into cards under $20 and cards $20 and up. Hidden in privacy mode.
+- Uses the price the server already checks every night, so there's nothing to set up. If a card's price is old, it says so and suggests checking eBay sold first.
+
 - **PSA slab check backup screen is easier:** tapping a grade before typing the card now jumps to the card box and says what's missing, instead of doing nothing. The card box also suggests cards as you type.
 
 ## v3.32.3 (October 25, 2026)

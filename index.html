@@ -1019,6 +1019,28 @@ body.at-show > .wrap:not(.show){display:none}
 #swBuy .sb-cond{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
 #swBuy .sb-cond button{height:44px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--muted);font:500 14px var(--f-body);cursor:pointer}
 #swBuy .sb-cond button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+/* vendor price check (card details Prices tab and the card show Got it sheet) */
+.offer{display:flex;flex-direction:column;gap:6px}
+.of-price{display:flex;align-items:center;gap:4px;height:48px;padding:0 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg);margin-top:4px}
+.of-price span{font:500 20px var(--f-mono);color:var(--muted)}
+.of-price input{flex:1;min-width:0;border:0;background:none;color:var(--ink);font:500 20px var(--f-mono);outline:none}
+.of-cond{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.of-cond button{height:36px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--muted);font:500 13px var(--f-body);cursor:pointer}
+.of-cond button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.of-out{display:flex;flex-direction:column;gap:6px;min-width:0}
+.of-out:empty{display:none}
+.of-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.of-pill{font:600 12px var(--f-body);padding:3px 10px;border-radius:999px;border:1px solid currentColor;white-space:nowrap}
+.of-pill.good{color:var(--good)} .of-pill.fair{color:var(--ink)} .of-pill.high{color:var(--bad)}
+.of-pct{font-size:13px;color:var(--muted);min-width:0}
+.of-nums{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.of-nums>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.of-nums>div+div{border-left:1px solid var(--line);padding-left:14px}
+.of-nums .k{font-size:12px;color:var(--muted)}
+.of-nums b{font:500 22px var(--f-mono)}
+.of-nums .s{font-size:12px;color:var(--muted)}
+.of-note{font-size:12px;color:var(--muted);line-height:1.4}
+.of-note.warn{color:var(--bad)}
 #swBuy .sb-seller{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 #swBuy .sb-seller .chip{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;font-size:13px;cursor:pointer}
 #swBuy .sb-seller .chip[aria-pressed="true"]{border-color:var(--dark);background:var(--dark-soft)}
@@ -1517,8 +1539,10 @@ html,body{overscroll-behavior-y:none}
     <label class="f">Price paid
       <span class="sb-price"><span aria-hidden="true">$</span><input id="sbPrice" inputmode="decimal" autocomplete="off" placeholder="0.00" aria-label="Price paid in dollars"></span>
     </label>
+    <div class="note">Haggling? Type the vendor's price first to see what to counter with, then change it to what you paid.</div>
     <div class="sb-delta" id="sbDelta" aria-live="polite"></div>
     <div class="f"><span>Condition</span><div class="sb-cond" id="sbCond" role="group" aria-label="Condition"></div></div>
+    <div class="of-out" id="sbOffer" aria-live="polite"></div>
     <label class="f">Where (remembered for today)<input class="field" id="sbWhere" maxlength="60" autocomplete="off" placeholder="Card show, table 14"></label>
     <div class="f"><span>Seller (optional)</span>
       <div class="sel-field"><button type="button" class="field sel-btn" id="sbSelBtn">Choose seller</button><button type="button" class="icon-btn sel-x" id="sbSelX" aria-label="Remove the seller" title="Remove the seller" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
@@ -1627,6 +1651,13 @@ html,body{overscroll-behavior-y:none}
         </div>
         <span class="s mkt" id="dMkt" hidden></span>
       </details></div>
+    <div class="box offer" id="dOffer">
+      <span class="k">Vendor's price</span>
+      <span class="s">Type what they're asking to see what to counter with.</span>
+      <span class="of-price"><span aria-hidden="true">$</span><input id="oAsk" inputmode="decimal" autocomplete="off" placeholder="0.00" aria-label="Vendor's price in dollars"></span>
+      <div class="of-cond" id="oCond" role="group" aria-label="Condition of the vendor's copy"></div>
+      <div class="of-out" id="oOut" aria-live="polite"></div>
+    </div>
     <div class="links links-tab" id="dLinks2"></div>
     <div class="cedit" id="dExtra" hidden><button class="btn" type="button" id="dXDel">Remove from this binder</button></div>
     <div class="cedit" id="dCustom" hidden><button class="btn" type="button" id="dCEdit">Edit custom card</button><button class="btn" type="button" id="dCDel">Delete custom card</button></div>
@@ -2696,6 +2727,82 @@ function drawSales(n){
     box.append(salesBlock(slotName(sl)+" · eBay via PriceCharting", (i.graded||{})[key], list, true, i.graded ? "No recent "+slotName(sl)+" sales found." : "Graded sales show here after the next price refresh."));
   }
 }
+// ---------- vendor price check: what to counter with ----------
+// Compares a vendor's price with recent sales for that condition and suggests an opening offer and a
+// walk-away price. A rising price (30 days) moves both closer to the sticker; a falling one moves them lower.
+// "habit" (from the server) is what you usually pay compared with the price, from your purchase log.
+const OFFER_SPLIT=20;   // same as the server: cheap cards are under $20
+let habit=null, habitAt=0;
+function loadHabit(then){
+  if(habit && Date.now()-habitAt<60000){ then&&then(); return; }
+  fetch("api/habit").then(r=>r.json()).then(j=>{ habit=j||{}; habitAt=Date.now(); then&&then(); }).catch(()=>{});
+}
+const median = a => { const s=[...a].sort((x,y)=>x-y), m=s.length>>1; return s.length ? (s.length%2 ? s[m] : (s[m-1]+s[m])/2) : 0; };
+// The recent-sales price to compare with: the middle of the newest sales when there are 3 or more,
+// else that condition's average, else the binder's price.
+function offerRef(cond, avg, recent, base){
+  const list=(recent||[]).map(x=>Number(x[1])).filter(v=>v>0);
+  if(cond && list.length>=3) return {p:median(list), how:"the middle of the last "+list.length+" "+cond+" sales"};
+  if(cond && avg && avg[0]) return {p:avg[0], how:"the "+cond+" average of "+avg[1]+" sale"+(avg[1]===1?"":"s")};
+  if(base) return {p:base, how:cond ? "the card's price (no recent "+cond+" sales)" : "the card's price"};
+  return null;
+}
+const offerRound = v => v>=100 ? Math.round(v/5)*5 : v>=20 ? Math.round(v) : Math.max(0.25, Math.round(v*4)/4);
+function offerAdvice(ask, ref, t30){
+  const up=t30!=null && t30>=5, down=t30!=null && t30<=-5;
+  const openF=up?0.90:down?0.80:0.85, walkF=up?1.20:down?1.05:1.15;
+  const walk=offerRound(ref.p*walkF); let open=offerRound(ref.p*openF);
+  if(open>=ask) open=null;   // the sticker is already below where you'd start
+  const good=ask<=ref.p*0.95, high=ask>walk;
+  return {pct:(ask-ref.p)/ref.p*100, open, walk, up, down, verdict:good?"Good deal":high?"High":"Fair", cls:good?"good":high?"high":"fair"};
+}
+// Fills `box` with the advice. o = {ask, ref, t30, stale}. Shows nothing until a price is typed.
+function drawOffer(box, o){
+  box.replaceChildren();
+  if(!(o.ask>0)) return;
+  const line=(cls,txt)=>{ const d=document.createElement("div"); d.className=cls; d.textContent=txt; box.append(d); return d; };
+  if(!o.ref){ line("of-note","No price for this card yet, so there's nothing to compare with."); return; }
+  const a=offerAdvice(o.ask, o.ref, o.t30);
+  const top=document.createElement("div"); top.className="of-top";
+  const pill=document.createElement("span"); pill.className="of-pill "+a.cls; pill.textContent=a.verdict;
+  const pc=document.createElement("span"); pc.className="of-pct";
+  pc.textContent = Math.abs(a.pct)<0.5 ? "Right at recent sales ("+money(o.ref.p)+")" : Math.round(Math.abs(a.pct))+"% "+(a.pct>0?"over":"under")+" recent sales ("+money(o.ref.p)+")";
+  top.append(pill,pc); box.append(top);
+  const nums=document.createElement("div"); nums.className="of-nums";
+  const num=(k,v,s)=>{ const d=document.createElement("div"); const kk=document.createElement("span"); kk.className="k"; kk.textContent=k; const vv=document.createElement("b"); vv.textContent=v; d.append(kk,vv); if(s){ const ss=document.createElement("span"); ss.className="s"; ss.textContent=s; d.append(ss); } nums.append(d); };
+  if(a.cls==="good") num("Take it", money(o.ask), "Under recent sales");
+  else num("Open at", a.open!=null ? money(a.open) : money(o.ask), a.open!=null ? "Your first counter" : "Already close to it");
+  num("Walk away above", money(a.walk), a.cls==="high" ? "The sticker is past this" : "");
+  box.append(nums);
+  line("of-note", "Recent sales = "+o.ref.how+".");
+  if(o.t30!=null) line("of-note", a.up ? "Up "+Math.round(o.t30)+"% in 30 days, so prices are climbing: the counter sits closer to the sticker." :
+    a.down ? "Down "+Math.round(Math.abs(o.t30))+"% in 30 days, so you can push lower." : "Steady over 30 days.");
+  if(o.stale) line("of-note warn", "Old price: "+o.stale+". Check eBay sold before you trust these numbers.");
+  const h=!isPrivate() && habit && habit[o.ref.p<OFFER_SPLIT?"cheap":"dear"];
+  if(h && h.n>=2){
+    const d=Math.round((h.r-1)*100);
+    line("of-note", "On "+(o.ref.p<OFFER_SPLIT?"cards under $"+OFFER_SPLIT:"cards $"+OFFER_SPLIT+" and up")+" you've usually paid "+(Math.abs(d)<1?"right at":Math.abs(d)+"% "+(d>0?"over":"under"))+" the price ("+h.n+" purchases).");
+  }
+}
+// Card details: the Vendor's price box in the Prices tab.
+let offerCond="";
+function offerConds(n){
+  const cb=$("oCond"); cb.replaceChildren();
+  for(const k of ["NM","LP","MP","HP","DMG"]){ const b=document.createElement("button"); b.type="button"; b.textContent=k; b.setAttribute("aria-pressed", k===offerCond); b.onclick=()=>{ offerCond=offerCond===k?"":k; offerConds(n); drawCardOffer(n); }; cb.append(b); }
+}
+function drawCardOffer(n){
+  const i=state.info[n]||{}, ask=parseFloat($("oAsk").value.replace(/^\$/,""));
+  const t=trend(n,30);
+  drawOffer($("oOut"), {ask, ref:offerRef(offerCond, (i.cond||{})[offerCond], (i.recent||{})[offerCond], basePrice(n)), t30:t?t.pct:null, stale:staleWhy(n)});
+}
+function resetCardOffer(n){
+  const raw=activeSlots().find(sl=>sl.t==="raw");
+  offerCond = recall("nd-offer-cond") || (raw && raw.c) || "LP";
+  $("oAsk").value=""; $("oOut").replaceChildren(); offerConds(n);
+  loadHabit();
+}
+$("oAsk").addEventListener("input",()=>{ if(state.open!=null) drawCardOffer(state.open); });
+$("oCond").addEventListener("click",()=>{ if(offerCond) store("nd-offer-cond", offerCond); });
 function condOptions(n){
   const sel=$("dCond"), cur=rec(n).cond||"";
   for(const o of sel.options){
@@ -2744,7 +2851,7 @@ function openCard(n){
   { const sp=cardSpot(n); $("dSpot").hidden=!sp; if(sp) setSpot(sp.text); }
   $("dP").textContent=basePrice(n) ? money(basePrice(n)) : "–";
   { const sw=staleWhy(n); if(sw) $("dP").append(staleEl(sw)); }
-  lpmpBox(n); mktLine(n); drawSales(n); ownLine(n); setCardTab(cardTab);
+  lpmpBox(n); mktLine(n); drawSales(n); ownLine(n); resetCardOffer(n); setCardTab(cardTab);
   { const sd=document.querySelector("#dlg .cs-side"); if(sd) sd.scrollTop=0; }
   $("dPsrc").textContent=priceSource(n);
   condOptions(n);
@@ -5758,21 +5865,24 @@ function openBuy(c){
   showThumb(c, $("sbTh"));
   $("sbName").textContent=c.name; $("sbSet").textContent=c.set+" · "+showNum(c);
   const st=showStale(c); $("sbAvg").textContent=c.price ? "Price "+money(c.price)+(st?" · "+st:"") : "No price yet";
-  $("sbPrice").value=""; $("sbDelta").textContent=""; $("sbDelta").className="sb-delta";
+  $("sbPrice").value=""; $("sbDelta").textContent=""; $("sbDelta").className="sb-delta"; $("sbOffer").replaceChildren();
   $("sbWhere").value=todayKey("nd-show-where")||"";
   const cb=$("sbCond"); cb.replaceChildren();
-  for(const k of ["NM","LP","MP","HP","DMG"]){ const b=document.createElement("button"); b.type="button"; b.textContent=k; b.setAttribute("aria-pressed", k===buyCond); b.onclick=()=>{ buyCond=buyCond===k?"":k; [...cb.children].forEach(x=>x.setAttribute("aria-pressed", x.textContent===buyCond)); }; cb.append(b); }
+  for(const k of ["NM","LP","MP","HP","DMG"]){ const b=document.createElement("button"); b.type="button"; b.textContent=k; b.setAttribute("aria-pressed", k===buyCond); b.onclick=()=>{ buyCond=buyCond===k?"":k; [...cb.children].forEach(x=>x.setAttribute("aria-pressed", x.textContent===buyCond)); drawBuyOffer(); }; cb.append(b); }
   setSeller(null);
   $("sbNote").textContent=isOffline() ? "No signal: this is saved on the phone and synced after you confirm, once you're back online." : "Adds a copy to "+c.set+" with today's date.";
   $("sbSave").disabled=false;
   $("swBuy").showModal();
 }
-$("sbPrice").oninput=()=>{
-  const v=parseFloat($("sbPrice").value), p=buyCard&&buyCard.price, d=$("sbDelta");
-  if(!(v>=0) || !p){ d.textContent=""; d.className="sb-delta"; return; }
-  const diff=v-p; d.className="sb-delta "+(diff<=0?"under":"over");
-  d.textContent=Math.abs(diff)<0.005 ? "Right at the price" : money(Math.abs(diff))+(diff<0?" under":" over")+" the price ("+Math.round(Math.abs(diff)/p*100)+"%)";
-};
+// The vendor price check in the Got it sheet: type their price to see what to counter with, then change it
+// to what you paid before saving.
+function drawBuyOffer(){
+  const c=buyCard; if(!c) return;
+  if(showData && showData.habit) habit=showData.habit;
+  const ask=parseFloat($("sbPrice").value.trim().replace(/^\$/,""));
+  drawOffer($("sbOffer"), {ask, ref:offerRef(buyCond, (c.cond||{})[buyCond], (c.recent||{})[buyCond], c.price), t30:c.t30, stale:showStale(c)});
+}
+$("sbPrice").oninput=()=>{ $("sbDelta").textContent=""; $("sbDelta").className="sb-delta"; drawBuyOffer(); };
 $("sbClose").onclick=()=>$("swBuy").close();
 $("swBuy").addEventListener("click",e=>{ if(e.target===$("swBuy")) $("swBuy").close(); });
 $("sbSave").onclick=async()=>{
