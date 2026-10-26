@@ -1096,6 +1096,16 @@ a.psa-scan{text-decoration:none}
 #psaDlg .psa-go{color:var(--muted);font-size:16px}
 #psaDlg .ui-h{margin:4px 0 -6px}
 .row-msg{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.h-chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:2px 0;scroll-padding:0 16px}
+.h-chips::-webkit-scrollbar{display:none}
+.h-chips:empty{display:none}
+.h-chip{flex:none;height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:14px;cursor:pointer;white-space:nowrap}
+.h-chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.f .h-chips{margin-top:8px}
+.buyform .where-chips{grid-column:1/-1;margin-top:-2px}
+.sl-plats-wrap{display:flex;flex-direction:column;gap:6px}
+.sl-plats-l{font-size:13px;color:var(--muted)}
+@media (hover:hover){.h-chips{flex-wrap:wrap;overflow:visible}}   /* mouse: show them all, no sideways scrolling */
 .sel-hide{display:none!important}
 .sel-field{display:flex;gap:8px}
 .sel-btn{flex:1;min-width:0;height:44px;text-align:left;cursor:pointer;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font:inherit;font-size:15px}
@@ -1614,12 +1624,13 @@ html,body{overscroll-behavior-y:none}
       <button class="icon-btn" type="button" id="slScan" aria-label="Scan the vendor's QR code" title="Scan vendor QR code"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><path d="M8 8h3v3H8zM13 13h3v3h-3zM13 8h3M8 16h3"/></svg></button>
       <input type="file" id="slQr" accept="image/*" capture="environment" hidden>
     </div>
+    <div class="sl-plats-wrap"><span class="sl-plats-l" id="slPlatsL">Where they sell</span><div class="h-chips" id="slPlats" role="group" aria-labelledby="slPlatsL"></div></div>
     <div class="note" id="slMsg"></div>
     <h3 class="ui-h" id="slH">Recent</h3>
     <div class="ui-group sl-list" id="slList"></div>
     <div class="sl-new" id="slNew" hidden>
       <b id="slNewT">Add as a new seller</b>
-      <div class="sl-newrow"><select class="field" id="slPlat" aria-label="Their site or app"></select><button class="btn primary" type="button" id="slUse">Add</button></div>
+      <div class="sl-newrow"><select class="field sel-hide" id="slPlat" aria-label="Their site or app" tabindex="-1"></select><button class="btn primary" type="button" id="slUse">Add seller</button></div>
       <div class="note" id="slNewLink"></div>
     </div>
     <div class="row-end"><button class="btn" type="button" id="slNone">No seller</button></div>
@@ -1703,7 +1714,8 @@ html,body{overscroll-behavior-y:none}
       <form class="buyform" id="dBuyForm">
         <label class="f">Date<input type="date" id="bDate" required></label>
         <label class="f">Paid ($)<input type="number" id="bPrice" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></label>
-        <label class="f">Where<input type="text" id="bWhere" maxlength="60" list="whereList" placeholder="eBay, card show, local shop…"></label>
+        <label class="f">Where<input type="text" id="bWhere" maxlength="60" autocomplete="off" placeholder="eBay, card show, local shop…"></label>
+        <div class="h-chips where-chips" id="bWhereChips" role="group" aria-label="Pick where"></div>
         <div class="f past-f"><span>Seller</span><div class="sel-field"><button type="button" class="field sel-btn" id="bSelBtn">Choose seller</button><button type="button" class="icon-btn sel-x" id="bSelX" aria-label="Remove the seller" title="Remove the seller" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div></div>
         <label class="f sel-hide">Seller
           <select id="bPlat">
@@ -1730,7 +1742,6 @@ html,body{overscroll-behavior-y:none}
           <button class="btn" type="button" id="bCancel" hidden>Cancel</button>
         </div>
       </form>
-      <datalist id="whereList"></datalist>
       <datalist id="handleList"></datalist>
     </div>
     <label class="f">Notes<input id="dNote" type="text" maxlength="200" placeholder="Anything to remember about this card"></label>
@@ -3063,23 +3074,29 @@ $("bPlat").addEventListener("change",()=>{
 let editIdx=null;
 function resetBuyForm(){
   editIdx=null; $("dBuyForm").classList.remove("editing");
-  $("bDate").value=todayStr(); $("bPrice").value=""; $("bWhere").value=""; $("bPlat").value=""; $("bHandle").value=""; $("bHandle").disabled=true;
+  $("bDate").value=todayStr(); $("bPrice").value=""; $("bWhere").value=""; drawWhereChips(); $("bPlat").value=""; $("bHandle").value=""; $("bHandle").disabled=true;
   $("bSubmit").textContent="Add purchase"; $("bCancel").hidden=true; drawBSug();
 }
 function editBuy(n,i){
   const b=buys(n)[i]; if(!b) return;
   editIdx=i; $("dBuyForm").classList.add("editing");
-  $("bDate").value=b.d||""; $("bPrice").value=(b.price==null?"":b.price); $("bWhere").value=b.where||"";
+  $("bDate").value=b.d||""; $("bPrice").value=(b.price==null?"":b.price); $("bWhere").value=b.where||""; drawWhereChips();
   $("bPlat").value=(b.seller&&b.seller.p)||""; $("bHandle").value=(b.seller&&b.seller.h)||""; $("bHandle").disabled=!$("bPlat").value;
   $("bSubmit").textContent="Save changes"; $("bCancel").hidden=false; drawBSug();
   handleOptions(); $("bPrice").focus();
 }
 $("bCancel").onclick=resetBuyForm;
 
+function drawWhereChips(){ const v=$("bWhere").value.trim().toLowerCase(); for(const b of $("bWhereChips").children) b.setAttribute("aria-pressed", String(b.textContent.toLowerCase()===v)); }
+$("bWhere").addEventListener("input", drawWhereChips);
 function whereOptions(){
   const seen=new Set(["eBay","TCGplayer","Local card shop","Card show","Facebook Marketplace"]);
   for(const k in state.own) for(const b of (state.own[k].purchases||[])) if(b && b.where) seen.add(b.where);
-  const dl=$("whereList"); dl.replaceChildren(); seen.forEach(w=>{ const o=document.createElement("option"); o.value=w; dl.append(o); });
+  const box=$("bWhereChips"); box.replaceChildren();
+  const recent=[...seen].slice(5).reverse(), list=[...new Set([...recent.slice(0,6), "eBay","TCGplayer","Local card shop","Card show","Facebook Marketplace"])];
+  for(const w of list){ const b=document.createElement("button"); b.type="button"; b.className="h-chip"; b.textContent=w;
+    b.onclick=()=>{ $("bWhere").value=w; drawWhereChips(); }; box.append(b); }
+  drawWhereChips();
 }
 function drawBuys(n){
   const ul=$("dBuys"); ul.replaceChildren();
@@ -5590,7 +5607,7 @@ const SELLER_PLATS=["instagram","linktree","tiktok","facebook","x","whatnot","eb
 let slCb=null, slList=[], slCur=null;
 function openSellerPicker(list, cur, cb){
   slList=list||[]; slCur=cur; slCb=cb;
-  $("slQ").value=""; $("slMsg").textContent=""; drawSl(); $("selDlg").showModal();
+  $("slQ").value=""; $("slMsg").textContent=""; drawSl(); $("selDlg").showModal(); drawPlatChips();
 }
 function slDone(sel){ $("selDlg").close(); const cb=slCb; slCb=null; if(cb) cb(sel); }
 const sameSeller=(a,b)=>a && b && a.p===b.p && a.h.toLowerCase()===b.h.toLowerCase();
@@ -5616,7 +5633,7 @@ function drawSl(){
   const typed=slTyped(), isNew=!!(typed && typed.h && !slList.some(x=>sameSeller(x,typed)));
   $("slNew").hidden=!isNew;
   if(isNew){
-    if($("slPlat").value!==typed.p && [...$("slPlat").options].some(o=>o.value===typed.p)) $("slPlat").value=typed.p;
+    if($("slPlat").value!==typed.p && [...$("slPlat").options].some(o=>o.value===typed.p)){ $("slPlat").value=typed.p; drawPlatChips(); }
     $("slNewT").textContent="Add “"+sellerLabel(typed)+"” as a new seller";
     const P=PLAT[typed.p], href=P && P.url ? P.url(typed.h) : null;
     $("slNewLink").textContent=href ? "Links to "+href.replace(/^https?:\/\/(www\.)?/,"") : "";
@@ -5625,6 +5642,16 @@ function drawSl(){
 }
 for(const k of SELLER_PLATS){ const o=document.createElement("option"); o.value=k; o.textContent=PLAT[k].label; $("slPlat").append(o); }
 $("slPlat").value=recall("nd-sel-plat")||"instagram";
+// the site chips under the search box: pick where they sell before (or after) typing their name
+function drawPlatChips(){
+  const box=$("slPlats"), cur=$("slPlat").value;
+  if(!box.childElementCount) for(const k of SELLER_PLATS){ const b=document.createElement("button"); b.type="button"; b.className="h-chip"; b.dataset.p=k; b.textContent=PLAT[k].label;
+    b.onclick=()=>{ $("slPlat").value=k; store("nd-sel-plat",k); drawPlatChips(); drawSl(); $("slQ").focus(); }; box.append(b); }
+  let on=null; for(const b of box.children){ const p=b.dataset.p===cur; b.setAttribute("aria-pressed", String(p)); if(p) on=b; }
+  if(on){ const l=on.offsetLeft-box.offsetLeft; if(l<box.scrollLeft || l+on.offsetWidth>box.scrollLeft+box.clientWidth) box.scrollLeft=l-16; }
+  $("slQ").placeholder="Search, or type their "+PLAT[cur].label+" name";
+}
+drawPlatChips();
 $("slQ").oninput=drawSl;
 $("slPlat").onchange=()=>{ store("nd-sel-plat",$("slPlat").value); drawSl(); };
 $("slUse").onclick=()=>{ const x=slTyped(); if(x && x.h){ store("nd-sel-plat",x.p); slDone(x); } };
@@ -5768,13 +5795,14 @@ function psaDrawManual(box, d){
   const h=document.createElement("h3"); h.className="ui-h"; h.textContent="Recent sales";
   const f=document.createElement("div"); f.className="psa-man";
   const card=document.createElement("input"); card.className="field"; card.id="psaManCard"; card.autocomplete="off"; card.placeholder="Card, like Neo Destiny Dark Espeon 4"; card.setAttribute("aria-label","The card on the label");
-  card.value=psaManCard; card.setAttribute("list","psaManList"); card.enterKeyHint="done";
-  const dl=document.createElement("datalist"); dl.id="psaManList";   // suggestions from every English card, as you type
+  card.value=psaManCard; card.enterKeyHint="done";
+  const dl=document.createElement("div"); dl.className="h-chips"; dl.id="psaManList";   // suggestions from every English card, as you type
   let sugT=0, sugQ="";
   card.addEventListener("input",()=>{ clearTimeout(sugT); const v=card.value.trim(); if(v.length<3 || v===sugQ) return;
     sugT=setTimeout(()=>{ sugQ=v; fetch("api/find?q="+enc(v)).then(r=>r.json()).then(j=>{ if(card.value.trim()!==v) return; dl.replaceChildren();
-      for(const c of (j.cards||[]).slice(0,8)){ const o=document.createElement("option");
-        o.value=[String(c.date||"").slice(0,4), (c.set||"").replace(/ Base Set$/,""), c.name, c.num ? c.num+(c.pt ? "/"+c.pt : "") : ""].filter(Boolean).join(" "); dl.append(o); }
+      for(const c of (j.cards||[]).slice(0,8)){ const o=document.createElement("button"); o.type="button"; o.className="h-chip";
+        o.textContent=[String(c.date||"").slice(0,4), (c.set||"").replace(/ Base Set$/,""), c.name, c.num ? c.num+(c.pt ? "/"+c.pt : "") : ""].filter(Boolean).join(" ");
+        o.onclick=()=>{ card.value=sugQ=o.textContent; dl.replaceChildren(); links(); }; dl.append(o); }
     }).catch(()=>{}); },300); });
 
   const gl=document.createElement("div"); gl.className="note"; gl.textContent="Grade on the label";

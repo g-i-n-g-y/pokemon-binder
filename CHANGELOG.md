@@ -12,6 +12,8 @@ The binder shows these in **Settings → About → Check for updates**.
 
 ## Unreleased
 
+- **Pick the site first when adding a seller:** the Seller pop-up now shows the sites (Instagram, TikTok, Whatnot, eBay and more) as buttons under the search box, so you can pick where they sell before typing their name. Pasting a link still picks the site for you.
+- **Where works on phones:** the Where box under Purchases now has tappable buttons (eBay, TCGplayer, card show and places you've used before) instead of a dropdown that ended up on the keyboard. The PSA slab check's card suggestions work the same way.
 - **Where each sale happened:** in card details, every recent sale now shows where it sold, as a link. Raw sales say **TCGplayer** and open the card's TCGplayer page, which has its sales history (TCGplayer doesn't link single sales). Graded sales say **eBay** and open the actual listing when PriceCharting links it, otherwise **PriceCharting** opens the card's page there.
 
 ## v3.35 (October 25, 2026)
