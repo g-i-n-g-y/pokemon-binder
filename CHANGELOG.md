@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Where each sale happened:** in card details, every recent sale now shows where it sold, as a link. Raw sales say **TCGplayer** and open the card's TCGplayer page, which has its sales history (TCGplayer doesn't link single sales). Graded sales say **eBay** and open the actual listing when PriceCharting links it, otherwise **PriceCharting** opens the card's page there.
+
 ## v3.35 (October 25, 2026)
 
 - **Vendor price check uses price history:** once the server has saved at least 5 days of prices over 2 weeks or more, the **Open at** and **Walk away above** numbers come from the card's last 90 days instead of a fixed percentage. You open near its lowest price and walk away a little over its usual price, so a short spike never sets what you pay. Cards without enough history keep the old rule.

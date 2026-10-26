@@ -240,6 +240,12 @@ dialog.cele::backdrop{background:transparent}
 .rs-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
 .rs-list li{display:flex;justify-content:space-between;font-size:14px;font-variant-numeric:tabular-nums}
 .rs-list li span:first-child{color:var(--muted)}
+.rs-list li{gap:10px;align-items:center}
+.rs-list li>span:first-child{flex:1}
+.rs-src{font-size:12px;color:var(--muted);white-space:nowrap}
+a.rs-src{color:var(--dark);text-decoration:none;padding:4px 2px}
+a.rs-src:hover{text-decoration:underline}
+.rs-list .rs-p{min-width:68px;text-align:right}
 .rs-none{font-size:13px;color:var(--muted)}
 .rs-tag{font-size:11px;padding:1px 6px;border-radius:99px;border:1px solid var(--line);color:var(--muted);margin-left:6px;vertical-align:middle;white-space:nowrap;font-weight:400}
 .slotrow{display:grid;grid-template-columns:64px 1fr;gap:8px;align-items:center;margin:8px 0}
@@ -2710,7 +2716,13 @@ function ownLine(n){
 matchMedia("(min-width:760px)").addEventListener("change",()=>{ if($("dlg").open) setCardTab(cardTab); });
 $("dTabs").addEventListener("click",e=>{ const b=e.target.closest("button[data-tab]"); if(b) setCardTab(b.dataset.tab); });
 const shortDay = d => d ? new Date(d+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "";
-function salesBlock(title, avg, list, mine, emptyText){
+// where a sale happened: a link to the listing when there is one, else to the store's page for the card
+function saleLink(href, label){
+  const a=document.createElement(href ? "a" : "span"); a.className="rs-src"; a.textContent=label+(href ? " ↗" : "");
+  if(href){ a.href=href; a.target="_blank"; a.rel="noopener noreferrer"; a.title="Open on "+label; }
+  return a;
+}
+function salesBlock(title, avg, list, mine, emptyText, where){
   const box=document.createElement("div"); box.className="rs-cond"+(mine?" mine":"");
   const head=document.createElement("div"); head.className="rs-head";
   const b=document.createElement("b"); b.textContent=title;
@@ -2719,7 +2731,8 @@ function salesBlock(title, avg, list, mine, emptyText){
   head.append(b,a); box.append(head);
   if(list && list.length){
     const ul=document.createElement("ul"); ul.className="rs-list";
-    for(const [d,p] of list){ const li=document.createElement("li"); const x=document.createElement("span"); x.textContent=shortDay(d); const y=document.createElement("span"); y.textContent=money(p); li.append(x,y); ul.append(li); }
+    for(const sale of list){ const [d,p]=sale; const li=document.createElement("li"); const x=document.createElement("span"); x.textContent=shortDay(d); const y=document.createElement("span"); y.className="rs-p"; y.textContent=money(p);
+      li.append(x); if(where){ const w=where(sale); if(w) li.append(saleLink(w[0], w[1])); } li.append(y); ul.append(li); }
     box.append(ul);
   } else { const e=document.createElement("div"); e.className="rs-none"; e.textContent=emptyText; box.append(e); }
   return box;
@@ -2732,13 +2745,17 @@ function drawSales(n){
     box.append(e); return;
   }
   const mineRaw=new Set(activeSlots().filter(sl=>sl.t==="raw").map(sl=>sl.c));
+  // raw sales are TCGplayer sales: each one links to the card's TCGplayer page, which has its sales history
+  const cc=state.cards.find(x=>x.n===n)||{}, tcgId=i.tcgId||cc.tcg;
+  const tcgUrl=tcgId ? "https://www.tcgplayer.com/product/"+enc(tcgId) : "";
   for(const c of ["NM","LP","MP","HP","DMG"])
-    box.append(salesBlock(c+" · "+COND_NAME[c], (i.cond||{})[c], (i.recent||{})[c], mineRaw.has(c), "No recent "+c+" sales found."));
+    box.append(salesBlock(c+" · "+COND_NAME[c], (i.cond||{})[c], (i.recent||{})[c], mineRaw.has(c), "No recent "+c+" sales found.", ()=>[tcgUrl, "TCGplayer"]));
   for(const sl of activeSlots().filter(sl=>sl.t==="graded")){
     const key=slotKey(sl);
     let list=(i.gradedRecent||{})[key];
     if(sl.co==="Any") list=Object.entries(i.gradedRecent||{}).filter(([k])=>k.endsWith(" "+sl.g)).flatMap(([,v])=>v).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,5);
-    box.append(salesBlock(slotName(sl)+" · eBay via PriceCharting", (i.graded||{})[key], list, true, i.graded ? "No recent "+slotName(sl)+" sales found." : "Graded sales show here after the next price refresh."));
+    box.append(salesBlock(slotName(sl)+" · eBay via PriceCharting", (i.graded||{})[key], list, true, i.graded ? "No recent "+slotName(sl)+" sales found." : "Graded sales show here after the next price refresh.",
+      sale=>sale[2] ? [sale[2], "eBay"] : [i.pc||"", "PriceCharting"]));
   }
 }
 // ---------- vendor price check: what to counter with ----------

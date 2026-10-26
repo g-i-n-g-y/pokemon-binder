@@ -2255,6 +2255,7 @@ def pc_sales(html):
     """Sold listings on a PriceCharting card page: [{d, title, price}], newest first."""
     out = []
     for row in re.findall(r"<tr[^>]*>(.*?)</tr>", html, re.S | re.I):
+        link = re.search(r'href="(https?://(?:www\.)?ebay\.com/itm/[^"\s]+)"', row)
         text = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", row)).strip()
         m = re.match(r"(\d{4}-\d{2}-\d{2}|[A-Z][a-z]{2,8}\.? \d{1,2},? \d{4})\s+(.*?)\s+\$([\d,]+\.\d{2})\b", text)
         if m:
@@ -2264,7 +2265,8 @@ def pc_sales(html):
                     d = datetime.strptime(d.replace(".", "").replace(",", "")[:3] + " " + " ".join(d.replace(",", "").split()[1:]), "%b %d %Y").strftime("%Y-%m-%d")
                 except ValueError:
                     continue
-            out.append({"d": d, "title": m.group(2), "price": float(m.group(3).replace(",", ""))})
+            out.append({"d": d, "title": m.group(2), "price": float(m.group(3).replace(",", "")),
+                        "url": unescape(link.group(1)).split("?")[0] if link else ""})
     seen, uniq = set(), []
     for x in out:
         k = (x["d"], x["title"], x["price"])
@@ -2285,7 +2287,7 @@ def graded_recent(sales, keep=5):
             key = f"{m.group(1).upper().replace('BECKETT', 'BGS')} {m.group(2)}"
             lst = out.setdefault(key, [])
             if len(lst) < keep:
-                lst.append([x["d"], x["price"]])
+                lst.append([x["d"], x["price"], x.get("url", "")])   # the eBay listing, when PriceCharting links it
     return out
 
 
