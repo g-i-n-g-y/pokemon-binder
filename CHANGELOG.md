@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v3.35.1 (October 26, 2026)
 
 - **Pick the site first when adding a seller:** the Seller pop-up now shows the sites (Instagram, TikTok, Whatnot, eBay and more) as buttons under the search box, so you can pick where they sell before typing their name. Pasting a link still picks the site for you.
 - **Where works on phones:** the Where box under Purchases now has tappable buttons (eBay, TCGplayer, card show and places you've used before) instead of a dropdown that ended up on the keyboard. The PSA slab check's card suggestions work the same way.
