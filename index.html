@@ -4804,9 +4804,12 @@ function drawLog(log){
 function zoomFoil(c, sid){
   const W=$("zoomWrap"), r=(c && c.rarity) || "";
   W.className="zwrap"; W.removeAttribute("style");
-  if(!c || c.custom || !/holo|shining|shiny|star|secret|ultra|rainbow|illustration|hyper|double rare|radiant|amazing|classic collection|legend|prime|break|ace spec|rare ace/i.test(r)) return;
-  const whole=/secret|ultra|rainbow|illustration|hyper|double rare|shiny|radiant|amazing/i.test(r);
+  if(!c || c.custom) return;
   let set=String(sid||c.sid||""); if(/^dex-|^own-|^$/.test(set) && /^[a-z0-9.]+-/.test(c.n||"")) set=c.n.split("-")[0];   // mixed binders: the card's own set
+  const svRare = r==="Rare" && /^(sv|me)\d/.test(set);   // since Scarlet & Violet, every Rare is a holo
+  if(!svRare && !/holo|shining|shiny|star|secret|ultra|rainbow|illustration|hyper|double rare|radiant|amazing|classic collection|legend|prime|break|ace spec|rare ace|pikachu rare|mega_attack|futuristic|black white/i.test(r)) return;
+  // whole-card foil: full arts, secret and shiny cards, and the "big" cards (EX, GX, V, VMAX, VSTAR, LV.X, ex, Prime, LEGEND, BREAK)
+  const whole=/secret|ultra|rainbow|illustration|hyper|double rare|shiny|radiant|amazing|trainer gallery|mega_attack|futuristic|black white|prime|legend|break/i.test(r) || /\b(EX|ex|GX|V|VMAX|VSTAR|LV\.X)$/.test(r);
   W.classList.add("holo", /shining/i.test(r) ? "f-glitter" : /^base[123]$/.test(set) ? "f-star" : "f-cosmos");
   if(!whole) artBox(set).forEach((v,i)=>W.style.setProperty(["--t","--r","--b","--l"][i], v+"%"));   // the art window
 }
