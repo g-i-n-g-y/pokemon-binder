@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Holo Trainer and Energy cards shimmer in the right place:** they now shine across the whole card, instead of in a box where a Pokémon card's picture would be.
+
 ## v3.38 (October 29, 2026)
 
 - **More holo cards shimmer:** Double Rare ex cards, Shiny and Shiny Vault cards, Radiant and Amazing Rares shimmer across the whole card when zoomed, and Classic Collection and ACE cards shimmer in their art window.
