@@ -10,6 +10,11 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Holo promos marked as holo:** McDonald's Collection cards from 2011 to 2019, the holo Latias, Latios, Plusle and Minun from the EX trainer kits, and three Dragon Vault cards (Exp. Share, First Ticket, Kyurem) had no rarity in the card list. They now show as holo, shimmer in their picture when zoomed, and sort with the holos.
+- **No shimmer on a stand-in card back:** some cards have no picture yet (like McDonald's 2014, 2015, 2017 and 2018), so the card back shows instead. Zooming one no longer makes the card back shimmer.
+
 ## v3.38.2 (October 29, 2026)
 
 - **Southern Islands reverse holos:** Mew, Togepi, Ledyba, Marill, Slowking and Vileplume now show as Reverse Holo (the card list left their rarity blank). When zoomed they shimmer everywhere except the picture, like the real cards, and they sort with the holos.

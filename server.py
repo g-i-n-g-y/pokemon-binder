@@ -459,9 +459,15 @@ def catalog(force=False):
         return cat["sets"] if cat else []
 
 
-# Rarities the card database leaves out or gets wrong, by card id. Southern Islands has no rarity symbols, and
-# six of its 18 cards are reverse holos.
-RARITY_FIXES = {f"si1-{n}": "Reverse Holo" for n in (1, 4, 7, 11, 14, 17)}
+# Rarities the card database leaves out, by card id: holos without a rarity symbol, checked against TCGdex and
+# TCGplayer. Southern Islands: six of its 18 cards are reverse holos. McDonald's 2011–2019: every card is a holo.
+# Trainer kits: one holo each. Dragon Vault: every card is a holo, but three were left blank.
+RARITY_FIXES = {
+    **{f"si1-{n}": "Reverse Holo" for n in (1, 4, 7, 11, 14, 17)},
+    **{f"mcd{y}-{n}": "Holo" for y in (11, 12, 14, 15, 16, 17, 18, 19) for n in range(1, 13)},
+    **{n: "Holo" for n in ("tk1a-4", "tk1b-2", "tk2a-6", "tk2b-6")},
+    **{n: "Rare Holo" for n in ("dv1-18", "dv1-19", "dv1-21")},
+}
 
 
 def fix_rarity(cards, sid=""):

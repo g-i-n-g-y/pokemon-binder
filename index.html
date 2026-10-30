@@ -4833,12 +4833,12 @@ function zoomFoil(c, sid){
 const ART_BOXES=[
   [/^(base|gym|neo|si\d|basep|cel25c|me55c)/, [11,9.8,47.5,10.3]],   // 1999–2003 Wizards cards, and their Classic Collection reprints
   [/^ecard/,      [13,6.5,50,10]],     // e-card: Expedition, Aquapolis, Skyridge
-  [/^(ex\d|pop)/, [9,5.5,52,5.5]],     // EX era: Ruby & Sapphire to Power Keepers
+  [/^(ex\d|pop|tk)/, [9,5.5,52,5.5]], // EX era: Ruby & Sapphire to Power Keepers, and the EX trainer kits
   [/^(dp|pl)/,    [9,5,48,5]],         // Diamond & Pearl, Platinum
   [/^(hgss|col|hsp)/, [11,3,46,3]],    // HeartGold & SoulSilver, Call of Legends
-  [/^(bw|dv)/,    [10,6,47,6]],        // Black & White
-  [/^(xy|g1|dc)/, [10,6,46,6]],        // XY
-  [/^(sm|det)/,   [10,7,48,7]],        // Sun & Moon
+  [/^(bw|dv|mcd1[12])/, [10,6,47,6]], // Black & White, and McDonald's 2011–2012
+  [/^(xy|g1|dc|mcd1[456])/, [10,6,46,6]], // XY, and McDonald's 2014–2016
+  [/^(sm|det|mcd1[789])/, [10,7,48,7]], // Sun & Moon, and McDonald's 2017–2019
   [/^(swsh|cel25|pgo)/, [9.5,7,48,6]], // Sword & Shield
 ];
 const artBox = set => (ART_BOXES.find(([re])=>re.test(set)) || [0,[10,7,49,6.5]])[1];   // Scarlet & Violet, Mega and anything newer
@@ -4860,7 +4860,10 @@ $("zoomWrap").addEventListener("pointermove",e=>{ const r=$("zoomWrap").getBound
 $("zoomWrap").addEventListener("pointerleave",()=>{ zl.held=false; });
 addEventListener("deviceorientation",e=>{ if(e.gamma==null || !$("zoom").open) return; zl.tilt=[Math.max(0,Math.min(100,50+e.gamma*1.6)), Math.max(0,Math.min(100,50+(e.beta-45)*1.6))]; });
 $("dArtBtn").onclick=()=>{ const a=$("dArt"); if(a.hidden || !a.currentSrc) return; $("zoomImg").src=a.currentSrc; $("zoomImg").alt=a.alt;
-  const c=state.cards.find(x=>x.n===state.open); zoomFoil(c, c && (c.sid || state.sid)); $("zoom").showModal(); };
+  const c=state.cards.find(x=>x.n===state.open);
+  zoomFoil(a.dataset.r ? null : c, c && (c.sid || state.sid));   // no shimmer on the image site's stand-in card back
+  $("zoom").showModal(); };
+$("zoomImg").addEventListener("error",()=>zoomFoil(null));
 $("zoom").onclick=()=>$("zoom").close();
 $("dlg").addEventListener("close",()=>{ if($("zoom").open) $("zoom").close(); });
 $("dlg").addEventListener("close",()=>{ if(state.view==="stats" && state.spendStale) loadStats(); if(state.view==="shop") drawShop(); });
@@ -5163,7 +5166,7 @@ $("dXDel").onclick=async()=>{
 // page and the front of the next. The layout (pocket size, starting order, and any cards you moved) is saved
 // on the server per binder. Until you move a card, the pages simply follow the starting order.
 const POCKETS=[4,9,12,16], PK_COLS={4:2,9:3,12:3,16:4};
-const RAR_RANK=["Common","Uncommon","Rare","Reverse Holo","Rare Holo","Rare Shining","Rare Holo EX","Rare Ultra","Rare Secret"];
+const RAR_RANK=["Common","Uncommon","Rare","Reverse Holo","Holo","Rare Holo","Rare Shining","Rare Holo EX","Rare Ultra","Rare Secret"];
 function pageOrders(){
   const o=[["num", isDex(state.sid) ? "Release date" : isOwn(state.sid) ? "Set and number" : "Set number"],
            ["rarity","Rarity"],["dex","Pokédex number"],["type","Pokémon, then Trainers and Energy"],["value","Value, high to low"]];
