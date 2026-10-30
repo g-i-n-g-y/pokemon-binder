@@ -4804,8 +4804,8 @@ function drawLog(log){
 function zoomFoil(c, sid){
   const W=$("zoomWrap"), r=(c && c.rarity) || "";
   W.className="zwrap"; W.removeAttribute("style");
-  if(!c || c.custom || !/holo|shining|star|secret|ultra|rainbow|illustration|hyper|legend|prime|break|ace spec/i.test(r)) return;
-  const whole=/secret|ultra|rainbow|illustration|hyper/i.test(r);
+  if(!c || c.custom || !/holo|shining|shiny|star|secret|ultra|rainbow|illustration|hyper|double rare|radiant|amazing|classic collection|legend|prime|break|ace spec|rare ace/i.test(r)) return;
+  const whole=/secret|ultra|rainbow|illustration|hyper|double rare|shiny|radiant|amazing/i.test(r);
   const set=String(sid||c.sid||"");
   W.classList.add("holo", /shining/i.test(r) ? "f-glitter" : /^base[123]$/.test(set) ? "f-star" : "f-cosmos");
   if(!whole) for(const [k,v] of [["--t","11%"],["--r","9.8%"],["--b","47.5%"],["--l","10.3%"]]) W.style.setProperty(k,v);   // the art window on a vintage card

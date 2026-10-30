@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **More holo cards shimmer:** Double Rare ex cards, Shiny and Shiny Vault cards, Radiant and Amazing Rares shimmer across the whole card when zoomed, and Classic Collection and ACE cards shimmer in their art window.
+
 ## v3.37 (October 29, 2026)
 
 - **Holo cards shimmer when zoomed:** tap a holo card's picture and a band of light slides across its foil. On a computer it follows your mouse, on a phone it follows how you tilt the phone, and left alone it sweeps slowly by itself.
