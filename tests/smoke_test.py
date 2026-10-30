@@ -384,7 +384,7 @@ def main():
         check("other websites can't add cards", blocked)
 
         sys.path.insert(0, os.path.join(REPO, "tests"))
-        from cleanup_check import page_parts
+        from cleanup_check import page_parts, server_source
         html, css, script = page_parts()
         names = re.findall(r"^\s*(?:async\s+)?function\s+(\w+)\s*\(", script, re.M)
         twice = sorted({n for n in names if names.count(n) > 1})
@@ -394,7 +394,7 @@ def main():
         check("no two page elements share an id (the code would only find the first)", not twice_ids, twice_ids)
         priv = [r for r in re.findall(r"([^{}]+)\{([^}]*)\}", css) if "#sValue" in r[0] and "data-private" in r[0]]
         check("privacy mode blurs the money totals", bool(priv) and all("blur" in r[1] for r in priv), priv)
-        srv = open(os.path.join(REPO, "server.py"), encoding="utf-8").read()
+        srv = server_source()
         defs = re.findall(r"^def (\w+)\(", srv, re.M)
         twice_defs = sorted({d for d in defs if defs.count(d) > 1})
         check("no two server functions share a name", not twice_defs, twice_defs)

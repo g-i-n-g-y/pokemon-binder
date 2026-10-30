@@ -57,7 +57,8 @@ Your collection, purchases, photos, and prices are stored only on the machine ru
 
 | File | What it is |
 |---|---|
-| `server.py` | The web server |
+| `server.py` | The web server: starts the binder and runs the files in `binder/` |
+| `binder/` | The rest of the server, one file per part: storage, cards, prices, PSA, pictures, card shows, spreadsheets, backups, phone sync, web pages and updates (since v4.0) |
 | `index.html` | The binder page (its layout) |
 | `app/` | The page's styles (`style.css`) and code, one file per part: the grid, card details, Pages, card show mode and so on (since v4.0) |
 | `fonts.css` | The page's fonts, built in so the binder doesn't ask Google for them (since v3.5) |

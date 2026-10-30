@@ -13,6 +13,7 @@ The binder shows these in **Settings → About → Check for updates**.
 ## Unreleased
 
 - Behind the scenes: the page's styles and code moved out of `index.html` into 17 smaller files in an `app` folder, so changes are quicker and safer to make. Nothing looks or works differently. The phone app saves the new files too, so it still opens with no signal.
+- Behind the scenes: the server is split the same way. `server.py` starts the binder and runs 13 smaller files in a `binder` folder (prices, cards, backups, updates and so on). Every address the page and phone app use stays exactly the same.
 
 ## v3.39 (October 30, 2026)
 

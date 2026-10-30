@@ -1,7 +1,8 @@
 # Pokemon Binder (Neo Destiny Tracker)
 
 A self-hosted Pokémon card collection tracker. `server.py` is the server
-(Python, standard library only) and `index.html` is the page, with its styles
+(Python, standard library only; it runs the files in `binder/` in order, as
+if they were one file) and `index.html` is the page, with its styles
 and code in `app/` (`style.css`, plus `*.js` files that `index.html` loads in
 order and that share one scope). The owner is
 not a programmer.
@@ -72,6 +73,10 @@ This repository is public. Never commit:
 ## Program files
 - `APP_FILES` in `server.py` lists the files an update installs. When you add
   a new program file, add it there too, or updates won't deliver it.
+- Keep `APP_FILES` in `server.py` as one plain list with no brackets inside:
+  older versions find it there with a simple pattern when they update.
+- A new server file in `binder/` also goes in `SERVER_PARTS`; a new page file
+  in `app/` also gets a `<script>` line in `index.html`.
 
 ## Releasing (only when the owner says "release" or "push it")
 1. Set `APP_VERSION` in `server.py` to the new version.

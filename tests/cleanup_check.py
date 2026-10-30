@@ -26,6 +26,13 @@ def once(name, text):
     return len(re.findall(r"\b" + re.escape(name) + r"\b", text)) == 1
 
 
+def server_source():
+    """server.py followed by the files in binder/ it runs (SERVER_PARTS), in order: the server as one text."""
+    src = open(os.path.join(REPO, "server.py"), encoding="utf-8").read()
+    parts = ast.literal_eval(re.search(r"^SERVER_PARTS\s*=\s*(\([^)]*\))", src, re.M).group(1))
+    return "\n".join([src] + [open(os.path.join(REPO, "binder", p + ".py"), encoding="utf-8").read() for p in parts])
+
+
 def page_parts():
     """The page in its three parts: index.html (layout), app/style.css (styles), and app/*.js joined in the order
     index.html loads them (code)."""
@@ -36,7 +43,7 @@ def page_parts():
 
 
 def main():
-    src = open(os.path.join(REPO, "server.py"), encoding="utf-8").read()
+    src = server_source()
     tree = ast.parse(src)
     defs = [n.name for n in tree.body if isinstance(n, (ast.FunctionDef, ast.ClassDef))]
     report("server: names defined twice", [n for n, c in collections.Counter(defs).items() if c > 1])
