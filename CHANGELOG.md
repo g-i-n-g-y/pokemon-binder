@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Fix:** in Download for TCGplayer, cards with no condition set on My copy now go in as **Lightly Played**. Before, they had no condition at all, and TCGplayer couldn't import those lines.
+
 ## v4.3 (October 30, 2026)
 
 - **Download for TCGplayer** now includes each card's printing and condition, so TCGplayer no longer files everything as 1st Edition Near Mint. Cards go in as Unlimited (TCGplayer calls Base Set's Unlimited cards just Normal or Holofoil), with the condition you set on My copy. Copies marked reverse holo get their own Reverse Holofoil line. Cards with no condition set go in as Near Mint. In TCGplayer, pick the **Pokémon** tab before importing.

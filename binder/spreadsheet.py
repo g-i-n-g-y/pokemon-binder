@@ -506,7 +506,7 @@ def export_tcgplayer(only=None):
                 continue
             code, name, number, kinds = found
             rev = min(qty, sum(1 for b in rec.get("purchases") or [] if isinstance(b, dict) and b.get("rev")))
-            cond = TCG_CONDS.get(rec.get("cond") or "", "")
+            cond = TCG_CONDS.get(rec.get("cond") or "", "Lightly Played")   # every line needs one; no condition set counts as LP
             for n_, is_rev in ((qty - rev, False), (rev, True)):   # reverse holo copies get a line of their own
                 if n_ > 0:
                     key = (code, name, number, tcg_printing(kinds, c.get("rarity", ""), is_rev), cond)
