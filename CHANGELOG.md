@@ -15,6 +15,7 @@ The binder shows these in **Settings → About → Check for updates**.
 - **More holo cards shimmer:** Double Rare ex cards, Shiny and Shiny Vault cards, Radiant and Amazing Rares shimmer across the whole card when zoomed, and Classic Collection and ACE cards shimmer in their art window.
 - **Shimmer in the right spot on newer cards:** the shine now follows each era's card layout (e-card, EX, Diamond & Pearl, HeartGold & SoulSilver, Black & White, XY, Sun & Moon, Sword & Shield, Scarlet & Violet), measured on real cards, instead of using the 1999 layout for everything.
 - **Big cards shine all over:** EX, GX, V, VMAX, VSTAR, LV.X, ex, Prime, LEGEND, BREAK and Trainer Gallery cards now shimmer across the whole card, like the real ones, instead of only in the picture. Scarlet & Violet and Mega-era Rares (which are all holo) and Pikachu Rares shimmer in their picture, and the newest Mega Attack, Futuristic and Black White Rares shine all over.
+- **Modern foils get their own look:** full-art cards (Ultra Rares, Special Illustration Rares, Trainer Gallery) show fine etched lines catching the light, Illustration and Rainbow Rares get a smooth sheen so the artwork stays clean, and gold cards (Hyper Rares and the gold Secret Rares from Sun & Moon and Sword & Shield) get a warm gold band with gold sparkles.
 
 ## v3.37 (October 29, 2026)
 

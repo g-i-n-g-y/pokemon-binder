@@ -163,6 +163,11 @@ dialog#zoom::backdrop{background:transparent}
 .zwrap.f-cosmos .zspark{background-image:radial-gradient(circle,rgba(255,255,255,.75) 0 2.2px,transparent 3px),radial-gradient(circle,rgba(255,255,255,.5) 0 1.2px,transparent 1.8px),radial-gradient(circle,transparent 0 7px,rgba(255,255,255,.45) 7.5px 8.5px,transparent 9.2px),radial-gradient(circle,rgba(255,255,255,.28) 0 5px,transparent 6px);background-size:37px 41px,19px 23px,71px 77px,97px 89px}
 .zwrap.f-star .zspark{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cg fill='%23fff'%3E%3Cpath d='M18 6 Q20 16 30 18 Q20 20 18 30 Q16 20 6 18 Q16 16 18 6Z' fill-opacity='.85'/%3E%3Cpath d='M62 40 Q63 46 69 47 Q63 48 62 54 Q61 48 55 47 Q61 46 62 40Z' fill-opacity='.7'/%3E%3Cpath d='M40 68 Q41 72 45 73 Q41 74 40 78 Q39 74 35 73 Q39 72 40 68Z' fill-opacity='.6'/%3E%3Ccircle cx='78' cy='14' r='1.5' fill-opacity='.8'/%3E%3Ccircle cx='10' cy='58' r='1.2' fill-opacity='.7'/%3E%3C/g%3E%3C/svg%3E");background-size:90px 90px}
 .zwrap.f-glitter .zspark{background-image:radial-gradient(circle,rgba(255,255,255,.8) 0 1.4px,transparent 2px),radial-gradient(circle,rgba(255,255,255,.55) 0 .9px,transparent 1.4px);background-size:13px 17px,7px 9px}
+.zwrap.f-etched .zspark{opacity:.75;background-image:repeating-radial-gradient(circle at 20% 115%,rgba(255,255,255,.55) 0 1px,transparent 1.2px 6px),repeating-linear-gradient(62deg,rgba(255,255,255,.18) 0 1px,transparent 1px 8px)}
+.zwrap.f-smooth .zspark{display:none}
+.zwrap.f-smooth .zfoil{background:linear-gradient(115deg,transparent calc(var(--band) - 30%),rgba(255,255,255,.75) var(--band),transparent calc(var(--band) + 30%))}
+.zwrap.f-gold .zfoil{background:linear-gradient(115deg,transparent calc(var(--band) - 24%),rgba(255,205,95,.95) var(--band),transparent calc(var(--band) + 24%))}
+.zwrap.f-gold .zspark{opacity:.8;background-image:radial-gradient(circle,rgba(255,226,150,.9) 0 1.3px,transparent 2px),radial-gradient(circle,rgba(255,240,200,.6) 0 .8px,transparent 1.3px);background-size:15px 19px,8px 10px}
 .zglare{mix-blend-mode:overlay;opacity:.6;background:radial-gradient(farthest-corner circle at calc(var(--mx) * 1%) calc(var(--my) * 1%),rgba(255,255,255,.55) 0%,rgba(255,255,255,.15) 28%,rgba(0,0,0,.2) 95%)}
 @media (prefers-reduced-motion:reduce){.zwrap.holo{transform:none}}
 /* phones: small picture on the left, the card's name and details beside it; store links move into the Prices tab */
@@ -4810,7 +4815,13 @@ function zoomFoil(c, sid){
   if(!svRare && !/holo|shining|shiny|star|secret|ultra|rainbow|illustration|hyper|double rare|radiant|amazing|classic collection|legend|prime|break|ace spec|rare ace|pikachu rare|mega_attack|futuristic|black white/i.test(r)) return;
   // whole-card foil: full arts, secret and shiny cards, and the "big" cards (EX, GX, V, VMAX, VSTAR, LV.X, ex, Prime, LEGEND, BREAK)
   const whole=/secret|ultra|rainbow|illustration|hyper|double rare|shiny|radiant|amazing|trainer gallery|mega_attack|futuristic|black white|prime|legend|break/i.test(r) || /\b(EX|ex|GX|V|VMAX|VSTAR|LV\.X)$/.test(r);
-  W.classList.add("holo", /shining/i.test(r) ? "f-glitter" : /^base[123]$/.test(set) ? "f-star" : "f-cosmos");
+  // foil look: glitter (Shining), stars (Base, Jungle, Fossil), gold (Hyper Rares, gold secret rares), etched lines (full arts),
+  // smooth (Illustration and Rainbow Rares), dots (everything else)
+  const look = /shining/i.test(r) ? "f-glitter" : /^base[123]$/.test(set) ? "f-star"
+    : /hyper rare/i.test(r) || (r==="Rare Secret" && /^(sm|swsh)/.test(set)) ? "f-gold"
+    : /rare ultra|^ultra rare|shiny ultra|trainer gallery|special illustration|mega_attack/i.test(r) ? "f-etched"
+    : r==="Illustration Rare" || r==="Rare Rainbow" ? "f-smooth" : "f-cosmos";
+  W.classList.add("holo", look);
   if(!whole) artBox(set).forEach((v,i)=>W.style.setProperty(["--t","--r","--b","--l"][i], v+"%"));   // the art window
 }
 // Where the picture sits on a card (top, right, bottom, left in %), by card layout, measured on real scans.
