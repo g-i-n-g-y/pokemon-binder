@@ -624,6 +624,7 @@ def refresh_prices(sid, reason="daily", only_daily=False, only=None):
                 prices["updated"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             write_json(sdir(sid, "prices.json"), prices)
             snapshot_history(sid, prices)
+            snapshot_cond_history(sid, prices)
         job["message"] = (f"{name}: got prices for the card you added." if only and len(cards) == 1
                           else f"{name}: updated {priced} of {len(cards)} prices.")
         log(f"{sid}: price refresh done, {priced} of {len(cards)} priced.")

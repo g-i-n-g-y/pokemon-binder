@@ -18,6 +18,81 @@ def snapshot_history(sid, prices=None):
     history_put_day(sid, today_local(), {n: v[0] for n, v in p.items() if v and isinstance(v[0], (int, float))})
 
 
+COND_ORDER = ("NM", "LP", "MP", "HP", "DMG")
+
+
+def snapshot_cond_history(sid, prices=None):
+    """For the card page's chart: save today's average price for each condition of every card, and keep every
+    recent sale the server has seen (TCGplayer only shows the newest 5 per condition, so the log grows over time).
+    cond_history.json is {day: {card: [NM, LP, MP, HP, DMG]}} with only the cards whose numbers changed since their
+    last saved day, so it stays small. sales_log.json is {card: {condition: [[day, price], ...]}}, oldest first."""
+    prices = prices if prices is not None else read_json(sdir(sid, "prices.json"), {})
+    info = (prices or {}).get("info") or {}
+    if not isinstance(info, dict) or not info:
+        return
+    today = today_local()
+    hist = read_json(sdir(sid, "cond_history.json"), {})
+    hist = hist if isinstance(hist, dict) else {}
+    last = {}   # each card's numbers as of the day before today
+    for d in sorted(hist):
+        if d < today and isinstance(hist[d], dict):
+            last.update(hist[d])
+    row = dict(hist.get(today) or {})
+    sales = read_json(sdir(sid, "sales_log.json"), {})
+    sales = sales if isinstance(sales, dict) else {}
+    sales_changed = False
+    for n, inf in info.items():
+        if not isinstance(inf, dict):
+            continue
+        cond = inf.get("cond") if isinstance(inf.get("cond"), dict) else {}
+        vals = [round(cond[c][0], 2) if isinstance(cond.get(c), list) and cond[c] and _is_num(cond[c][0]) else None
+                for c in COND_ORDER]
+        if any(v is not None for v in vals) and last.get(n) != vals:
+            row[n] = vals
+        else:
+            row.pop(n, None)
+        for c, got in (inf.get("recent") if isinstance(inf.get("recent"), dict) else {}).items():
+            if c not in COND_ORDER or not isinstance(got, list):
+                continue
+            have = sales.setdefault(n, {}).setdefault(c, [])
+            seen = {(d, p) for d, p in have}
+            for s in got:
+                ok = isinstance(s, list) and len(s) == 2 and isinstance(s[0], str) and _is_num(s[1])
+                if ok and (s[0][:10], round(s[1], 2)) not in seen:
+                    have.append([s[0][:10], round(s[1], 2)])
+                    seen.add((s[0][:10], round(s[1], 2)))
+                    sales_changed = True
+            have.sort()
+    if row != (hist.get(today) or {}):
+        if row:
+            hist[today] = row
+        else:
+            hist.pop(today, None)
+        write_json(sdir(sid, "cond_history.json"), hist)
+    if sales_changed:
+        write_json(sdir(sid, "sales_log.json"), sales)
+
+
+def card_cond_series(sid, n):
+    """One card's chart lines by condition: {"NM": [[day, price], ...], ...}, only the days the price changed."""
+    hist = read_json(sdir(sid, "cond_history.json"), {})
+    out = {c: [] for c in COND_ORDER}
+    for d in sorted(hist if isinstance(hist, dict) else {}):
+        vals = hist[d].get(n) if isinstance(hist[d], dict) else None
+        if isinstance(vals, list):
+            for c, v in zip(COND_ORDER, vals):
+                if _is_num(v):
+                    out[c].append([d, v])
+    return {c: pts for c, pts in out.items() if pts}
+
+
+def card_sales(sid, n):
+    """Every sale saved for one card: {"NM": [[day, price], ...], ...}, oldest first."""
+    sales = read_json(sdir(sid, "sales_log.json"), {})
+    got = sales.get(n) if isinstance(sales, dict) else None
+    return {c: got[c] for c in COND_ORDER if isinstance(got, dict) and got.get(c)}
+
+
 TREND_DAYS = (1, 7, 30, 90, 365)   # the price change periods the page offers (plus "all time")
 
 

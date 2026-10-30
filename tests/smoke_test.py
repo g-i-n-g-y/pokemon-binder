@@ -136,6 +136,22 @@ assert server.clean_leftovers() == 5
 assert os.path.exists(os.path.join(server.APP, "fresh.tmp")) and os.path.exists(os.path.join(server.APP, "server.py"))
 os.remove(os.path.join(server.APP, "fresh.tmp"))
 # picture download misses aren't Status problems, real problems are
+# condition prices for the card chart: only changes are saved, sales are kept without repeats
+pr = {"info": {"1": {"cond": {"NM": [30.0, 3, "2026-10-01"], "LP": [25.0, 5, "2026-10-01"]},
+                     "recent": {"LP": [["2026-10-01", 25.0], ["2026-09-30", 24.5]]}}}}
+server.snapshot_cond_history("neo4", pr)
+server.snapshot_cond_history("neo4", pr)   # a second check the same day changes nothing
+assert server.card_cond_series("neo4", "1") == {"NM": [[server.today_local(), 30.0]], "LP": [[server.today_local(), 25.0]]}, server.card_cond_series("neo4", "1")
+assert server.card_sales("neo4", "1") == {"LP": [["2026-09-30", 24.5], ["2026-10-01", 25.0]]}, server.card_sales("neo4", "1")
+h = server.read_json(server.sdir("neo4", "cond_history.json"), {})
+server.write_json(server.sdir("neo4", "cond_history.json"), {"2026-01-01": h[server.today_local()]})   # pretend that was an older day
+server.snapshot_cond_history("neo4", pr)
+assert server.today_local() not in server.read_json(server.sdir("neo4", "cond_history.json"), {}), "an unchanged price was saved again"
+pr["info"]["1"]["cond"]["LP"] = [26.0, 5, "2026-10-02"]
+pr["info"]["1"]["recent"]["LP"].append(["2026-10-02", 27.5])
+server.snapshot_cond_history("neo4", pr)
+assert server.card_cond_series("neo4", "1")["LP"] == [["2026-01-01", 25.0], [server.today_local(), 26.0]]
+assert len(server.card_sales("neo4", "1")["LP"]) == 3
 # card pictures only come from the card picture websites
 assert server.fetch_image("unittest", {"n": "x1", "img": "http://127.0.0.1:8080/api/backup"}) is None
 assert server.fetch_image("unittest", {"n": "x2", "img": "https://images.pokemontcg.io.evil.example/x.png"}) is None
@@ -186,6 +202,9 @@ def main():
         check("collection came across", code == 200 and st["collection"]["1"]["purchases"][0]["price"] == 20)
         check("prices came across", code == 200 and st["prices"]["p"]["1"] == [25.0])
         code, hist = call(base, "GET", "/api/set/neo4/history")
+        code, ch = call(base, "GET", "/api/set/neo4/history?card=1")
+        check("a card's chart also sends prices by condition and its sales", code == 200 and isinstance(ch.get("cond"), dict)
+              and isinstance(ch.get("sales"), dict) and "points" in ch, ch)
         check("price history came across", hist == {"2026-10-11": {"1": 24.0, "2": 9.0}, "2026-10-12": {"1": 25.0, "2": 10.0}})
         code, tr = call(base, "GET", "/api/set/neo4/trends?today=2026-10-13")
         c1 = (tr.get("cards") or {}).get("1", {}) if isinstance(tr, dict) else {}
@@ -282,6 +301,8 @@ def main():
         code, zipped = call(base, "GET", "/api/backup")
         names = zipfile.ZipFile(io.BytesIO(zipped)).namelist() if code == 200 else []
         check("backup downloads", code == 200 and "sets/neo4/collection.json" in names and "sets/neo4/photos/1" in names, names[:5])
+        check("backups hold the condition prices and sales for the card chart",
+              "sets/neo4/cond_history.json" in names and "sets/neo4/sales_log.json" in names, [n for n in names if "neo4" in n])
         call(base, "PUT", "/api/settings", {"psaToken": "smoke-test-code"})
         code, keyless = call(base, "GET", "/api/backup")
         st_zip = json.loads(zipfile.ZipFile(io.BytesIO(keyless)).read("settings.json")) if code == 200 else {}

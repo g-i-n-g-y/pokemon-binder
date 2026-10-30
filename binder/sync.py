@@ -195,6 +195,9 @@ def warm_up():
             if not data_exists(sdir(sid, "history.json")):
                 with lock:
                     snapshot_history(sid)
+            if not data_exists(sdir(sid, "sales_log.json")):   # first start with the condition chart: begin with the sales already saved
+                with lock:
+                    snapshot_cond_history(sid)
         except Exception as e:
             log(f"{sid}: history setup: {e}")
         try:
