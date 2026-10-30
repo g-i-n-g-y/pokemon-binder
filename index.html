@@ -156,6 +156,8 @@ dialog#zoom::backdrop{background:transparent}
 .zwrap.holo>i{display:block}
 .zwrap.holo{transform:perspective(900px) rotateY(calc((var(--mx) - 50) * .18deg)) rotateX(calc((50 - var(--my)) * .18deg))}
 .zfoil,.zspark{clip-path:inset(var(--t,0) var(--r,0) var(--b,0) var(--l,0))}
+/* reverse holos: the foil is everywhere except the art window */
+.zwrap.rev .zfoil,.zwrap.rev .zspark{clip-path:polygon(evenodd,0 0,100% 0,100% 100%,0 100%,0 0,var(--l) var(--t),var(--l) calc(100% - var(--b)),calc(100% - var(--r)) calc(100% - var(--b)),calc(100% - var(--r)) var(--t),var(--l) var(--t))}
 .zfoil{mix-blend-mode:overlay;background:linear-gradient(115deg,transparent calc(var(--band) - 22%),rgba(255,255,255,.9) var(--band),transparent calc(var(--band) + 22%))}
 .zspark{mix-blend-mode:screen;opacity:.9;background-position:calc(var(--mx) * -.4px) calc(var(--my) * -.4px);
   -webkit-mask-image:linear-gradient(115deg,transparent calc(var(--band) - 20%),#000 var(--band),transparent calc(var(--band) + 20%));
@@ -4804,7 +4806,8 @@ function drawLog(log){
   }
 }
 // Tap the card picture to see it as big as the screen allows (handy for showing a vendor); tap again to close.
-// Holo shimmer for the zoomed card. Older holos shine only in the art window; full-art and secret rares shine all over.
+// Holo shimmer for the zoomed card. Older holos shine only in the art window, reverse holos everywhere but the art window;
+// full-art and secret rares shine all over.
 // Foil pattern by era: Starlight stars (Base, Jungle, Fossil), glitter (Shining cards), Cosmos dots (everything else).
 function zoomFoil(c, sid){
   const W=$("zoomWrap"), r=(c && c.rarity) || "";
@@ -4823,6 +4826,7 @@ function zoomFoil(c, sid){
     : /rare ultra|^ultra rare|shiny ultra|trainer gallery|special illustration|mega_attack/i.test(r) ? "f-etched"
     : r==="Illustration Rare" || r==="Rare Rainbow" ? "f-smooth" : "f-cosmos";
   W.classList.add("holo", look);
+  if(/reverse holo/i.test(r)) W.classList.add("rev");
   if(!whole) artBox(set).forEach((v,i)=>W.style.setProperty(["--t","--r","--b","--l"][i], v+"%"));   // the art window
 }
 // Where the picture sits on a card (top, right, bottom, left in %), by card layout, measured on real scans.
@@ -5159,7 +5163,7 @@ $("dXDel").onclick=async()=>{
 // page and the front of the next. The layout (pocket size, starting order, and any cards you moved) is saved
 // on the server per binder. Until you move a card, the pages simply follow the starting order.
 const POCKETS=[4,9,12,16], PK_COLS={4:2,9:3,12:3,16:4};
-const RAR_RANK=["Common","Uncommon","Rare","Rare Holo","Rare Shining","Rare Holo EX","Rare Ultra","Rare Secret"];
+const RAR_RANK=["Common","Uncommon","Rare","Reverse Holo","Rare Holo","Rare Shining","Rare Holo EX","Rare Ultra","Rare Secret"];
 function pageOrders(){
   const o=[["num", isDex(state.sid) ? "Release date" : isOwn(state.sid) ? "Set and number" : "Set number"],
            ["rarity","Rarity"],["dex","Pokédex number"],["type","Pokémon, then Trainers and Energy"],["value","Value, high to low"]];

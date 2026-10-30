@@ -459,6 +459,26 @@ def catalog(force=False):
         return cat["sets"] if cat else []
 
 
+# Rarities the card database leaves out or gets wrong, by card id. Southern Islands has no rarity symbols, and
+# six of its 18 cards are reverse holos.
+RARITY_FIXES = {f"si1-{n}": "Reverse Holo" for n in (1, 4, 7, 11, 14, 17)}
+
+
+def fix_rarity(cards, sid=""):
+    """Put the right rarity on cards from the card database, including card lists saved before a fix was added."""
+    for c in cards or []:
+        n = str(c.get("n", ""))
+        fix = RARITY_FIXES.get(n if "-" in n else f"{sid}-{n}")
+        if fix:
+            c["rarity"] = fix
+    return cards
+
+
+def card_list(sid):
+    """A binder's saved card list (None if it isn't saved yet)."""
+    return fix_rarity(read_json(sdir(sid, "cards.json"), None), sid)
+
+
 def fetch_cards(sid):
     raw = json.loads(http_get(f"{GH}/cards/en/{sid}.json"))
     cards = []
@@ -467,13 +487,14 @@ def fetch_cards(sid):
                       "type": c.get("supertype", ""),
                       "img": (c.get("images") or {}).get("large") or (c.get("images") or {}).get("small", "")})
     cards.sort(key=lambda c: num_key(c["n"]))
+    fix_rarity(cards, sid)
     write_json(sdir(sid, "cards.json"), cards)
     return cards
 
 
 def set_cards(sid):
     """Every card in a binder: the card database's list, cards you added from Find a card, and custom cards."""
-    cards = read_json(sdir(sid, "cards.json"), None)
+    cards = card_list(sid)
     if cards is None:
         cards = [] if is_own(sid) else dex_cards(sid) if is_dex(sid) else fetch_cards(sid)
     return cards + extra_list(sid) + custom_cards(sid)
@@ -481,7 +502,7 @@ def set_cards(sid):
 
 def binder_size(sid):
     """How many cards a binder holds, without downloading anything. None if its card list isn't saved yet."""
-    cards = read_json(sdir(sid, "cards.json"), None)
+    cards = card_list(sid)
     if cards is None and not is_own(sid):
         return None
     return len(cards or []) + len(extra_list(sid)) + len(custom_list(sid))
@@ -494,7 +515,7 @@ def binder_size(sid):
 
 def extra_list(sid):
     out = read_json(sdir(sid, "extra.json"), [])
-    return [c for c in out if isinstance(c, dict) and re.fullmatch(NUM_RE, str(c.get("n", "")))] if isinstance(out, list) else []
+    return fix_rarity([c for c in out if isinstance(c, dict) and re.fullmatch(NUM_RE, str(c.get("n", "")))]) if isinstance(out, list) else []
 
 
 def forget_card(sid, n):
@@ -531,9 +552,9 @@ def add_card(sid, gid):
     with lock:
         if not is_multi(sid):
             local = gid[len(sid) + 1:] if gid.startswith(sid + "-") else None
-            if local and any(c["n"] == local for c in (read_json(sdir(sid, "cards.json"), None) or [])):
+            if local and any(c["n"] == local for c in (card_list(sid) or [])):
                 return {"n": local, "already": True}
-        elif is_dex(sid) and any(c["n"] == gid for c in (read_json(sdir(sid, "cards.json"), None) or [])):
+        elif is_dex(sid) and any(c["n"] == gid for c in (card_list(sid) or [])):
             return {"n": gid, "already": True}
         lst = extra_list(sid)
         if any(c["n"] == gid for c in lst):
@@ -724,13 +745,13 @@ def build_dex_index():
                 n = f"{st['id']}-{c['number']}"
                 if not re.fullmatch(NUM_RE, n):
                     continue
-                every.append([n, c["name"], str(c["number"]), c.get("rarity") or "", c.get("supertype", ""),
+                every.append([n, c["name"], str(c["number"]), RARITY_FIXES.get(n) or c.get("rarity") or "", c.get("supertype", ""),
                               (c.get("images") or {}).get("large") or (c.get("images") or {}).get("small", ""), st["id"],
                               ((c.get("nationalPokedexNumbers") or [0])[0] or 0)])
                 if c.get("supertype") != "Pokémon":
                     continue
                 card = {"n": n, "num": str(c["number"]), "set": st["name"], "pt": st.get("printedTotal", 0),
-                        "date": st.get("releaseDate", ""), "name": c["name"], "rarity": c.get("rarity") or "",
+                        "date": st.get("releaseDate", ""), "name": c["name"], "rarity": RARITY_FIXES.get(n) or c.get("rarity") or "",
                         "type": "Pokémon",
                         "img": (c.get("images") or {}).get("large") or (c.get("images") or {}).get("small", "")}
                 for d in c.get("nationalPokedexNumbers") or []:
@@ -841,7 +862,7 @@ def card_index():
 
 def _card_out(c, sets):
     st = sets.get(c[6]) or ["", "", 0, "", 0]
-    return {"n": c[0], "name": c[1], "num": c[2], "rarity": c[3], "type": c[4], "img": c[5],
+    return {"n": c[0], "name": c[1], "num": c[2], "rarity": RARITY_FIXES.get(c[0]) or c[3], "type": c[4], "img": c[5],
             "setId": c[6], "set": st[0], "pt": st[2], "date": st[3]}
 
 
@@ -862,7 +883,7 @@ def where_cards():
     for sid in sets_list()["order"]:
         coll = read_json(sdir(sid, "collection.json"), {})
         coll = coll if isinstance(coll, dict) else {}
-        base = read_json(sdir(sid, "cards.json"), None) or []
+        base = card_list(sid) or []
         for c in base + extra_list(sid):
             gid = c["n"] if (is_multi(sid) or c.get("extra")) else f"{sid}-{c['n']}"
             rec = coll.get(c["n"]) if isinstance(coll.get(c["n"]), dict) else {}
@@ -1141,7 +1162,7 @@ def home_data():
     binders, recent, want = [], [], {}
     for sid in sl["order"]:
         meta = sl["meta"].get(sid, {})
-        cards = read_json(sdir(sid, "cards.json"), None)
+        cards = card_list(sid)
         cards = (cards or []) + extra_list(sid) + custom_cards(sid) if cards is not None or is_own(sid) else []
         coll = read_json(sdir(sid, "collection.json"), {})
         prices = (read_json(sdir(sid, "prices.json"), {}) or {}).get("p") or {}
@@ -1246,7 +1267,7 @@ def show_data():
         if sid not in use:
             continue
         meta = sl["meta"].get(sid, {})
-        cards = read_json(sdir(sid, "cards.json"), None)
+        cards = card_list(sid)
         cards = (cards or []) + extra_list(sid) + custom_cards(sid) if cards is not None or is_own(sid) else []
         pr = read_json(sdir(sid, "prices.json"), {}) or {}
         prices, info = pr.get("p") or {}, pr.get("info") or {}
@@ -1520,7 +1541,7 @@ def psa_match(e):
     best, best_score = None, 0
     for sid in sl["order"]:
         meta = sl["meta"].get(sid, {})
-        cards = read_json(sdir(sid, "cards.json"), None)
+        cards = card_list(sid)
         cards = (cards or []) + extra_list(sid) + custom_cards(sid) if cards is not None or is_own(sid) else []
         set_words = _psa_words(meta.get("name", ""))
         for c in cards:
@@ -2719,7 +2740,7 @@ def spending():
     hist_by_set, cur_by_set = {}, {}
     for sid in sl["order"]:
         coll = read_json(sdir(sid, "collection.json"), {})
-        cards = {c["n"]: c["name"] for c in (read_json(sdir(sid, "cards.json"), None) or []) + extra_list(sid)}
+        cards = {c["n"]: c["name"] for c in (card_list(sid) or []) + extra_list(sid)}
         prices = read_json(sdir(sid, "prices.json"), {})
         base = {n: v[0] for n, v in (prices.get("p") or {}).items() if v}
         info = prices.get("info") or {}
@@ -3115,7 +3136,7 @@ def shows_due():
 def set_totals(sid):
     """Same math as the page header: value counts owned copies at their condition's price when set."""
     coll = read_json(sdir(sid, "collection.json"), {})
-    cards = (read_json(sdir(sid, "cards.json"), None) or []) + extra_list(sid) + custom_list(sid)
+    cards = (card_list(sid) or []) + extra_list(sid) + custom_list(sid)
     prices = read_json(sdir(sid, "prices.json"), {})
     p, info = prices.get("p") or {}, prices.get("info") or {}
     t = {"owned": 0, "count": len(cards), "value": 0.0, "paid": 0.0, "need": 0.0, "full": 0.0}
@@ -3449,7 +3470,7 @@ def export_collection(only=None):
         prices, info = pr.get("p") or {}, pr.get("info") or {}
         trends = set_trends(sid, today_local())["cards"]   # price changes, for spotting cards that are climbing
         rows = []
-        cards = read_json(sdir(sid, "cards.json"), None)
+        cards = card_list(sid)
         cards = (cards or []) + extra_list(sid) + custom_cards(sid)
         for c in cards:
             rec = coll.get(c["n"]) or {}
@@ -4083,7 +4104,7 @@ class Handler(BaseHTTPRequestHandler):
                 m = dict(sl["meta"].get(sid, {"id": sid, "name": sid}))
                 coll = read_json(sdir(sid, "collection.json"), {})
                 m["owned"] = sum(1 for v in coll.values() if (v or {}).get("qty", 0) > 0)
-                cards = read_json(sdir(sid, "cards.json"), None)
+                cards = card_list(sid)
                 m["custom"] = len(custom_list(sid))
                 size = binder_size(sid)
                 m["count"] = size if size is not None else m.get("total", 0) + m["custom"]

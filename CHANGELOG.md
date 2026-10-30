@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Southern Islands reverse holos:** Mew, Togepi, Ledyba, Marill, Slowking and Vileplume now show as Reverse Holo (the card list left their rarity blank). When zoomed they shimmer everywhere except the picture, like the real cards, and they sort with the holos.
+
 ## v3.38.1 (October 29, 2026)
 
 - **Holo Trainer and Energy cards shimmer in the right place:** they now shine across the whole card, instead of in a box where a Pokémon card's picture would be.
