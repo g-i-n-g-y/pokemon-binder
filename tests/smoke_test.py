@@ -324,6 +324,8 @@ def main():
         code, res = call(base, "POST", "/api/restore", zipped, "application/zip")
         check("backup restores", code == 200, res)
         _, st = call(base, "GET", "/api/set/neo4/state")
+        _, ch = call(base, "GET", "/api/set/neo4/history?card=1")
+        check("restore brings back the card chart's condition prices and sales", bool(ch.get("cond")) and bool(ch.get("sales")), ch)
         check("restore brought the card back", {k: v for k, v in (st["collection"].get("2") or {}).items() if k != "got"} == rec)
 
         # Find a card, your own binders and the Pages view (v3.8)
