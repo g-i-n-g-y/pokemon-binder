@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Download for TCGplayer** now starts with no binders ticked, so you pick just the ones to import. **Select all** and **Select none** are at the top of the list.
+
 ## v4.3.1 (October 30, 2026)
 
 - **Fix:** in Download for TCGplayer, cards with no condition set on My copy now go in as **Lightly Played**. Before, they had no condition at all, and TCGplayer couldn't import those lines.

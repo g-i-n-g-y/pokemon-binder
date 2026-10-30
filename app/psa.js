@@ -343,7 +343,8 @@ $("sbSave").onclick=async()=>{
   toast(online ? c.name+" marked owned"+(price!=null?" · "+money(price):"")+"." : c.name+" saved on this phone. It syncs when you're back online.");
 };
 
-// Download spreadsheet, or the list for TCGplayer's Collection import: pick which binders go in (all of them to start)
+// Download spreadsheet, or the list for TCGplayer's Collection import: pick which binders go in
+// (the spreadsheet starts with all of them, TCGplayer with none, since you'd usually import one binder at a time)
 let xlKind="xlsx";
 function openXl(kind){
   xlKind=kind;
@@ -354,7 +355,7 @@ function openXl(kind){
   for(const s of state.sets){
     const l=document.createElement("label"), sp=document.createElement("span"), b=document.createElement("b"), sm=document.createElement("small");
     b.textContent=s.name; sm.textContent=(s.owned||0)+" of "+(s.count||0)+" owned"; sp.append(b,sm);
-    const cb=document.createElement("input"); cb.type="checkbox"; cb.value=s.id; cb.checked=true; cb.setAttribute("aria-label","Include "+s.name);
+    const cb=document.createElement("input"); cb.type="checkbox"; cb.value=s.id; cb.checked=kind!=="tcg"; cb.setAttribute("aria-label","Include "+s.name);
     l.append(sp,cb); box.append(l);
   }
   $("xlDlg").showModal();
