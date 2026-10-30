@@ -395,6 +395,10 @@ table.shop.no-trend .c-trend{display:none}
 .buyform .f-where{grid-column:1/-1}
 .buyform .how{grid-column:1/-1}
 .buyform.had .buy-only{display:none}
+.buyform .rev-row{grid-column:1/-1;padding:2px 0;min-height:0;cursor:pointer}
+.buyform .rev-row:hover{background:none}
+.buyform .rev-row .ui-switch{width:48px}
+.buylist .rv{align-self:flex-start;font-size:11px;line-height:1;padding:3px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
 .buylist .pr.had{font-family:inherit;font-size:13px;color:var(--muted)}
 .buys-head .had-all{border:0;background:none;color:var(--dark);cursor:pointer;font:inherit;font-size:13px;padding:0 0 0 6px;text-decoration:underline;text-underline-offset:2px}
 .buyform .formbtns{grid-column:1/-1;display:flex;gap:8px}
@@ -1788,6 +1792,7 @@ html,body{overscroll-behavior-y:none}
           </select>
         </label>
         <label class="f sel-hide">Handle or name<input type="text" id="bHandle" maxlength="100" autocomplete="off" placeholder="@shopname" disabled></label>
+        <label class="ui-row rev-row" for="bRev" id="bRevRow"><span class="ui-l"><b>Reverse holo</b><small>Shiny all over except the picture</small></span><input type="checkbox" class="ui-switch" id="bRev"></label>
         <div class="formbtns">
           <button class="btn primary" type="submit" id="bSubmit">Add purchase</button>
           <button class="btn" type="button" id="bCancel" hidden>Cancel</button>
@@ -3132,9 +3137,16 @@ function setHow(had){
   $("bSubmit").textContent = editIdx!=null ? "Save changes" : had ? "Add copy" : "Add purchase";
 }
 for(const b of $("bHow").children) b.onclick=()=>setHow(b.dataset.had==="1");
+// Reverse holos started with Legendary Collection (2002): Base to Neo, their promos and Southern Islands never had them.
+function hasReverses(n){
+  let set=String(state.sid||""); if(/^dex-|^own-/.test(set) && /^[a-z0-9.]+-/.test(String(n||""))) set=String(n).split("-")[0];
+  const c=state.cards.find(x=>x.n===n);
+  return !c || !c.custom ? !/^(base[1-5]|gym\d|neo\d|basep|si\d)$/.test(set) : false;
+}
 function resetBuyForm(){
   editIdx=null; $("dBuyForm").classList.remove("editing");
   $("bDate").value=todayStr(); $("bPrice").value=""; $("bWhere").value=""; drawWhereChips(); $("bPlat").value=""; $("bHandle").value=""; $("bHandle").disabled=true;
+  $("bRev").checked=false; $("bRevRow").hidden=!hasReverses(state.open);
   $("bCancel").hidden=true; setHow(false); drawBSug();
 }
 function editBuy(n,i){
@@ -3142,6 +3154,7 @@ function editBuy(n,i){
   editIdx=i; $("dBuyForm").classList.add("editing");
   $("bDate").value=b.d||""; $("bPrice").value=(b.price==null?"":b.price); $("bWhere").value=b.where||""; drawWhereChips();
   $("bPlat").value=(b.seller&&b.seller.p)||""; $("bHandle").value=(b.seller&&b.seller.h)||""; $("bHandle").disabled=!$("bPlat").value;
+  $("bRev").checked=!!b.rev; $("bRevRow").hidden=!hasReverses(n) && !b.rev;
   $("bCancel").hidden=false; setHow(!!b.had); drawBSug();
   handleOptions(); $("bPrice").focus();
 }
@@ -3168,6 +3181,7 @@ function drawBuys(n){
     const w=document.createElement("span"); w.className="meta2";
     if(b.where){ const ww=document.createElement("span"); ww.className="w"; ww.textContent=b.where; w.append(ww); }
     const se=sellerEl(b.seller); if(se) w.append(se);
+    if(b.rev){ const rv=document.createElement("span"); rv.className="rv"; rv.textContent="Reverse holo"; w.append(rv); }
     const pr=document.createElement("span"); pr.className="pr";
     if(b.had){ pr.classList.add("had"); pr.textContent="Already had"; }
     else if(b.price==null || b.price===""){
@@ -3213,6 +3227,7 @@ $("dBuyForm").addEventListener("submit",e=>{
   const had=$("dBuyForm").classList.contains("had");
   const entry=had ? {d, price:null, where:"", had:true} : {d, price, where:$("bWhere").value.trim()};
   if(!had && plat && h) entry.seller={p:plat, h};
+  if($("bRev").checked && !$("bRevRow").hidden) entry.rev=true;
   const l=buys(n).slice();
   if(editIdx!=null && l[editIdx]) l[editIdx]=entry; else l.push(entry);
   l.sort((a,b)=>(a.d||"").localeCompare(b.d||""));
@@ -4840,7 +4855,13 @@ function zoomFoil(c, sid){
   if(!c || c.custom) return;
   let set=String(sid||c.sid||""); if(/^dex-|^own-|^$/.test(set) && /^[a-z0-9.]+-/.test(c.n||"")) set=c.n.split("-")[0];   // mixed binders: the card's own set
   const svRare = r==="Rare" && /^(sv|me)\d/.test(set);   // since Scarlet & Violet, every Rare is a holo
-  if(!svRare && !/holo|shining|shiny|star|secret|ultra|rainbow|illustration|hyper|double rare|radiant|amazing|classic collection|legend|prime|break|ace spec|rare ace|pikachu rare|mega_attack|futuristic|black white/i.test(r)) return;
+  const holoR = svRare || /holo|shining|shiny|star|secret|ultra|rainbow|illustration|hyper|double rare|radiant|amazing|classic collection|legend|prime|break|ace spec|rare ace|pikachu rare|mega_attack|futuristic|black white/i.test(r);
+  // your own copies marked Reverse holo: shine that way when every copy is one, or when the regular card has no foil at all
+  const cps=(!c.sid || c.sid===state.sid) && state.own ? buys(c.n) : [], revN=cps.filter(b=>b.rev).length;
+  const myRev = revN>0 && (revN===cps.length || !holoR);
+  if(myRev){ W.classList.add("holo","rev","f-cosmos");
+    artBox(set).forEach((v,i)=>W.style.setProperty(["--t","--r","--b","--l"][i], v+"%")); return; }
+  if(!holoR) return;
   // whole-card foil: full arts, secret and shiny cards, the "big" cards (EX, GX, V, VMAX, VSTAR, LV.X, ex, Prime, LEGEND, BREAK),
   // and holo Trainers and Energy, whose picture doesn't sit where a Pokémon's art window is
   const whole=c.type==="Trainer" || c.type==="Energy" || /secret|ultra|rainbow|illustration|hyper|double rare|shiny|radiant|amazing|trainer gallery|mega_attack|futuristic|black white|prime|legend|break/i.test(r) || /\b(EX|ex|GX|V|VMAX|VSTAR|LV\.X)$/.test(r);
