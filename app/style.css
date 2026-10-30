@@ -363,7 +363,20 @@ table.shop.no-trend .c-trend{display:none}
 .mv h3{grid-column:1/-1;font-family:var(--f-mono);font-size:12px;font-weight:500;color:var(--muted);margin:8px 0 2px}
 .spark{margin-top:8px}
 .spark svg{display:block;width:100%;height:auto}
-.spark .cap{font-size:12px;color:var(--muted);margin-top:2px}
+.spark .cap{font-size:12px;color:var(--muted);margin-top:6px}
+.ch-read{display:flex;align-items:baseline;gap:8px;min-height:24px}
+.ch-read b{font-family:var(--f-mono);font-size:17px;font-weight:600}
+.ch-read span{font-size:12px;color:var(--muted)}
+/* pan-y: swiping up or down on the chart scrolls the page; the chart only gets sideways moves and press-and-hold */
+.ch-plot{touch-action:pan-y;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;border-radius:6px;outline:none;margin-top:2px}
+.ch-plot:focus-visible{box-shadow:0 0 0 2px var(--dark)}
+.ch-plot svg{max-height:170px;cursor:crosshair}
+.ch-msg{font-size:12px;color:var(--muted);text-align:center;padding:22px 8px;border:1px dashed var(--line);border-radius:8px}
+.ch-btns{display:flex;width:100%;margin-top:8px}
+.ch-btns button{flex:1 1 0;min-width:0;padding:6px 2px;font-size:13px;display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.2}
+.ch-btns button small{font-family:var(--f-mono);font-size:10px;opacity:.85}
+.ch-btns button.none{opacity:.45}
+.ch-range button{padding:5px 2px;font-size:12px}
 .buys{display:flex;flex-direction:column;gap:8px;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
 .buys-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .buys-head .k{font-size:12px;color:var(--muted);}

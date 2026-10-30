@@ -184,27 +184,153 @@ $("dBuyForm").addEventListener("submit",e=>{
   l.sort((a,b)=>(a.d||"").localeCompare(b.d||""));
   save({purchases:l}); resetBuyForm(); drawBuys(n); condOptions(n);
 });
+// The card's price chart: drag a finger (or the mouse) along it to read the price on any day, tap a condition to
+// see its own line, and pick how far back. An up-or-down swipe that starts on the chart always scrolls the page:
+// it only reads prices after a sideways move or a press and hold (touch-action: pan-y does the scrolling part).
+const CH_CONDS=["NM","LP","MP","HP","DMG"];
+const CH_RANGES=[["1M",30],["3M",91],["6M",182],["1Y",365],["All",0]];
+const chart={n:null, pts:[], X:null, Y:null, W:0, lineEl:null, dotEl:null, idx:-1, show:null, reset:null};
+const dayStr = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+// One condition's prices, one point per day: saved change days carried forward, ending with today's live price
+function condLine(n, c){
+  const got=Array.isArray(state.seriesCache[n]) ? state.seriesCache[n] : null, live=((state.info[n]||{}).cond||{})[c], t=todayStr();
+  const pts=(got && got.cond && got.cond[c] || []).map(p=>[p[0],p[1]]);
+  if(live && live[0]!=null){ if(pts.length && pts[pts.length-1][0]===t) pts[pts.length-1][1]=live[0]; else if(!pts.length || pts[pts.length-1][0]<t) pts.push([t,live[0]]); }
+  if(!pts.length) return [];
+  const out=[]; let i=0, val=pts[0][1];
+  for(const d=new Date(pts[0][0]+"T12:00:00"); out.length<4000; d.setDate(d.getDate()+1)){
+    const k=dayStr(d); while(i<pts.length && pts[i][0]<=k){ val=pts[i][1]; i++; }
+    out.push([k,val]); if(k>=t) break;
+  }
+  return out;
+}
 function drawSpark(n){
   const box=$("dSpark"); box.replaceChildren();
-  const sr=series(n);
-  if(sr.length<2){ const c=document.createElement("div"); c.className="cap"; c.textContent="Price trend appears after a few days of saved prices."; box.append(c); return; }
-  const W=360,H=56,P=4, xs=sr.map(p=>new Date(p[0]).getTime()), ys=sr.map(p=>p[1]);
-  const x0=Math.min(...xs), x1=Math.max(...xs), y0=Math.min(...ys), y1=Math.max(...ys);
-  const X=v=>P+(x1===x0?0.5:(v-x0)/(x1-x0))*(W-2*P), Y=v=>H-P-(y1===y0?0.5:(v-y0)/(y1-y0))*(H-2*P);
-  const pts=sr.map((p,i)=>X(xs[i]).toFixed(1)+","+Y(ys[i]).toFixed(1)).join(" ");
-  const ns="http://www.w3.org/2000/svg", svg=document.createElementNS(ns,"svg"); svg.setAttribute("viewBox","0 0 "+W+" "+H); svg.setAttribute("role","img");
-  const t=trend(n,30);
-  svg.setAttribute("aria-label","Price trend: "+money(ys[0])+" to "+money(ys[ys.length-1]));
-  const area=document.createElementNS(ns,"polygon"); area.setAttribute("points",P+","+(H-P)+" "+pts+" "+(W-P)+","+(H-P)); area.setAttribute("fill","var(--dark)"); area.setAttribute("opacity","0.12");
-  const line=document.createElementNS(ns,"polyline"); line.setAttribute("points",pts); line.setAttribute("fill","none"); line.setAttribute("stroke","var(--dark)"); line.setAttribute("stroke-width","2"); line.setAttribute("stroke-linejoin","round"); line.setAttribute("stroke-linecap","round");
-  const dot=document.createElementNS(ns,"circle"); dot.setAttribute("cx",X(xs[xs.length-1])); dot.setAttribute("cy",Y(ys[ys.length-1])); dot.setAttribute("r","4"); dot.setAttribute("fill","var(--dark)"); dot.setAttribute("stroke","var(--surface)"); dot.setAttribute("stroke-width","2");
-  svg.append(area,line,dot); box.append(svg);
+  chart.n=n; chart.pts=[]; chart.idx=-1; chart.lineEl=null;
+  let mode=recall("nd-chart-cond")||"price"; if(mode!=="price" && !CH_CONDS.includes(mode)) mode="price";
+  let range=+(recall("nd-chart-range")||0); if(!CH_RANGES.some(r=>r[1]===range)) range=0;
+  const priceLine=series(n);   // also asks the server for this card's history when it isn't loaded yet
+  const info=state.info[n]||{}, got=Array.isArray(state.seriesCache[n]) ? state.seriesCache[n] : null, sales=got && got.sales || {};
+  // the readout: the latest price, or the day under your finger
+  const read=document.createElement("div"); read.className="ch-read"; read.setAttribute("aria-live","polite");
+  const rv=document.createElement("b"), rd=document.createElement("span"); read.append(rv,rd);
+  const plot=document.createElement("div"); plot.className="ch-plot";
+  // the condition buttons, each with its latest average
+  const conds=document.createElement("div"); conds.className="seg ch-btns"; conds.setAttribute("role","group"); conds.setAttribute("aria-label","Which price");
+  for(const c of ["price"].concat(CH_CONDS)){
+    const v=c==="price" ? basePrice(n) : ((info.cond||{})[c]||[])[0];
+    const b=document.createElement("button"); b.type="button"; b.setAttribute("aria-pressed",String(c===mode));
+    if(c!=="price" && v==null && !(got && got.cond && got.cond[c])) b.classList.add("none");
+    const l=document.createElement("span"); l.textContent=c==="price" ? "Price" : c;
+    const sm=document.createElement("small"); sm.textContent=v ? money0(v) : "–";
+    b.append(l,sm); b.onclick=()=>{ store("nd-chart-cond", c==="price" ? undefined : c); drawSpark(n); };
+    conds.append(b);
+  }
+  const ranges=document.createElement("div"); ranges.className="seg ch-btns ch-range"; ranges.setAttribute("role","group"); ranges.setAttribute("aria-label","How far back");
+  for(const [label,days] of CH_RANGES){
+    const b=document.createElement("button"); b.type="button"; b.textContent=String(label); b.setAttribute("aria-pressed",String(days===range));
+    b.onclick=()=>{ store("nd-chart-range", days ? String(days) : undefined); drawSpark(n); };
+    ranges.append(b);
+  }
   const cap=document.createElement("div"); cap.className="cap";
-  const w=trend(n);
-  cap.append("Low "+money(y0)+" · High "+money(y1)+" since "+fmtDay(sr[0][0])+(w?" · "+periodName()+" ":""));
-  if(w) cap.append(trendEl(w));
-  box.append(cap);
+  box.append(read,plot,conds,ranges,cap);
+  // the line to draw, cut to the chosen range
+  const all=mode==="price" ? priceLine : condLine(n,mode);
+  let pts=all;
+  if(range){ const cut=new Date(); cut.setDate(cut.getDate()-range); const k=dayStr(cut); pts=all.filter(p=>p[0]>=k); }
+  const label=mode==="price" ? "Price" : mode;
+  const latest=all.length ? all[all.length-1] : null;
+  const when=d=>d===todayStr() ? "today" : fmtDay(d);
+  chart.reset=()=>{ rv.textContent=latest ? money(latest[1]) : (mode==="price" && basePrice(n) ? money(basePrice(n)) : "–"); rd.textContent=latest ? label+" · "+when(latest[0]) : label; };
+  chart.show=i=>{ const p=chart.pts[i]; if(!p) return; rv.textContent=money(p[1]); rd.textContent=label+" · "+when(p[0]); };
+  chart.reset();
+  if(pts.length<2){
+    const m=document.createElement("div"); m.className="ch-msg";
+    m.textContent = mode==="price" ? "Price trend appears after a few days of saved prices."
+      : !all.length ? "No "+mode+" sales saved yet."
+      : "Each condition's trend builds up from "+fmtDay(all[0][0])+".";
+    plot.append(m); return;
+  }
+  // the sale dots: this condition's, or on Price the conditions your price is made from
+  const dotConds=mode==="price" ? activeSlots().filter(sl=>sl.t==="raw").map(sl=>sl.c) : [mode];
+  const k0=pts[0][0];
+  const dots=dotConds.flatMap(c=>(sales[c]||[]).filter(s=>s[0]>=k0));
+  const W=360,H=120,P=6, t0=Date.parse(pts[0][0]+"T12:00:00"), t1=Date.parse(pts[pts.length-1][0]+"T12:00:00");
+  const ys=pts.map(p=>p[1]).concat(dots.map(s=>s[1])), y0=Math.min(...ys), y1=Math.max(...ys);
+  const X=d=>P+(t1===t0?0.5:(Date.parse(d+"T12:00:00")-t0)/(t1-t0))*(W-2*P), Y=v=>H-P-(y1===y0?0.5:(v-y0)/(y1-y0))*(H-2*P);
+  const line=pts.map(p=>X(p[0]).toFixed(1)+","+Y(p[1]).toFixed(1)).join(" ");
+  const ns="http://www.w3.org/2000/svg", svg=document.createElementNS(ns,"svg"); svg.setAttribute("viewBox","0 0 "+W+" "+H); svg.setAttribute("role","img");
+  const lo=Math.min(...pts.map(p=>p[1])), hi=Math.max(...pts.map(p=>p[1]));
+  svg.setAttribute("aria-label",label+" price chart: "+money(pts[0][1])+" on "+fmtDay(pts[0][0])+" to "+money(pts[pts.length-1][1])+" now, low "+money(lo)+", high "+money(hi));
+  const mk=(tag,attrs)=>{ const e=document.createElementNS(ns,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); return e; };
+  svg.append(mk("polygon",{points:P+","+(H-P)+" "+line+" "+(W-P)+","+(H-P), fill:"var(--dark)", opacity:"0.12"}));
+  svg.append(mk("polyline",{points:line, fill:"none", stroke:"var(--dark)", "stroke-width":"2", "stroke-linejoin":"round", "stroke-linecap":"round"}));
+  for(const s of dots) svg.append(mk("circle",{cx:X(s[0]), cy:Y(s[1]), r:"2.5", fill:"var(--dark)", opacity:"0.45"}));
+  const last=pts[pts.length-1];
+  svg.append(mk("circle",{cx:X(last[0]), cy:Y(last[1]), r:"4", fill:"var(--dark)", stroke:"var(--surface)", "stroke-width":"2"}));
+  chart.lineEl=mk("line",{y1:P, y2:H-P, stroke:"var(--ink)", "stroke-width":"1", opacity:"0.5", visibility:"hidden"});
+  chart.dotEl=mk("circle",{r:"4.5", fill:"var(--ink)", stroke:"var(--surface)", "stroke-width":"2", visibility:"hidden"});
+  svg.append(chart.lineEl, chart.dotEl);
+  plot.append(svg); plot.tabIndex=0; plot.setAttribute("aria-label","Price chart. Use the left and right arrow keys to read each day.");
+  chart.pts=pts; chart.X=X; chart.Y=Y; chart.W=W;
+  cap.append("Low "+money(lo)+" · High "+money(hi)+" since "+fmtDay(pts[0][0]));
+  const w=mode==="price" && !range ? trend(n) : null;
+  if(w){ cap.append(" · "+periodName()+" "); cap.append(trendEl(w)); }
 }
+// Show one day on the chart, with a line and a dot, and its price in the readout
+function chartAt(i){
+  if(!chart.pts.length || !chart.lineEl) return;
+  i=Math.max(0,Math.min(chart.pts.length-1,i)); chart.idx=i;
+  const p=chart.pts[i], x=chart.X(p[0]), y=chart.Y(p[1]);
+  chart.lineEl.setAttribute("x1",x); chart.lineEl.setAttribute("x2",x); chart.lineEl.setAttribute("visibility","visible");
+  chart.dotEl.setAttribute("cx",x); chart.dotEl.setAttribute("cy",y); chart.dotEl.setAttribute("visibility","visible");
+  chart.show(i);
+}
+// the day nearest a spot on screen
+function chartAtX(clientX){
+  const svg=$("dSpark").querySelector(".ch-plot svg"); if(!svg || !chart.pts.length) return;
+  const r=svg.getBoundingClientRect(), vx=(clientX-r.left)/r.width*chart.W;
+  let best=0, bd=Infinity; chart.pts.forEach((p,i)=>{ const d=Math.abs(chart.X(p[0])-vx); if(d<bd){ bd=d; best=i; } });
+  chartAt(best);
+}
+function chartOff(){
+  chart.idx=-1;
+  if(chart.lineEl){ chart.lineEl.setAttribute("visibility","hidden"); chart.dotEl.setAttribute("visibility","hidden"); }
+  if(chart.reset) chart.reset();
+}
+// One set of listeners on the chart's box, for whichever card is open (the chart inside is redrawn per card)
+(()=>{
+  const box=$("dSpark");
+  let start=null, reading=false, hold=0;
+  const stop=()=>{ clearTimeout(hold); start=null; reading=false; chartOff(); };
+  box.addEventListener("pointerdown",e=>{
+    if(e.pointerType==="mouse" || !e.target.closest(".ch-plot svg")) return;
+    start={x:e.clientX, y:e.clientY, id:e.pointerId}; reading=false;
+    clearTimeout(hold); hold=setTimeout(()=>{ if(start){ reading=true; chartAtX(start.x); } },300);   // press and hold
+  });
+  box.addEventListener("pointermove",e=>{
+    if(e.pointerType==="mouse"){ if(e.target.closest(".ch-plot svg")) chartAtX(e.clientX); else if(chart.idx>=0) chartOff(); return; }
+    if(!start || e.pointerId!==start.id) return;
+    if(!reading){
+      const dx=Math.abs(e.clientX-start.x), dy=Math.abs(e.clientY-start.y);
+      if(dx<8 && dy<8) return;
+      clearTimeout(hold);
+      if(dy>=dx){ start=null; return; }   // up or down first: the page scrolls, the chart leaves it alone
+      reading=true;
+      const plot=e.target.closest(".ch-plot"); if(plot && plot.setPointerCapture) try{ plot.setPointerCapture(e.pointerId); }catch(_){}
+    }
+    chartAtX(e.clientX);
+  });
+  for(const ev of ["pointerup","pointercancel"]) box.addEventListener(ev,e=>{ if(e.pointerType!=="mouse") stop(); });
+  box.addEventListener("pointerleave",e=>{ if(e.pointerType==="mouse") chartOff(); });
+  box.addEventListener("contextmenu",e=>{ if(e.target.closest(".ch-plot")) e.preventDefault(); });   // press and hold reads prices, not a menu
+  box.addEventListener("keydown",e=>{
+    if(!e.target.classList || !e.target.classList.contains("ch-plot") || !chart.pts.length) return;
+    if(e.key==="ArrowLeft" || e.key==="ArrowRight"){ e.preventDefault(); chartAt(chart.idx<0 ? chart.pts.length-1 : chart.idx+(e.key==="ArrowLeft"?-1:1)); }
+    else if(e.key==="Escape" && chart.idx>=0){ e.preventDefault(); e.stopPropagation(); chartOff(); }
+  });
+  box.addEventListener("focusout",e=>{ if(e.target.classList && e.target.classList.contains("ch-plot")) chartOff(); });
+})();
 let tNote; $("dNote").oninput=e=>{ clearTimeout(tNote); tNote=setTimeout(()=>save({note:e.target.value}),700); };
 let photoSide="front";
 function drawPhoto(n){
