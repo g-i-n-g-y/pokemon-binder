@@ -13,6 +13,7 @@ The binder shows these in **Settings → About → Check for updates**.
 ## Unreleased
 
 - **More holo cards shimmer:** Double Rare ex cards, Shiny and Shiny Vault cards, Radiant and Amazing Rares shimmer across the whole card when zoomed, and Classic Collection and ACE cards shimmer in their art window.
+- **Shimmer in the right spot on newer cards:** the shine now follows each era's card layout (e-card, EX, Diamond & Pearl, HeartGold & SoulSilver, Black & White, XY, Sun & Moon, Sword & Shield, Scarlet & Violet), measured on real cards, instead of using the 1999 layout for everything.
 
 ## v3.37 (October 29, 2026)
 

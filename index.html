@@ -4806,10 +4806,23 @@ function zoomFoil(c, sid){
   W.className="zwrap"; W.removeAttribute("style");
   if(!c || c.custom || !/holo|shining|shiny|star|secret|ultra|rainbow|illustration|hyper|double rare|radiant|amazing|classic collection|legend|prime|break|ace spec|rare ace/i.test(r)) return;
   const whole=/secret|ultra|rainbow|illustration|hyper|double rare|shiny|radiant|amazing/i.test(r);
-  const set=String(sid||c.sid||"");
+  let set=String(sid||c.sid||""); if(/^dex-|^own-|^$/.test(set) && /^[a-z0-9.]+-/.test(c.n||"")) set=c.n.split("-")[0];   // mixed binders: the card's own set
   W.classList.add("holo", /shining/i.test(r) ? "f-glitter" : /^base[123]$/.test(set) ? "f-star" : "f-cosmos");
-  if(!whole) for(const [k,v] of [["--t","11%"],["--r","9.8%"],["--b","47.5%"],["--l","10.3%"]]) W.style.setProperty(k,v);   // the art window on a vintage card
+  if(!whole) artBox(set).forEach((v,i)=>W.style.setProperty(["--t","--r","--b","--l"][i], v+"%"));   // the art window
 }
+// Where the picture sits on a card (top, right, bottom, left in %), by card layout, measured on real scans.
+const ART_BOXES=[
+  [/^(base|gym|neo|si\d|basep|cel25c|me55c)/, [11,9.8,47.5,10.3]],   // 1999–2003 Wizards cards, and their Classic Collection reprints
+  [/^ecard/,      [13,6.5,50,10]],     // e-card: Expedition, Aquapolis, Skyridge
+  [/^(ex\d|pop)/, [9,5.5,52,5.5]],     // EX era: Ruby & Sapphire to Power Keepers
+  [/^(dp|pl)/,    [9,5,48,5]],         // Diamond & Pearl, Platinum
+  [/^(hgss|col|hsp)/, [11,3,46,3]],    // HeartGold & SoulSilver, Call of Legends
+  [/^(bw|dv)/,    [10,6,47,6]],        // Black & White
+  [/^(xy|g1|dc)/, [10,6,46,6]],        // XY
+  [/^(sm|det)/,   [10,7,48,7]],        // Sun & Moon
+  [/^(swsh|cel25|pgo)/, [9.5,7,48,6]], // Sword & Shield
+];
+const artBox = set => (ART_BOXES.find(([re])=>re.test(set)) || [0,[10,7,49,6.5]])[1];   // Scarlet & Violet, Mega and anything newer
 const zl={raf:0, held:false, tilt:null};
 function zoomLight(t){
   const W=$("zoomWrap");
