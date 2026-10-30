@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v3.39 (October 30, 2026)
 
 - **Already had:** cards you got without buying them (from a pack, a gift, kept since you were a kid) can be marked **Already had** on My copy. They count as owned but don't ask for a price. When you add a copy, pick **Bought** or **Already had**; for copies already listed without a price, tap **Already had it?** next to the total.
 - **Reverse holos:** when you add a copy on My copy, turn on **Reverse holo** if it's one (not shown for Base to Neo, which had none). The copy shows a Reverse holo tag, and the zoomed card shimmers everywhere except the picture. Prices are still for the regular card.
