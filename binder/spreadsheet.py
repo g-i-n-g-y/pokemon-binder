@@ -392,8 +392,9 @@ def apply_import(sid, plan):
 
 
 # ---------- download for TCGplayer (Collection → Import) ----------
-# TCGplayer's import reads one card per line: quantity, its name, its set code in brackets, its number, then the
-# printing and condition, like "1 Dark Gengar [N4] 006/105 Unlimited Holofoil Lightly Played". Its set codes and names differ from the card database's, so they come from
+# TCGplayer's import reads one card per line: quantity, its name, its set code in brackets and its number, like
+# "1 Dark Gengar [N4] 006/105". Its Share adds the printing and condition after that, but its Import turns those
+# lines down, so they're left off and the list is sorted by condition instead, to make fixing them in TCGplayer quick. Its set codes and names differ from the card database's, so they come from
 # TCGCSV, a free daily copy of TCGplayer's catalog, matched by the TCGplayer product id each price check saves.
 TCGCSV = "https://tcgcsv.com/tcgplayer/3"   # 3 = Pokémon
 TCG_CATALOG = os.path.join(DATA, "tcg_catalog")
@@ -506,11 +507,12 @@ def export_tcgplayer(only=None):
                 continue
             code, name, number, kinds = found
             rev = min(qty, sum(1 for b in rec.get("purchases") or [] if isinstance(b, dict) and b.get("rev")))
-            cond = TCG_CONDS.get(rec.get("cond") or "", "Lightly Played")   # every line needs one; no condition set counts as LP
+            cond = TCG_CONDS.get(rec.get("cond") or "", "Lightly Played")   # for sorting; no condition set counts as LP
             for n_, is_rev in ((qty - rev, False), (rev, True)):   # reverse holo copies get a line of their own
                 if n_ > 0:
                     key = (code, name, number, tcg_printing(kinds, c.get("rarity", ""), is_rev), cond)
                     lines[key] = lines.get(key, 0) + n_   # the same card in two binders is one line
-    text = "".join(" ".join(x for x in (str(q), name, f"[{code}]", num, printing, cond) if x) + "\n"
-                   for (code, name, num, printing, cond), q in lines.items())
+    order = list(TCG_CONDS.values())   # Near Mint first, then Lightly Played, and so on
+    rows = sorted(lines.items(), key=lambda kv: (order.index(kv[0][4]), kv[0][3] == "Reverse Holofoil"))
+    text = "".join(f"{q} {name} [{code}] {num}\n" for (code, name, num, printing, cond), q in rows)
     return text, missed

@@ -12,6 +12,7 @@ The binder shows these in **Settings → About → Check for updates**.
 
 ## Unreleased
 
+- **Fix:** Download for TCGplayer goes back to plain lines (like "1 Dark Gengar [N4] 006/105"). TCGplayer's import turned down every line with a printing and condition, even written exactly the way TCGplayer's own Share writes them. TCGplayer files the cards as 1st Edition Near Mint, so the list is now sorted by your condition (Near Mint, then Lightly Played, and so on) to make fixing them in TCGplayer quicker.
 - **Download for TCGplayer** now starts with no binders ticked, so you pick just the ones to import. **Select all** and **Select none** are at the top of the list.
 
 ## v4.3.1 (October 30, 2026)
