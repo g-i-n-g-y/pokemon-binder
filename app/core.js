@@ -12,6 +12,7 @@ const RSYM = {"Common":"●","Uncommon":"◆","Rare":"★","Rare Holo":"★ Holo
 const DEFAULT_SLOTS=[{t:"raw",c:"LP"},{t:"raw",c:"MP"}];
 const state = { serverName:"", slots:DEFAULT_SLOTS, slotOpts:null, trends:{}, histFirst:"", seriesCache:{}, view:"cards", spend:null, sid:null, set:{}, cards:[], own:{}, prices:{}, info:{}, updated:"", sets:[], catalog:null,
                 filter:"all", rar:"", sort:"num", q:"", ready:false, open:null };
+/** @type {(id: string) => any} any page element: an input, a dialog, a list... */
 const $ = id => document.getElementById(id);
 const money = v => v==null ? "–" : "$"+v.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
 const money0 = v => "$"+Math.round(v||0).toLocaleString("en-US");

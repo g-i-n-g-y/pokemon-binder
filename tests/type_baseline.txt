@@ -1,0 +1,68 @@
+app/card.js: error TS2339: Property 'href' does not exist on type 'HTMLSpanElement | HTMLAnchorElement'.
+app/card.js: error TS2339: Property 'rel' does not exist on type 'HTMLSpanElement | HTMLAnchorElement'.
+app/card.js: error TS2339: Property 'target' does not exist on type 'HTMLSpanElement | HTMLAnchorElement'.
+app/card.js: error TS2345: Argument of type 'boolean' is not assignable to parameter of type 'string'.
+app/card.js: error TS2362: The left-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+app/card.js: error TS2362: The left-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+app/card.js: error TS2363: The right-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+app/card.js: error TS2363: The right-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+app/copy.js: error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+app/copy.js: error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+app/core.js: error TS2322: Type 'number' is not assignable to type 'string'.
+app/core.js: error TS2345: Argument of type 'Date' is not assignable to parameter of type 'number'.
+app/core.js: error TS2362: The left-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+app/core.js: error TS2362: The left-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+app/core.js: error TS2363: The right-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+app/core.js: error TS2363: The right-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+app/find.js: error TS2339: Property '_c' does not exist on type 'HTMLButtonElement'.
+app/find.js: error TS2339: Property '_c' does not exist on type 'HTMLButtonElement'.
+app/grid.js: error TS2339: Property 'focus' does not exist on type 'Element'.
+app/grid.js: error TS2339: Property 't' does not exist on type '() => void'.
+app/grid.js: error TS2339: Property 't' does not exist on type '() => void'.
+app/grid.js: error TS2345: Argument of type 'boolean' is not assignable to parameter of type 'string'.
+app/grid.js: error TS2365: Operator '+' cannot be applied to types 'boolean' and 'boolean'.
+app/offline.js: error TS2339: Property 'closest' does not exist on type 'EventTarget'.
+app/offline.js: error TS2339: Property 'closest' does not exist on type 'EventTarget'.
+app/offline.js: error TS2339: Property 'title' does not exist on type 'Element'.
+app/offline.js: error TS2339: Property 'url' does not exist on type 'RequestInfo | URL'.
+app/pages.js: error TS2322: Type 'number' is not assignable to type 'string'.
+app/pages.js: error TS2322: Type 'number' is not assignable to type 'string'.
+app/pages.js: error TS2362: The left-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+app/pages.js: error TS2363: The right-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+app/psa.js: error TS2339: Property 'classList' does not exist on type 'Node'.
+app/psa.js: error TS2339: Property 'removeAttribute' does not exist on type 'Node'.
+app/psa.js: error TS2339: Property 'tabIndex' does not exist on type 'Node'.
+app/psa.js: error TS2345: Argument of type 'boolean' is not assignable to parameter of type 'string'.
+app/psa.js: error TS2345: Argument of type 'boolean' is not assignable to parameter of type 'string'.
+app/psa.js: error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+app/psa.js: error TS2362: The left-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+app/psa.js: error TS2363: The right-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+app/sets.js: error TS2322: Type 'HTMLSpanElement' is not assignable to type 'string'.
+app/sets.js: error TS2339: Property 'closest' does not exist on type 'EventTarget'.
+app/sets.js: error TS2339: Property 'closest' does not exist on type 'EventTarget'.
+app/settings.js: error TS2322: Type 'string | number' is not assignable to type 'string'.
+app/settings.js: error TS2322: Type 'string | string[]' is not assignable to type 'string'.
+app/settings.js: error TS2322: Type 'string | string[]' is not assignable to type 'string'.
+app/settings.js: error TS2322: Type 'string | string[]' is not assignable to type 'string'.
+app/settings.js: error TS2322: Type '{ t: string; c: string; co?: undefined; g?: undefined; } | { t: string; co: string; g: string; c?: undefined; } | { t: string; c?: undefined; co?: undefined; g?: undefined; }' is not assignable to type '{ t: string; c: string; }'.
+app/settings.js: error TS2339: Property 'forEach' does not exist on type 'string | string[]'.
+app/settings.js: error TS2339: Property 'href' does not exist on type 'HTMLSpanElement | HTMLAnchorElement'.
+app/settings.js: error TS2339: Property 'rel' does not exist on type 'HTMLSpanElement | HTMLAnchorElement'.
+app/settings.js: error TS2339: Property 'target' does not exist on type 'HTMLSpanElement | HTMLAnchorElement'.
+app/settings.js: error TS2339: Property 'title' does not exist on type 'Element'.
+app/shop.js: error TS2322: Type 'number' is not assignable to type 'string'.
+app/shop.js: error TS2322: Type 'number' is not assignable to type 'string'.
+app/show.js: error TS2362: The left-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+app/show.js: error TS2363: The right-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+app/stats.js: error TS2339: Property 'forEach' does not exist on type 'number | RegExp | number[]'.
+app/stats.js: error TS2339: Property 'forEach' does not exist on type 'number | RegExp | number[]'.
+app/stats.js: error TS2339: Property 'test' does not exist on type 'RegExp | number[]'.
+app/stats.js: error TS2339: Property 'toLowerCase' does not exist on type 'string | number'.
+app/updates.js: error TS2322: Type 'number' is not assignable to type 'string'.
+app/updates.js: error TS2322: Type 'string | any[]' is not assignable to type 'string'.
+app/updates.js: error TS2339: Property 'forEach' does not exist on type 'string | any[]'.
+app/updates.js: error TS2339: Property 'push' does not exist on type 'string | any[]'.
+app/updates.js: error TS2345: Argument of type 'Date' is not assignable to parameter of type 'number'.
+app/updates.js: error TS2363: The right-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+app/updates.js: error TS2363: The right-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+app/updates.js: error TS2769: No overload matches this call.

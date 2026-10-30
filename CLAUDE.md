@@ -87,4 +87,6 @@ This repository is public. Never commit:
    Also run `tests/api_check.py`: it compares every API answer with
    `tests/api_answers.json`. If an answer changed on purpose, save the new
    ones with `--save`; if not, it's a bug.
+   And `tests/type_check.py` (needs Node on this PC; skipped without it):
+   it lists new type-checker notes in `app/*.js`.
 4. Merge `next` into `main` and push.
