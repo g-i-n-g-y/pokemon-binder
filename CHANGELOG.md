@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v3.36 (October 29, 2026)
 
 - **Upgrades shows which conditions are picked:** each picked condition (MP, HP, DMG) has a ✓, unpicked ones are dimmed, and a thin line separates the buttons, so two picked ones no longer look like one.
 - **Shopping list without a column of zeros:** the price-change column only shows once at least one card on the list has actually gone up or down, instead of "0.0%" on every row.
