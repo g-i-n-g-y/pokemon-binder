@@ -285,6 +285,9 @@ label.f select,label.f input{font:inherit;font-size:15px;color:var(--ink);backgr
 .skin b{font-family:var(--f-display);font-size:17px;display:block}
 .skin span{font-size:13px;color:var(--muted)}
 footer{font-size:13px;color:var(--muted);max-width:70ch}
+.how h3{margin:14px 0 4px;font-size:15px}
+.how h3:first-child{margin-top:4px}
+.how p{margin:0;line-height:1.55;max-width:62ch}
 /* Set map: one small box per binder page, real card pictures in each pocket */
 .views{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface);align-self:flex-start}
 .views button{border:0;background:none;padding:10px 16px;font:inherit;font-size:14px;font-weight:500;color:var(--muted);cursor:pointer}
@@ -1500,8 +1503,17 @@ html,body{overscroll-behavior-y:none}
     </div>
   </section>
 
-  <footer id="foot">Prices are averages of recent Unlimited sales (pick which ones per binder in Settings) and are checked automatically every night. Tap Need on a card to mark it owned, or tap the card to log what you paid, set its condition, or add a photo of your copy. Tap the home button at the top left to switch binders or add a new one. Everything saves on <span class="srv">the server</span>.</footer>
+  <footer id="foot"><button class="hm-link" type="button" id="howBtn">How it works</button></footer>
 </main>
+
+<dialog id="howDlg" class="float pop" aria-labelledby="howTitle">
+  <div class="sheet">
+    <button class="close" type="button" id="howClose">Close ✕</button>
+    <h2 id="howTitle">How it works</h2>
+    <div class="how" id="howBody"></div>
+    <div class="sheet-foot"><button class="btn primary" type="button" id="howDone">Got it</button></div>
+  </div>
+</dialog>
 
 <main class="wrap home" id="home" hidden aria-labelledby="hmTitle">
   <header class="hm-top">
@@ -4394,6 +4406,24 @@ function setView(v){
   $("vCards").hidden=v!=="cards"; $("vPages").hidden=v!=="pages"; $("vShop").hidden=v!=="shop"; $("vUpg").hidden=v!=="upg"; $("vStats").hidden=v!=="stats";
   renderView();
 }
+// "How it works": a link at the bottom of each binder tab opens help for that tab first, then the general tips.
+const HOW={
+  cards:["Cards","Every card in the set: in color if you own it, grey if you still need it. Tap Need on a card to mark it owned. Tap the card itself to log what you paid, its condition, notes and photos. Use All, Owned and Need, the rarity list and the sort to narrow it down."],
+  pages:["Pages","Lays the binder out like a real one. Pick 4, 9, 12 or 16 pockets a page and the order cards go in. Arrange lets you move cards: tap a card, then tap where it should go. All in color shows every card in color, owned or not."],
+  shop:["Shopping list","The cards you still need. The running total shows what it costs to buy every card down to that row, and a budget highlights the rows it covers. Got it marks a card owned with today's date. Pick My order and drag the ⠿ handle to sort cards your own way."],
+  upg:["Upgrades","Cards you own in a worn condition, and what a better copy costs now. Pick which conditions to upgrade from and the condition to upgrade to. Cards without a condition aren't listed: set it on a card's My copy tab."],
+  stats:["Stats","What you've spent and what your cards are worth, across all your binders, with spending per month and every purchase you've logged. Biggest movers shows this binder's cards whose price changed the most."]
+};
+function openHow(){
+  const [name,text]=HOW[state.view]||HOW.cards, B=$("howBody"); B.replaceChildren();
+  const sec=(t,p)=>{ const h=document.createElement("h3"); h.textContent=t; const q=document.createElement("p"); q.textContent=p; B.append(h,q); };
+  sec(name, text);
+  sec("Everywhere", "Prices are averages of recent Unlimited sales (pick which ones per binder in Settings) and are checked automatically every night. Tap the home button at the top left to switch binders or add a new one. Everything saves on "+srv()+".");
+  $("howDlg").showModal();
+}
+$("howBtn").onclick=openHow;
+$("howClose").onclick=$("howDone").onclick=()=>$("howDlg").close();
+$("howDlg").addEventListener("click",e=>{ if(e.target===$("howDlg")) $("howDlg").close(); });   // tap outside the window closes it
 function renderView(){ if(state.view==="pages") drawPages(); else if(state.view==="shop") drawShop(); else if(state.view==="upg") drawUpg(); else if(state.view==="stats") loadStats(); }
 $("views").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b && b.dataset.v!==state.view) withTransition("fade", ()=>setView(b.dataset.v)); });
 
