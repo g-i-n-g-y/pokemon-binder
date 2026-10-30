@@ -1,7 +1,9 @@
 # Pokemon Binder (Neo Destiny Tracker)
 
 A self-hosted Pokémon card collection tracker. `server.py` is the server
-(Python, standard library only) and `index.html` is the page. The owner is
+(Python, standard library only) and `index.html` is the page, with its styles
+and code in `app/` (`style.css`, plus `*.js` files that `index.html` loads in
+order and that share one scope). The owner is
 not a programmer.
 
 ## Working with the owner

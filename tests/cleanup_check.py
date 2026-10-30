@@ -26,6 +26,15 @@ def once(name, text):
     return len(re.findall(r"\b" + re.escape(name) + r"\b", text)) == 1
 
 
+def page_parts():
+    """The page in its three parts: index.html (layout), app/style.css (styles), and app/*.js joined in the order
+    index.html loads them (code)."""
+    read = lambda name: open(os.path.join(REPO, *name.split("/")), encoding="utf-8").read()
+    html = read("index.html")
+    script = "\n".join(read(n) for n in re.findall(r'<script src="(app/[\w-]+\.js)"></script>', html))
+    return html, read("app/style.css"), script
+
+
 def main():
     src = open(os.path.join(REPO, "server.py"), encoding="utf-8").read()
     tree = ast.parse(src)
@@ -35,16 +44,14 @@ def main():
     names = [t.id for n in tree.body if isinstance(n, ast.Assign) for t in n.targets if isinstance(t, ast.Name)]
     report("server: settings/values nothing uses", [n for n in names if n not in KEEP and once(n, src)])
 
-    page = open(os.path.join(REPO, "index.html"), encoding="utf-8").read()
-    st, en = page.index("<style>"), page.index("</style>")
-    css, rest = page[st:en], page[:st] + page[en:]
-    script = page[page.index("<script>", en):]
+    html, css, script = page_parts()
+    rest = html + script
     fns = re.findall(r"^\s*(?:async\s+)?function\s+(\w+)\s*\(", script, re.M)
     report("page: functions defined twice", [f for f, c in collections.Counter(fns).items() if c > 1])
     report("page: functions nothing uses", [f for f in fns if once(f, script)])
     tops = re.findall(r"^(?:const|let|var)\s+(\w+)", script, re.M)
     report("page: values nothing uses", [t for t in tops if t not in KEEP and once(t, script)])
-    ids = re.findall(r'\sid="([^"]+)"', page[:page.index("<script>", en)])
+    ids = re.findall(r'\sid="([^"]+)"', html)
     report("page: ids used twice", [i for i, c in collections.Counter(ids).items() if c > 1])
     classes = set(re.findall(r"\.([a-zA-Z][\w-]*)", re.sub(r"url\([^)]*\)|\d+\.\d+", "", css)))
     built = tuple(re.findall(r'"([a-z][\w]*-)"\s*\+', rest))   # names built from pieces, like "cv-"+key

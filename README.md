@@ -58,7 +58,8 @@ Your collection, purchases, photos, and prices are stored only on the machine ru
 | File | What it is |
 |---|---|
 | `server.py` | The web server |
-| `index.html` | The binder page |
+| `index.html` | The binder page (its layout) |
+| `app/` | The page's styles (`style.css`) and code, one file per part: the grid, card details, Pages, card show mode and so on (since v4.0) |
 | `fonts.css` | The page's fonts, built in so the binder doesn't ask Google for them (since v3.5) |
 | `sw.js` | Keeps a saved copy of the binder on your phone so the app opens offline |
 | `icon-192.png`, `icon-512.png` | The phone app's icons |

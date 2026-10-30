@@ -3992,7 +3992,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/sw.js":   # the version goes in, so each binder update refreshes the phone's saved copies
             try:
                 with open(os.path.join(APP, "sw.js"), "rb") as f:
-                    body = f.read().replace(b"__VERSION__", APP_VERSION.encode())
+                    body = f.read().replace(b"__VERSION__", APP_VERSION.encode()).replace(
+                        b'"__APP_FILES__"', json.dumps([n for n in APP_FILES if n.startswith("app/")]).encode())
             except OSError:
                 return self.send(404, b"not found", "text/plain")
             return self.send(200, body, "application/javascript; charset=utf-8", "no-cache")
@@ -4000,6 +4001,9 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_file(os.path.join(APP, path[1:]), "image/png")
         if path == "/app-icon.png":   # your own tab icon from Settings, used as the app icon too
             return self.send_file(ICON_FILE, "image/png", "no-cache")
+        if path.startswith("/app/") and path[1:] in APP_FILES:   # the page's styles and code
+            kind = "text/css; charset=utf-8" if path.endswith(".css") else "application/javascript; charset=utf-8"
+            return self.send_file(os.path.join(APP, *path[1:].split("/")), kind, "no-cache")
         if path == "/fonts.css":   # fonts kept on the server; the page asks for fonts.css?v=<n>, so a new version means a new address
             return self.send_file(os.path.join(APP, "fonts.css"), "text/css; charset=utf-8", "max-age=31536000, immutable")
         m = re.fullmatch(r"/art/(\d{1,4})(s?)\.png", path)
@@ -4810,7 +4814,11 @@ def test_tcgplayer(pid):
 UPDATES = os.environ.get("BINDER_UPDATES", "/updates")
 # The program files of THIS version. The updater reads this line from a new server.py to know what to download,
 # so a later version can be split into more files. Versions before v3.0 only ever had these two.
-APP_FILES = ("server.py", "index.html", "fonts.css", "sw.js", "icon-192.png", "icon-512.png")
+# Keep it one plain list with no brackets inside: older versions read it with a simple pattern.
+APP_FILES = ("server.py", "index.html", "fonts.css", "sw.js", "icon-192.png", "icon-512.png",
+             "app/style.css", "app/core.js", "app/grid.js", "app/card.js", "app/copy.js", "app/settings.js",
+             "app/updates.js", "app/sets.js", "app/data.js", "app/shop.js", "app/stats.js", "app/find.js",
+             "app/pages.js", "app/show.js", "app/psa.js", "app/offline.js", "app/start.js")
 UPDATE_FILES = APP_FILES
 APP_FILE_RE = re.compile(r"[A-Za-z0-9_\-]+(?:/[A-Za-z0-9_\-]+)*\.(?:py|html|js|css|woff2|png|svg|json|txt)")
 GH_REPO = os.environ.get("GITHUB_REPO", "g-i-n-g-y/pokemon-binder")

@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- Behind the scenes: the page's styles and code moved out of `index.html` into 17 smaller files in an `app` folder, so changes are quicker and safer to make. Nothing looks or works differently. The phone app saves the new files too, so it still opens with no signal.
+
 ## v3.39 (October 30, 2026)
 
 - **Already had:** cards you got without buying them (from a pack, a gift, kept since you were a kid) can be marked **Already had** on My copy. They count as owned but don't ask for a price. When you add a copy, pick **Bought** or **Already had**; for copies already listed without a price, tap **Already had it?** next to the total.

@@ -5,9 +5,10 @@ const SHELL = "binder-shell-" + VERSION;   // the page, fonts and icons
 const DATA = "binder-data";                 // the last binder data the phone saw (cards, prices, purchases)
 const PICS = "binder-pics";                 // card pictures, logos and Pokémon art you've looked at
 const MAX_PICS = 3000;
+const APP_FILES = "__APP_FILES__";          // the page's styles and code (app/...), filled in by the server
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(SHELL).then(c => c.addAll(["./", "fonts.css?v=1", "manifest.webmanifest", "icon-192.png", "icon-512.png", "favicon"]).catch(() => {})));
+  e.waitUntil(caches.open(SHELL).then(c => c.addAll(["./", "fonts.css?v=1", "manifest.webmanifest", "icon-192.png", "icon-512.png", "favicon", ...APP_FILES]).catch(() => {})));
   self.skipWaiting();
 });
 self.addEventListener("activate", e => {
@@ -55,5 +56,5 @@ self.addEventListener("fetch", e => {
   if (req.mode === "navigate") { e.respondWith(networkFirst(req, SHELL, new Request("./"))); return; }
   if (p.includes("/api/")) { e.respondWith(networkFirst(req, DATA)); return; }
   if (/\/(img|photo)\//.test(p) || /\/(art|unown)\//.test(p) || /\/(logo|sprite)\.png$/.test(p)) { e.respondWith(cacheFirst(req)); return; }
-  if (/(fonts\.css|manifest\.webmanifest|icon-\d+\.png|app-icon\.png|favicon)$/.test(p)) { e.respondWith(networkFirst(req, SHELL)); return; }
+  if (/(fonts\.css|manifest\.webmanifest|icon-\d+\.png|app-icon\.png|favicon)$/.test(p) || /\/app\/[\w-]+\.(js|css)$/.test(p)) { e.respondWith(networkFirst(req, SHELL)); return; }
 });

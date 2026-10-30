@@ -2,16 +2,29 @@
 
     python3 tests/smoke_test.py
 
-It copies server.py, index.html and fonts.css into a temporary folder, writes a small binder in the old JSON layout,
+It copies the program files (APP_FILES in server.py) into a temporary folder, writes a small binder in the old JSON layout,
 starts the binder on a spare port (nothing outside the temporary folder is touched, no downloads are needed),
 and checks that the main pages answer, data moves into the database, saves stick, and backups restore.
 Prints PASS or FAIL for each check and exits with 1 if anything failed. Python standard library only.
 """
-import io, json, os, re, shutil, socket, subprocess, sys, tempfile, time, urllib.error, urllib.request, zipfile
+import ast, io, json, os, re, shutil, socket, subprocess, sys, tempfile, time, urllib.error, urllib.request, zipfile
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 failed = []
+
+
+def app_files():
+    """The program files listed in server.py (APP_FILES)."""
+    src = open(os.path.join(REPO, "server.py"), encoding="utf-8").read()
+    return ast.literal_eval(re.search(r"^APP_FILES\s*=\s*(\([^)]*\))", src, re.M).group(1))
+
+
+def copy_app(dst_root):
+    for name in app_files():
+        dst = os.path.join(dst_root, *name.split("/"))
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        shutil.copyfile(os.path.join(REPO, *name.split("/")), dst)
 
 
 def check(name, ok, detail=""):
@@ -134,8 +147,7 @@ def main():
     tmp = tempfile.mkdtemp(prefix="binder-smoke-")
     proc = None
     try:
-        for name in ("server.py", "index.html", "fonts.css"):
-            shutil.copyfile(os.path.join(REPO, name), os.path.join(tmp, name))
+        copy_app(tmp)
         sample_binder(tmp)
         with socket.socket() as s:
             s.bind(("127.0.0.1", 0))
@@ -371,14 +383,15 @@ def main():
             blocked = e.code == 403
         check("other websites can't add cards", blocked)
 
-        page = open(os.path.join(REPO, "index.html"), encoding="utf-8").read()
-        names = re.findall(r"^\s*(?:async\s+)?function\s+(\w+)\s*\(", page, re.M)
+        sys.path.insert(0, os.path.join(REPO, "tests"))
+        from cleanup_check import page_parts
+        html, css, script = page_parts()
+        names = re.findall(r"^\s*(?:async\s+)?function\s+(\w+)\s*\(", script, re.M)
         twice = sorted({n for n in names if names.count(n) > 1})
         check("no two page functions share a name (the later one would replace the first)", not twice, twice)
-        ids = re.findall(r'\sid="([^"]+)"', page.split("<script>")[0])
+        ids = re.findall(r'\sid="([^"]+)"', html)
         twice_ids = sorted({i for i in ids if ids.count(i) > 1})
         check("no two page elements share an id (the code would only find the first)", not twice_ids, twice_ids)
-        css = page.split("</style>")[0]
         priv = [r for r in re.findall(r"([^{}]+)\{([^}]*)\}", css) if "#sValue" in r[0] and "data-private" in r[0]]
         check("privacy mode blurs the money totals", bool(priv) and all("blur" in r[1] for r in priv), priv)
         srv = open(os.path.join(REPO, "server.py"), encoding="utf-8").read()

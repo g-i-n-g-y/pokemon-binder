@@ -9,10 +9,10 @@ Each answer's status code and body are compared with the saved ones. Values that
 today's date) are blanked out first. Nothing outside the temporary folder is touched, no downloads are needed.
 Only save new answers when a change to the API is on purpose.
 """
-import ast, datetime, io, json, os, re, shutil, socket, subprocess, sys, tempfile, time, urllib.parse, zipfile
+import datetime, io, json, os, re, shutil, socket, subprocess, sys, tempfile, time, urllib.parse, zipfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from smoke_test import OPENER, REPO, call, sample_binder   # noqa: E402
+from smoke_test import OPENER, REPO, call, copy_app, sample_binder   # noqa: E402
 
 ANSWERS = os.path.join(REPO, "tests", "api_answers.json")
 VERSION = re.search(r'^APP_VERSION = "([^"]+)"', open(os.path.join(REPO, "server.py"), encoding="utf-8").read(), re.M).group(1)
@@ -96,19 +96,11 @@ def answer(base, method, path, body):
     return {"status": code, "body": scrub(res)}
 
 
-def app_files():
-    src = open(os.path.join(REPO, "server.py"), encoding="utf-8").read()
-    return ast.literal_eval(re.search(r"^APP_FILES\s*=\s*(\([^)]*\))", src, re.M).group(1))
-
-
 def run():
     tmp = tempfile.mkdtemp(prefix="binder-api-")
     proc = None
     try:
-        for name in app_files():
-            dst = os.path.join(tmp, *name.split("/"))
-            os.makedirs(os.path.dirname(dst), exist_ok=True)
-            shutil.copyfile(os.path.join(REPO, *name.split("/")), dst)
+        copy_app(tmp)
         sample_binder(tmp)
         with socket.socket() as s:
             s.bind(("127.0.0.1", 0))
