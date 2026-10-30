@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v4.2.1 (October 30, 2026)
 
 - **Fix:** updates could hit GitHub's hourly limit ("GitHub's hourly limit for update checks was reached"). Since v4.0 an update downloads 36 files, and each one counted against GitHub's limit of 60 an hour. Program files and release notes now come from GitHub's plain file address, which doesn't count, so an update uses only 2 or 3 of the 60.
 
