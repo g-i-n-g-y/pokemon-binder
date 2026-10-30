@@ -5258,7 +5258,7 @@ function drawPages(){
   $("pgArr").setAttribute("aria-pressed", pg.arr); $("pgArr").textContent=pg.arr ? "Done arranging" : "Arrange";
   const sheets=Math.ceil(sides/2), cards=L.slots.filter(Boolean).length;
   $("pgSum").textContent = !cards ? "No cards yet." :
-    cards+" card"+(cards===1?"":"s")+" fill "+sides+" page"+(sides===1?"":"s")+" of "+L.pk+" pockets ("+sheets+" sheet"+(sheets===1?"":"s")+", front and back). Page 1 is on the right, after the inside cover."
+    cards+" card"+(cards===1?"":"s")+" fill "+sides+" page"+(sides===1?"":"s")+" of "+L.pk+" pockets ("+sheets+" sheet"+(sheets===1?"":"s")+", front and back)."+(pagesWide() ? " Page 1 is on the right, after the inside cover." : " Swipe to turn the page.")
     +(L.custom ? " You've moved some cards: new cards go at the end." : "")
     +(pg.arr ? " Tap a card, then tap where it should go"+(matchMedia("(pointer:fine)").matches ? ", or drag it there." : ".") : "");
   V.replaceChildren(); V.classList.toggle("pg-arr", pg.arr);

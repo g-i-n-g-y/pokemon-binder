@@ -15,6 +15,7 @@ The binder shows these in **Settings → About → Check for updates**.
 - **Upgrades shows which conditions are picked:** each picked condition (MP, HP, DMG) has a ✓, unpicked ones are dimmed, and a thin line separates the buttons, so two picked ones no longer look like one.
 - **Shopping list without a column of zeros:** the price-change column only shows once at least one card on the list has actually gone up or down, instead of "0.0%" on every row.
 - **Stats without a half-empty box:** when no prices have moved yet, Spending per month uses the full width and Biggest movers shrinks to one short line underneath. Once prices move, they sit side by side again.
+- **Pages on phones:** the line above the pages now says "Swipe to turn the page." On a phone you see one page at a time, so "Page 1 is on the right" only shows on bigger screens.
 
 ## v3.35.1 (October 26, 2026)
 
