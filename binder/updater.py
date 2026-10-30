@@ -235,6 +235,21 @@ def gh_get(path, accept):
         return r.read()
 
 
+def gh_file(name, ref):
+    """One file of the repository at `ref` (a commit or branch). Public repositories use GitHub's plain file address,
+    which doesn't count against the hourly limit of 60 API requests (an update downloads every program file);
+    a private copy (GITHUB_TOKEN) goes through the API."""
+    if not GH_TOKEN:
+        try:
+            req = urllib.request.Request(f"https://raw.githubusercontent.com/{GH_REPO}/{ref}/{name}",
+                                         headers={"User-Agent": "pokemon-binder"})
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return r.read()
+        except Exception as e:
+            log(f"Plain GitHub download of {name} didn't work ({e}), trying the API")
+    return gh_get(f"contents/{name}?ref={ref}", "application/vnd.github.raw")
+
+
 def gh_json(path):
     return json.loads(gh_get(path, "application/vnd.github+json"))
 
@@ -278,7 +293,7 @@ def check_github():
     running = file_version(os.path.join(APP, "server.py"))
     try:   # the version written in the latest server.py, which is what would actually be installed
         m = re.search(r'^APP_VERSION\s*=\s*"([^"]+)"',
-                      gh_get(f"contents/server.py?ref={latest['sha']}", "application/vnd.github.raw").decode("utf-8", "ignore"), re.M)
+                      gh_file("server.py", latest["sha"]).decode("utf-8", "ignore"), re.M)
         latest["fileVersion"] = m.group(1) if m else ""
     except Exception:
         latest["fileVersion"] = latest["version"]
@@ -331,7 +346,7 @@ def changelog():
     """Release notes from GitHub (checked at most once an hour), plus whether a newer version is out."""
     if GH_REPO and time.time() - CHANGELOG_CACHE["at"] > 3600:
         try:
-            CHANGELOG_CACHE["text"] = gh_get(f"contents/CHANGELOG.md?ref={GH_BRANCH}", "application/vnd.github.raw").decode("utf-8", "ignore")
+            CHANGELOG_CACHE["text"] = gh_file("CHANGELOG.md", GH_BRANCH).decode("utf-8", "ignore")
             CHANGELOG_CACHE["error"] = ""
         except Exception as e:
             CHANGELOG_CACHE["error"] = gh_error(e)
@@ -355,7 +370,7 @@ def install_from_github(sha=None):
         dst = os.path.join(stage, *name.split("/"))
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         with open(dst, "wb") as f:
-            f.write(gh_get(f"contents/{name}?ref={info['sha']}", "application/vnd.github.raw"))
+            f.write(gh_file(name, info["sha"]))
 
     fetch("server.py")   # first: it says which other files this version needs
     for name in files_of(os.path.join(stage, "server.py")):

@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Fix:** updates could hit GitHub's hourly limit ("GitHub's hourly limit for update checks was reached"). Since v4.0 an update downloads 36 files, and each one counted against GitHub's limit of 60 an hour. Program files and release notes now come from GitHub's plain file address, which doesn't count, so an update uses only 2 or 3 of the 60.
+
 ## v4.2 (October 30, 2026)
 
 - **Download for TCGplayer:** Settings → Backup and import → **Download for TCGplayer** makes a list of the cards you own in the binders you pick, ready for **Collection → Import** in the TCGplayer app. Each card uses TCGplayer's own name, set code and number, so it matches the right card. Cards TCGplayer doesn't list (often custom cards) are left out, and the app tells you how many. The list doesn't say 1st Edition or reverse holo, so check those in TCGplayer after importing.
