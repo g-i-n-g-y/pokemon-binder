@@ -7,7 +7,7 @@ A self-hosted Pokémon TCG collection tracker: one small Python server (standard
 
 - **Binders your way:** any English set, a Pokémon master set (every card of one Pokémon, like all the Totodile cards), or your own mix (Favorites, Trade pile). Owned cards in color, needed ones in greyscale.
 - **Real binder pages:** lay cards out 4, 9, 12 or 16 to a page, with a cover. **Find a card** searches every English card by name, number (like `80/111`) or set.
-- **Prices from recent sales:** TCGplayer's newest sales for each condition (LP and MP by default), with TCGdex market prices as a backup. Daily refresh, price history, biggest movers, a shopping list with a budget, and an upgrades list.
+- **Prices from recent sales:** TCGplayer's newest sales for each condition (LP and MP by default), with TCGdex market prices as a backup. Daily refresh, price history with a chart you can drag along for each condition (NM to DMG), biggest movers, a shopping list with a budget, and an upgrades list.
 - **At the card show:** card show mode lists every card you still need, with a big **Got it** button. Type a vendor's asking price to see if it's a good deal, what to offer and when to walk away. Scan a PSA slab's label to check it's real and see recent sales for that grade.
 - **Your copies:** condition, notes, front and back photos, and a purchase log (price, place, seller). Zoom in on a holo and it shimmers like the real card.
 - **Phone app (Android):** install it, open it with no signal, mark cards owned offline, sync when you're back.
@@ -29,7 +29,7 @@ Also: custom cards for anything the card database is missing, upcoming card show
 
 ![The Pages view with the inside cover and page 1](screenshots/pages.png)
 
-**Card details.** The price to buy one, from recent sales, with its trend and how it's worked out a tap away. Type what a vendor is asking to see if it's a good deal, what to offer and when to walk away. Below are the newest sales for every condition, so you can see whether a different condition is worth it.
+**Card details.** The price to buy one, from recent sales, with a price chart you can drag a finger along (for your price or any one condition) and how it's worked out a tap away. Type what a vendor is asking to see if it's a good deal, what to offer and when to walk away. Below are the newest sales for every condition, so you can see whether a different condition is worth it.
 
 ![Card details with prices and recent sales](screenshots/card-details.png)
 

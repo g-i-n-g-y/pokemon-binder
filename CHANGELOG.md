@@ -10,6 +10,12 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Price chart:** the small price trend on each card is now a chart you can drag a finger (or the mouse) along to read the price on any day. Tap **NM, LP, MP, HP** or **DMG** to see that condition's own line, each with its latest average, or **Price** for your usual price. Pick **1M, 3M, 6M, 1Y** or **All**; your choices are remembered on each device. Dots show individual sales.
+- Swiping up or down on the chart still scrolls the page. It only reads prices when you drag sideways or press and hold.
+- The server now saves each card's price for every condition, and keeps every sale it sees (TCGplayer only shows the newest 5), so the dots build up over time. Each condition's line starts from the day you install this version. Both are in your backups.
+
 ## v4.3.2 (October 30, 2026)
 
 - **Fix:** Download for TCGplayer goes back to plain lines (like "1 Dark Gengar [N4] 006/105"). TCGplayer's import turned down every line with a printing and condition, even written exactly the way TCGplayer's own Share writes them. TCGplayer files the cards as 1st Edition Near Mint, so the list is now sorted by your condition (Near Mint, then Lightly Played, and so on) to make fixing them in TCGplayer quicker.
