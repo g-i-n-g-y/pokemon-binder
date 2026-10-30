@@ -389,3 +389,100 @@ def apply_import(sid, plan):
         write_json(sdir(sid, "collection.json"), coll)
     log(f"{sid}: imported a spreadsheet ({len(plan['changes'])} cards changed)")
     return name
+
+
+# ---------- download for TCGplayer (Collection → Import) ----------
+# TCGplayer's import reads one card per line: quantity, its name, its set code in brackets and its number,
+# like "1 Dark Gengar [N4] 006/105". Its set codes and names differ from the card database's, so they come from
+# TCGCSV, a free daily copy of TCGplayer's catalog, matched by the TCGplayer product id each price check saves.
+TCGCSV = "https://tcgcsv.com/tcgplayer/3"   # 3 = Pokémon
+TCG_CATALOG = os.path.join(DATA, "tcg_catalog")
+
+
+def tcg_groups():
+    """TCGplayer's Pokémon sets: {group id: [set code, release date]}. Saved for a week."""
+    path = os.path.join(TCG_CATALOG, "groups.json")
+    saved = read_json(path, None)
+    if saved and time.time() - saved.get("at", 0) < 7 * DAY:
+        return saved["groups"]
+    try:
+        raw = json.loads(http_get(f"{TCGCSV}/groups", timeout=30)).get("results") or []
+    except Exception:
+        if saved:
+            return saved["groups"]
+        raise
+    groups = {str(g["groupId"]): [g.get("abbreviation") or "", str(g.get("publishedOn") or "")[:10]]
+              for g in raw if isinstance(g, dict) and g.get("groupId")}
+    os.makedirs(TCG_CATALOG, exist_ok=True)
+    write_json(path, {"at": time.time(), "groups": groups})
+    return groups
+
+
+def tcg_products(gid):
+    """One TCGplayer set's cards: {product id: [name, number]}. Saved for a month."""
+    path = os.path.join(TCG_CATALOG, f"{gid}.json")
+    saved = read_json(path, None)
+    if saved and time.time() - saved.get("at", 0) < 30 * DAY:
+        return saved["p"]
+    try:
+        raw = json.loads(http_get(f"{TCGCSV}/{gid}/products", timeout=30)).get("results") or []
+    except Exception:
+        if saved:
+            return saved["p"]
+        raise
+    prods = {}
+    for p in raw:
+        num = next((e.get("value") for e in p.get("extendedData") or [] if e.get("name") == "Number"), "")
+        if num:   # cards have a number; sealed products don't
+            prods[str(p["productId"])] = [p.get("name") or "", num]
+    os.makedirs(TCG_CATALOG, exist_ok=True)
+    write_json(path, {"at": time.time(), "p": prods})
+    return prods
+
+
+def _tcg_line(groups, pid, name, num, date):
+    """(set code, TCGplayer name, number) for one card, or None. Looks in the TCGplayer sets released closest to it."""
+    def apart(gday):
+        try:
+            return abs((datetime.fromisoformat(gday) - datetime.fromisoformat((date or "").replace("/", "-")[:10])).days)
+        except ValueError:
+            return 99999
+    near = sorted(groups, key=lambda g: apart(groups[g][1]))
+    lead = re.match(r"0*(\d+)", str(num or ""))
+    for gid in near[:8]:
+        prods = tcg_products(gid)
+        if pid and str(pid) in prods:
+            return (groups[gid][0],) + tuple(prods[str(pid)])
+        if not pid and lead:   # no TCGplayer id yet: the same name and number in a set from that time
+            for pname, pnum in prods.values():
+                m = re.match(r"0*(\d+)", pnum)
+                if m and m.group(1) == lead.group(1) and _simple(pname) == _simple(name):
+                    return groups[gid][0], pname, pnum
+    return None
+
+
+def export_tcgplayer(only=None):
+    """(text, cards left out) for TCGplayer's Collection import: every owned card in the binders asked for."""
+    sl = sets_list()
+    groups = tcg_groups()
+    lines, missed = {}, []
+    for sid in sl["order"]:
+        if only and sid not in only:
+            continue
+        coll = read_json(sdir(sid, "collection.json"), {})
+        ids = read_json(sdir(sid, "tcg_ids.json"), {})
+        set_day = sl["meta"].get(sid, {}).get("releaseDate", "")
+        for c in (card_list(sid) or []) + extra_list(sid) + custom_cards(sid):
+            rec = coll.get(c["n"]) or {}
+            qty = int(rec.get("qty") or 0) if isinstance(rec.get("qty"), (int, float)) else 0
+            if qty <= 0:
+                continue
+            ref, _, num = card_ref(sid, c)
+            found = None if c.get("custom") and not ids.get(c["n"]) else \
+                _tcg_line(groups, ids.get(ref or c["n"]), c.get("name", ""), num, c.get("date") or set_day)
+            if found:
+                lines[found] = lines.get(found, 0) + qty   # the same card in two binders is one line
+            else:
+                missed.append(c.get("name", c["n"]))
+    text = "".join(f"{q} {name} [{code}] {num}\n" for (code, name, num), q in lines.items())
+    return text, missed

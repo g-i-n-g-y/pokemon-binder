@@ -215,6 +215,27 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, {"custom": os.path.exists(ICON_FILE)}, cache="no-store")
         if path == "/api/backups":
             return self.send(200, {"backups": list_auto_backups()}, cache="no-store")
+        if path == "/api/export/tcgplayer.txt":   # for TCGplayer's Collection > Import; every binder, or just ?b=neo4,neo1
+            want = (urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("b") or [""])[0]
+            order = sets_list()["order"]
+            only = [x for x in want.split(",") if x in order] if want else None
+            if want and not only:
+                return self.send(400, {"error": "None of those binders exist."})
+            try:
+                text, missed = export_tcgplayer(only)
+            except Exception as e:
+                log(f"TCGplayer download: {e}")
+                return self.send(502, {"error": "Couldn't reach TCGplayer's card list. Try again in a few minutes."})
+            body = text.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Content-Disposition", f'attachment; filename="tcgplayer-import-{time.strftime("%Y-%m-%d")}.txt"')
+            self.send_header("X-Binder-Missed", str(len(missed)))   # owned cards TCGplayer's list didn't have
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(body)
+            return
         if path == "/api/export.xlsx":   # every binder in one spreadsheet, or just ?b=neo4,neo1
             want = (urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("b") or [""])[0]
             order = sets_list()["order"]

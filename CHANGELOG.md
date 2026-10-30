@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Download for TCGplayer:** Settings → Backup and import → **Download for TCGplayer** makes a list of the cards you own in the binders you pick, ready for **Collection → Import** in the TCGplayer app. Each card uses TCGplayer's own name, set code and number, so it matches the right card. Cards TCGplayer doesn't list (often custom cards) are left out, and the app tells you how many. The list doesn't say 1st Edition or reverse holo, so check those in TCGplayer after importing.
+
 ## v4.1 (October 30, 2026)
 
 - **Already had, by default:** a copy that's gone 30 days with no price, place or seller (or was logged before tracking) now shows as **Already had** instead of "Price not added yet". If you did buy it, tap **Edit** and add the price.

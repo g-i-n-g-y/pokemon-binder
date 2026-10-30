@@ -343,8 +343,13 @@ $("sbSave").onclick=async()=>{
   toast(online ? c.name+" marked owned"+(price!=null?" · "+money(price):"")+"." : c.name+" saved on this phone. It syncs when you're back online.");
 };
 
-// Download spreadsheet: pick which binders go in the Excel file (all of them to start)
-function openXl(){
+// Download spreadsheet, or the list for TCGplayer's Collection import: pick which binders go in (all of them to start)
+let xlKind="xlsx";
+function openXl(kind){
+  xlKind=kind;
+  $("xlTitle").textContent = kind==="tcg" ? "Download for TCGplayer" : "Download spreadsheet";
+  $("xlNote").textContent = kind==="tcg" ? "Pick the binders to put in the list. Each card you own is one line, ready for Collection → Import in the TCGplayer app. Cards in more than one binder are added up."
+    : "Pick the binders to put in the Excel file. Each one gets its own tab.";
   const box=$("xlList"); box.replaceChildren(); $("xlErr").textContent="";
   for(const s of state.sets){
     const l=document.createElement("label"), sp=document.createElement("span"), b=document.createElement("b"), sm=document.createElement("small");
@@ -354,7 +359,8 @@ function openXl(){
   }
   $("xlDlg").showModal();
 }
-$("bkXlsx").onclick=()=>{ (state.sets && state.sets.length ? Promise.resolve() : loadSets()).then(openXl); };
+$("bkXlsx").onclick=()=>{ (state.sets && state.sets.length ? Promise.resolve() : loadSets()).then(()=>openXl("xlsx")); };
+$("bkTcg").onclick=()=>{ (state.sets && state.sets.length ? Promise.resolve() : loadSets()).then(()=>openXl("tcg")); };
 $("xlClose").onclick=()=>$("xlDlg").close();
 $("xlDlg").addEventListener("click",e=>{ if(e.target===$("xlDlg")) $("xlDlg").close(); });
 $("xlAll").onclick=()=>$("xlList").querySelectorAll("input").forEach(x=>x.checked=true);
@@ -363,9 +369,28 @@ $("xlGo").onclick=()=>{
   const all=[...$("xlList").querySelectorAll("input")], ids=all.filter(x=>x.checked).map(x=>x.value);
   if(!ids.length){ $("xlErr").textContent="Pick at least one binder."; return; }
   if(isOffline()){ $("xlErr").textContent="Downloading needs a connection to "+srv()+"."; return; }
-  const a=document.createElement("a"); a.href="api/export.xlsx"+(ids.length===all.length ? "" : "?b="+ids.map(enc).join(",")); a.download="";
+  const pick=ids.length===all.length ? "" : "?b="+ids.map(enc).join(",");
+  if(xlKind==="tcg"){ tcgDownload(pick); return; }
+  const a=document.createElement("a"); a.href="api/export.xlsx"+pick; a.download="";
   document.body.append(a); a.click(); a.remove(); $("xlDlg").close();
 };
+// The TCGplayer list is fetched first, so the window can say how many cards TCGplayer's list didn't have
+async function tcgDownload(pick){
+  $("xlGo").disabled=true; $("xlErr").textContent="Matching your cards to TCGplayer's list…";
+  try{
+    const r=await fetch("api/export/tcgplayer.txt"+pick);
+    if(!r.ok){ const j=await r.json().catch(()=>({})); throw new Error(j.error||"Couldn't make the list."); }
+    const text=await r.text(), missed=Number(r.headers.get("X-Binder-Missed"))||0;
+    if(!text.trim()){ $("xlErr").textContent="None of the cards you own in those binders are on TCGplayer's list."; return; }
+    const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([text],{type:"text/plain"}));
+    a.download="tcgplayer-import-"+todayStr()+".txt"; document.body.append(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+    $("xlDlg").close();
+    const n=text.trim().split("\n").length;
+    toast(n+" card"+(n===1?"":"s")+" ready for TCGplayer"+(missed ? ". "+missed+" couldn't be matched (often promos or custom cards), so add those by hand." : "."));
+  }catch(e){ $("xlErr").textContent=e.message||"Couldn't make the list."; }
+  finally{ $("xlGo").disabled=false; }
+}
 // which binders you're working on
 function openPick(){
   const box=$("spList"); box.replaceChildren(); $("spErr").textContent="";

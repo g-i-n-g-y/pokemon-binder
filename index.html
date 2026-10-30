@@ -318,7 +318,7 @@
   <div class="sheet">
     <button class="close" type="button" id="xlClose">Close ✕</button>
     <h2 id="xlTitle">Download spreadsheet</h2>
-    <div class="note">Pick the binders to put in the Excel file. Each one gets its own tab.</div>
+    <div class="note" id="xlNote">Pick the binders to put in the Excel file. Each one gets its own tab.</div>
     <div class="row-msg"><button class="hm-link" type="button" id="xlAll">Select all</button><button class="hm-link" type="button" id="xlNone">Select none</button></div>
     <div class="sp-list" id="xlList"></div>
     <div class="err" id="xlErr" aria-live="polite"></div>
@@ -722,10 +722,11 @@
       <div class="btnrow">
         <a class="btn" href="api/backup" download id="bkDown">Download backup</a>
         <button class="btn" type="button" id="bkXlsx">Download spreadsheet</button>
+        <button class="btn" type="button" id="bkTcg">Download for TCGplayer</button>
         <label class="btn" for="bkUp">Restore from backup</label>
         <input id="bkUp" type="file" accept=".zip,application/zip" hidden>
       </div>
-      <div class="note" id="bkMsg">One file with everything, for every binder. Keep a copy somewhere other than <span class="srv">the server</span>. <b>Download spreadsheet</b> gives you the binders you pick as an Excel file (a tab for each binder) to open anywhere.</div>
+      <div class="note" id="bkMsg">One file with everything, for every binder. Keep a copy somewhere other than <span class="srv">the server</span>. <b>Download spreadsheet</b> gives you the binders you pick as an Excel file (a tab for each binder) to open anywhere. <b>Download for TCGplayer</b> gives you a list of the cards you own, for Collection → Import in the TCGplayer app.</div>
       <div class="prev" id="bkAutoWrap" hidden>
         <h3 class="ui-h">Saved on <span class="srv">the server</span></h3>
         <div class="note">Made automatically before each update, import, restore and phone sync, and before a binder starts fresh. To save space, the ones before updates, imports and syncs leave out your photos (those never change your photos), and restoring one of those keeps the photos you have. One daily backup a week includes them.</div>
