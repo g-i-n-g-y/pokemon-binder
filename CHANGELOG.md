@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Already had:** cards you got without buying them (from a pack, a gift, kept since you were a kid) can be marked **Already had** on My copy. They count as owned but don't ask for a price. When you add a copy, pick **Bought** or **Already had**; for copies already listed without a price, tap **Already had it?** next to the total.
+
 ## v3.38.3 (October 29, 2026)
 
 - **Holo promos marked as holo:** McDonald's Collection cards from 2011 to 2019, the holo Latias, Latios, Plusle and Minun from the EX trainer kits, and three Dragon Vault cards (Exp. Share, First Ticket, Kyurem) had no rarity in the card list. They now show as holo, shimmer in their picture when zoomed, and sort with the holos.

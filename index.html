@@ -392,7 +392,11 @@ table.shop.no-trend .c-trend{display:none}
 .buyform{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
 .buyform label.f{min-width:0}
 .buyform input{width:100%;min-width:0;box-sizing:border-box}
-.buyform label.f:nth-child(3){grid-column:1/-1}
+.buyform .f-where{grid-column:1/-1}
+.buyform .how{grid-column:1/-1}
+.buyform.had .buy-only{display:none}
+.buylist .pr.had{font-family:inherit;font-size:13px;color:var(--muted)}
+.buys-head .had-all{border:0;background:none;color:var(--dark);cursor:pointer;font:inherit;font-size:13px;padding:0 0 0 6px;text-decoration:underline;text-underline-offset:2px}
 .buyform .formbtns{grid-column:1/-1;display:flex;gap:8px}
 .buyform .formbtns .btn{flex:1;justify-content:center}
 .buyform select{font:inherit;font-size:15px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
@@ -1758,11 +1762,12 @@ html,body{overscroll-behavior-y:none}
       <div class="buys-head"><span class="k">Purchases</span><span class="s" id="dPaid"></span></div>
       <ul class="buylist" id="dBuys"></ul>
       <form class="buyform" id="dBuyForm">
-        <label class="f">Date<input type="date" id="bDate" required></label>
-        <label class="f">Paid ($)<input type="number" id="bPrice" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></label>
-        <label class="f">Where<input type="text" id="bWhere" maxlength="60" autocomplete="off" placeholder="eBay, card show, local shop…"></label>
-        <div class="h-chips where-chips" id="bWhereChips" role="group" aria-label="Pick where"></div>
-        <div class="f past-f"><span>Seller</span><div class="sel-field"><button type="button" class="field sel-btn" id="bSelBtn">Choose seller</button><button type="button" class="icon-btn sel-x" id="bSelX" aria-label="Remove the seller" title="Remove the seller" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div></div>
+        <div class="h-chips how" id="bHow" role="group" aria-label="How you got it"><button type="button" class="h-chip" data-had="0" aria-pressed="true">Bought</button><button type="button" class="h-chip" data-had="1" aria-pressed="false">Already had</button></div>
+        <label class="f"><span id="bDateK">Date</span><input type="date" id="bDate" required></label>
+        <label class="f buy-only">Paid ($)<input type="number" id="bPrice" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></label>
+        <label class="f f-where buy-only">Where<input type="text" id="bWhere" maxlength="60" autocomplete="off" placeholder="eBay, card show, local shop…"></label>
+        <div class="h-chips where-chips buy-only" id="bWhereChips" role="group" aria-label="Pick where"></div>
+        <div class="f past-f buy-only"><span>Seller</span><div class="sel-field"><button type="button" class="field sel-btn" id="bSelBtn">Choose seller</button><button type="button" class="icon-btn sel-x" id="bSelX" aria-label="Remove the seller" title="Remove the seller" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div></div>
         <label class="f sel-hide">Seller
           <select id="bPlat">
             <option value="">None</option>
@@ -3118,17 +3123,26 @@ $("bPlat").addEventListener("change",()=>{
   handleOptions();
 });
 let editIdx=null;
+// Bought, or Already had (pulled from a pack, a gift, kept since you were a kid): those copies need no price.
+function setHow(had){
+  $("dBuyForm").classList.toggle("had", had);
+  for(const b of $("bHow").children) b.setAttribute("aria-pressed", String((b.dataset.had==="1")===had));
+  if(editIdx==null) $("bDate").value = had && $("bDate").value===todayStr() ? "" : $("bDate").value || todayStr();
+  $("bDate").required=!had; $("bDateK").textContent=had ? "When you got it (optional)" : "Date";
+  $("bSubmit").textContent = editIdx!=null ? "Save changes" : had ? "Add copy" : "Add purchase";
+}
+for(const b of $("bHow").children) b.onclick=()=>setHow(b.dataset.had==="1");
 function resetBuyForm(){
   editIdx=null; $("dBuyForm").classList.remove("editing");
   $("bDate").value=todayStr(); $("bPrice").value=""; $("bWhere").value=""; drawWhereChips(); $("bPlat").value=""; $("bHandle").value=""; $("bHandle").disabled=true;
-  $("bSubmit").textContent="Add purchase"; $("bCancel").hidden=true; drawBSug();
+  $("bCancel").hidden=true; setHow(false); drawBSug();
 }
 function editBuy(n,i){
   const b=buys(n)[i]; if(!b) return;
   editIdx=i; $("dBuyForm").classList.add("editing");
   $("bDate").value=b.d||""; $("bPrice").value=(b.price==null?"":b.price); $("bWhere").value=b.where||""; drawWhereChips();
   $("bPlat").value=(b.seller&&b.seller.p)||""; $("bHandle").value=(b.seller&&b.seller.h)||""; $("bHandle").disabled=!$("bPlat").value;
-  $("bSubmit").textContent="Save changes"; $("bCancel").hidden=false; drawBSug();
+  $("bCancel").hidden=false; setHow(!!b.had); drawBSug();
   handleOptions(); $("bPrice").focus();
 }
 $("bCancel").onclick=resetBuyForm;
@@ -3155,7 +3169,8 @@ function drawBuys(n){
     if(b.where){ const ww=document.createElement("span"); ww.className="w"; ww.textContent=b.where; w.append(ww); }
     const se=sellerEl(b.seller); if(se) w.append(se);
     const pr=document.createElement("span"); pr.className="pr";
-    if(b.price==null || b.price===""){
+    if(b.had){ pr.classList.add("had"); pr.textContent="Already had"; }
+    else if(b.price==null || b.price===""){
       const inp=document.createElement("input"); inp.type="number"; inp.min="0"; inp.step="0.01"; inp.inputMode="decimal"; inp.placeholder="Paid $";
       inp.setAttribute("aria-label","What you paid on "+fmtDay(b.d));
       inp.onchange=()=>{ if(inp.value==="") return; const l=buys(n).slice(); l[i]={...l[i], price:Math.round(Number(inp.value)*100)/100}; save({purchases:l}); drawBuys(n); };
@@ -3174,20 +3189,30 @@ function drawBuys(n){
     li.append(d,w,pr,ed,x); ul.append(li);
   });
   const total=paidFor(n);
-  const unpriced=list.filter(b=>b.price==null || b.price==="").length;   // marked owned on the fly, price still to add
-  $("dPaid").textContent = !list.length ? "" : unpriced===list.length ? "Price not added yet"
-    : money(total)+" total"+(unpriced ? " · "+unpriced+" without a price" : "");
+  const unpriced=list.filter(b=>!b.had && (b.price==null || b.price==="")).length;   // marked owned on the fly, price still to add
+  const had=list.filter(b=>b.had).length, paidN=list.length-unpriced-had;
+  const bits=[];
+  if(paidN) bits.push(money(total)+" total");
+  if(had) bits.push(had===list.length ? "Already had" : had+" already had");
+  if(unpriced) bits.push(unpriced===list.length ? "Price not added yet" : unpriced+" without a price");
+  $("dPaid").textContent=bits.join(" · ");
+  if(unpriced){   // one tap for cards you've had for years and never paid for
+    const hb=document.createElement("button"); hb.type="button"; hb.className="had-all"; hb.textContent=unpriced===1 ? "Already had it?" : "Already had these?";
+    hb.onclick=()=>{ save({purchases:buys(n).map(b=>!b.had && (b.price==null || b.price==="") ? {...b, had:true} : b)}); drawBuys(n); };
+    $("dPaid").append(hb);
+  }
   whereOptions(); handleOptions();
 }
 $("dBuyForm").addEventListener("submit",e=>{
   e.preventDefault();
   const n=state.open; if(n==null) return;
-  const d=$("bDate").value || (editIdx!=null ? "" : todayStr());
+  const d=$("bDate").value || (editIdx!=null || $("dBuyForm").classList.contains("had") ? "" : todayStr());
   const price=$("bPrice").value==="" ? null : Math.round(Number($("bPrice").value)*100)/100;
   const plat=$("bPlat").value, h=cleanHandle(plat,$("bHandle").value);
   if(plat==="web" && h && !PLAT.web.url(h)){ $("dSaved").textContent="That website address doesn't look right. Use something like shopname.com."; return; }
-  const entry={d, price, where:$("bWhere").value.trim()};
-  if(plat && h) entry.seller={p:plat, h};
+  const had=$("dBuyForm").classList.contains("had");
+  const entry=had ? {d, price:null, where:"", had:true} : {d, price, where:$("bWhere").value.trim()};
+  if(!had && plat && h) entry.seller={p:plat, h};
   const l=buys(n).slice();
   if(editIdx!=null && l[editIdx]) l[editIdx]=entry; else l.push(entry);
   l.sort((a,b)=>(a.d||"").localeCompare(b.d||""));
@@ -6440,7 +6465,7 @@ function pendWords(p){
   if(p.cond) bits.push(p.cond);
   if(b.where) bits.push((b.price!=null?"at ":"from ")+b.where);
   if(b.seller && b.seller.h) bits.push((PLAT[b.seller.p]||{}).label ? PLAT[b.seller.p].label+" "+b.seller.h : b.seller.h);
-  return bits.length ? bits.join(" · ") : "no price added";
+  return bits.length ? bits.join(" · ") : b.had ? "already had" : "no price added";
 }
 function pendUI(){
   const n=pendingList().length;
