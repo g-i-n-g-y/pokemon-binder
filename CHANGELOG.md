@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v4.4 (October 30, 2026)
 
 - **Price chart:** the small price trend on each card is now a chart you can drag a finger (or the mouse) along to read the price on any day. Tap **NM, LP, MP, HP** or **DMG** to see that condition's own line, each with its latest average, or **Price** for your usual price. Pick **1M, 3M, 6M, 1Y** or **All**; your choices are remembered on each device. Dots show individual sales.
 - Swiping up or down on the chart still scrolls the page. It only reads prices when you drag sideways or press and hold.
