@@ -392,8 +392,8 @@ def apply_import(sid, plan):
 
 
 # ---------- download for TCGplayer (Collection → Import) ----------
-# TCGplayer's import reads one card per line: quantity, its name, its set code in brackets and its number,
-# like "1 Dark Gengar [N4] 006/105". Its set codes and names differ from the card database's, so they come from
+# TCGplayer's import reads one card per line: quantity, its name, its set code in brackets, its number, then the
+# printing and condition, like "1 Dark Gengar [N4] 006/105 Unlimited Holofoil Lightly Played". Its set codes and names differ from the card database's, so they come from
 # TCGCSV, a free daily copy of TCGplayer's catalog, matched by the TCGplayer product id each price check saves.
 TCGCSV = "https://tcgcsv.com/tcgplayer/3"   # 3 = Pokémon
 TCG_CATALOG = os.path.join(DATA, "tcg_catalog")
@@ -419,29 +419,34 @@ def tcg_groups():
 
 
 def tcg_products(gid):
-    """One TCGplayer set's cards: {product id: [name, number]}. Saved for a month."""
+    """One TCGplayer set's cards: {product id: [name, number, [printings]]}, printings like "Unlimited Holofoil".
+    Saved for a month."""
     path = os.path.join(TCG_CATALOG, f"{gid}.json")
     saved = read_json(path, None)
-    if saved and time.time() - saved.get("at", 0) < 30 * DAY:
+    if saved and saved.get("v") == 2 and time.time() - saved.get("at", 0) < 30 * DAY:
         return saved["p"]
     try:
         raw = json.loads(http_get(f"{TCGCSV}/{gid}/products", timeout=30)).get("results") or []
+        kinds = {}   # the printings each card comes in, from TCGplayer's price list
+        for x in json.loads(http_get(f"{TCGCSV}/{gid}/prices", timeout=30)).get("results") or []:
+            if x.get("subTypeName"):
+                kinds.setdefault(str(x.get("productId")), []).append(x["subTypeName"])
     except Exception:
-        if saved:
+        if saved and saved.get("v") == 2:
             return saved["p"]
         raise
     prods = {}
     for p in raw:
         num = next((e.get("value") for e in p.get("extendedData") or [] if e.get("name") == "Number"), "")
         if num:   # cards have a number; sealed products don't
-            prods[str(p["productId"])] = [p.get("name") or "", num]
+            prods[str(p["productId"])] = [p.get("name") or "", num, kinds.get(str(p["productId"]), [])]
     os.makedirs(TCG_CATALOG, exist_ok=True)
-    write_json(path, {"at": time.time(), "p": prods})
+    write_json(path, {"v": 2, "at": time.time(), "p": prods})
     return prods
 
 
 def _tcg_line(groups, pid, name, num, date):
-    """(set code, TCGplayer name, number) for one card, or None. Looks in the TCGplayer sets released closest to it."""
+    """(set code, TCGplayer name, number, printings) for one card, or None. Looks in the TCGplayer sets released closest to it."""
     def apart(gday):
         try:
             return abs((datetime.fromisoformat(gday) - datetime.fromisoformat((date or "").replace("/", "-")[:10])).days)
@@ -452,13 +457,29 @@ def _tcg_line(groups, pid, name, num, date):
     for gid in near[:8]:
         prods = tcg_products(gid)
         if pid and str(pid) in prods:
-            return (groups[gid][0],) + tuple(prods[str(pid)])
+            name_, num_, kinds = prods[str(pid)]
+            return groups[gid][0], name_, num_, tuple(kinds)
         if not pid and lead:   # no TCGplayer id yet: the same name and number in a set from that time
-            for pname, pnum in prods.values():
+            for pname, pnum, kinds in prods.values():
                 m = re.match(r"0*(\d+)", pnum)
                 if m and m.group(1) == lead.group(1) and _simple(pname) == _simple(name):
-                    return groups[gid][0], pname, pnum
+                    return groups[gid][0], pname, pnum, tuple(kinds)
     return None
+
+
+TCG_CONDS = {"NM": "Near Mint", "LP": "Lightly Played", "MP": "Moderately Played", "HP": "Heavily Played", "DMG": "Damaged"}
+
+
+def tcg_printing(kinds, rarity, rev):
+    """Which of TCGplayer's printings a copy is. The binder collects Unlimited, so 1st Edition is left out;
+    Reverse Holofoil only for copies marked reverse holo. Cards that come both plain and holo go by rarity."""
+    if rev and "Reverse Holofoil" in kinds:
+        return "Reverse Holofoil"
+    left = [k for k in kinds if not k.startswith("1st Edition") and k != "Reverse Holofoil"]
+    if len(left) > 1:
+        holo = "holo" in (rarity or "").lower()
+        left = [k for k in left if ("Holofoil" in k) == holo] or left
+    return left[0] if left else ""
 
 
 def export_tcgplayer(only=None):
@@ -480,9 +501,16 @@ def export_tcgplayer(only=None):
             ref, _, num = card_ref(sid, c)
             found = None if c.get("custom") and not ids.get(c["n"]) else \
                 _tcg_line(groups, ids.get(ref or c["n"]), c.get("name", ""), num, c.get("date") or set_day)
-            if found:
-                lines[found] = lines.get(found, 0) + qty   # the same card in two binders is one line
-            else:
+            if not found:
                 missed.append(c.get("name", c["n"]))
-    text = "".join(f"{q} {name} [{code}] {num}\n" for (code, name, num), q in lines.items())
+                continue
+            code, name, number, kinds = found
+            rev = min(qty, sum(1 for b in rec.get("purchases") or [] if isinstance(b, dict) and b.get("rev")))
+            cond = TCG_CONDS.get(rec.get("cond") or "", "")
+            for n_, is_rev in ((qty - rev, False), (rev, True)):   # reverse holo copies get a line of their own
+                if n_ > 0:
+                    key = (code, name, number, tcg_printing(kinds, c.get("rarity", ""), is_rev), cond)
+                    lines[key] = lines.get(key, 0) + n_   # the same card in two binders is one line
+    text = "".join(" ".join(x for x in (str(q), name, f"[{code}]", num, printing, cond) if x) + "\n"
+                   for (code, name, num, printing, cond), q in lines.items())
     return text, missed

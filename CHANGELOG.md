@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Download for TCGplayer** now includes each card's printing and condition, so TCGplayer no longer files everything as 1st Edition Near Mint. Cards go in as Unlimited (TCGplayer calls Base Set's Unlimited cards just Normal or Holofoil), with the condition you set on My copy. Copies marked reverse holo get their own Reverse Holofoil line. Cards with no condition set go in as Near Mint. In TCGplayer, pick the **Pokémon** tab before importing.
+
 ## v4.2.1 (October 30, 2026)
 
 - **Fix:** updates could hit GitHub's hourly limit ("GitHub's hourly limit for update checks was reached"). Since v4.0 an update downloads 36 files, and each one counted against GitHub's limit of 60 an hour. Program files and release notes now come from GitHub's plain file address, which doesn't count, so an update uses only 2 or 3 of the 60.

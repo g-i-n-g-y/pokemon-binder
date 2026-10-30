@@ -348,7 +348,7 @@ let xlKind="xlsx";
 function openXl(kind){
   xlKind=kind;
   $("xlTitle").textContent = kind==="tcg" ? "Download for TCGplayer" : "Download spreadsheet";
-  $("xlNote").textContent = kind==="tcg" ? "Pick the binders to put in the list. Each card you own is one line, ready for Collection → Import in the TCGplayer app. Cards in more than one binder are added up."
+  $("xlNote").textContent = kind==="tcg" ? "Pick the binders to put in the list. Each card you own is one line, ready for Collection → Import in the TCGplayer app (pick the Pokémon tab there first). Each line has the card's printing and the condition from My copy."
     : "Pick the binders to put in the Excel file. Each one gets its own tab.";
   const box=$("xlList"); box.replaceChildren(); $("xlErr").textContent="";
   for(const s of state.sets){
