@@ -136,6 +136,10 @@ assert server.clean_leftovers() == 5
 assert os.path.exists(os.path.join(server.APP, "fresh.tmp")) and os.path.exists(os.path.join(server.APP, "server.py"))
 os.remove(os.path.join(server.APP, "fresh.tmp"))
 # picture download misses aren't Status problems, real problems are
+# card pictures only come from the card picture websites
+assert server.fetch_image("unittest", {"n": "x1", "img": "http://127.0.0.1:8080/api/backup"}) is None
+assert server.fetch_image("unittest", {"n": "x2", "img": "https://images.pokemontcg.io.evil.example/x.png"}) is None
+assert "x1" not in str(server._img_fail) and "x2" not in str(server._img_fail), "a refused picture shouldn't even be tried"
 for m in ("image neo4-1: timed out", "Pokémon art 158: timed out", "neo3: set logo: HTTP Error 404"):
     assert server.PICTURE_MISS_RE.search(m), m
 assert not server.PICTURE_MISS_RE.search("neo4: price refresh failed: timed out")
@@ -278,6 +282,23 @@ def main():
         code, zipped = call(base, "GET", "/api/backup")
         names = zipfile.ZipFile(io.BytesIO(zipped)).namelist() if code == 200 else []
         check("backup downloads", code == 200 and "sets/neo4/collection.json" in names and "sets/neo4/photos/1" in names, names[:5])
+        call(base, "PUT", "/api/settings", {"psaToken": "smoke-test-code"})
+        code, keyless = call(base, "GET", "/api/backup")
+        st_zip = json.loads(zipfile.ZipFile(io.BytesIO(keyless)).read("settings.json")) if code == 200 else {}
+        check("backups leave the PSA access code out", code == 200 and "psaToken" not in st_zip, st_zip.keys())
+        code, _ = call(base, "POST", "/api/restore", keyless, "application/zip")
+        _, sett = call(base, "GET", "/api/settings")
+        check("restoring a backup keeps your PSA access code", code == 200 and sett.get("psa") is True, sett.get("psa"))
+        bad = io.BytesIO()
+        with zipfile.ZipFile(io.BytesIO(keyless)) as zin, zipfile.ZipFile(bad, "w") as zout:
+            for n in zin.namelist():
+                zout.writestr(n, zin.read(n))
+            zout.writestr("favicon", b"<script>alert(1)</script>")
+            zout.writestr("favicon.json", json.dumps({"type": "text/html"}))
+        call(base, "POST", "/api/restore", bad.getvalue(), "application/zip")
+        with OPENER.open(base + "/favicon", timeout=10) as r:
+            ftype = r.headers.get("Content-Type", "")
+        check("a tab icon from an edited backup is only ever sent as a picture", ftype.startswith("image/"), ftype)
         call(base, "PUT", "/api/set/neo4/card/2", {"qty": 0, "purchases": []})
         code, res = call(base, "POST", "/api/restore", zipped, "application/zip")
         check("backup restores", code == 200, res)

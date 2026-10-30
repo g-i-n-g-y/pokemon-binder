@@ -208,7 +208,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(404, b"not found", "text/plain")
         if path in ("/favicon", "/favicon.ico"):
             if os.path.exists(ICON_FILE):
-                return self.send_file(ICON_FILE, read_json(ICON_FILE + ".json", {}).get("type", "image/png"), "no-cache")
+                kind = read_json(ICON_FILE + ".json", {}).get("type")   # only a picture type, even from an edited backup
+                return self.send_file(ICON_FILE, kind if kind in ICON_TYPES else "image/png", "no-cache")
             return self.send(200, DEFAULT_ICON, "image/svg+xml", "no-cache")
         if path == "/api/icon":
             return self.send(200, {"custom": os.path.exists(ICON_FILE)}, cache="no-store")

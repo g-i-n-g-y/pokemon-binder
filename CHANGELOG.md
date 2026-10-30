@@ -13,6 +13,8 @@ The binder shows these in **Settings → About → Check for updates**.
 ## Unreleased
 
 - Behind the scenes: the page's styles and code moved out of `index.html` into 17 smaller files in an `app` folder, so changes are quicker and safer to make. Nothing looks or works differently. The phone app saves the new files too, so it still opens with no signal.
+- Safer backups: backup files no longer include your PSA access code, so they're safe to keep anywhere. Restoring a backup keeps the code you already have (on a new server, type it in again under Settings).
+- Safety: a backup file someone edited can no longer make the server download from other addresses, or turn the tab icon into a web page. Card pictures only come from the two card picture websites.
 - Behind the scenes: the server is split the same way. `server.py` starts the binder and runs 13 smaller files in a `binder` folder (prices, cards, backups, updates and so on). Every address the page and phone app use stays exactly the same.
 
 ## v3.39 (October 30, 2026)

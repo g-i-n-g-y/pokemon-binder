@@ -33,6 +33,10 @@ def _download(url, dest):
     os.replace(tmp, dest)
 
 
+# Card pictures only come from these websites, so a card list from an edited backup can't send the server elsewhere.
+PICTURE_SITES = ("https://images.pokemontcg.io/", "https://images.scrydex.com/")
+
+
 def fetch_image(sid, card, full=False):
     """Make sure one card picture is on the server. Returns its path, or None."""
     n = card["n"]
@@ -40,7 +44,7 @@ def fetch_image(sid, card, full=False):
     if os.path.exists(dest) and os.path.getsize(dest) > 0:
         return dest
     url = card.get("img") or ""
-    if not url.startswith("http"):
+    if not url.startswith(PICTURE_SITES):
         return None
     key = (sid, n, full)
     if time.time() - _img_fail.get(key, 0) < 600:

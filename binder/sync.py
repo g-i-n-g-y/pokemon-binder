@@ -158,7 +158,11 @@ def _restore_from(z, names):
         with tx():   # all of the data goes in together, or none of it does
             for n in names:
                 if DOC_RE.fullmatch(n):
-                    db_write(n, json.loads(z.read(n)))
+                    obj = json.loads(z.read(n))
+                    if n == "settings.json" and isinstance(obj, dict):   # backups leave out the PSA key: keep yours
+                        now = db_read("settings.json")
+                        obj.update({s: now[s] for s in SECRET_SETTINGS if isinstance(now, dict) and s in now and s not in obj})
+                    db_write(n, obj)
         try:
             has_photos = json.loads(z.read("backup.json")).get("photos", True) is not False
         except Exception:

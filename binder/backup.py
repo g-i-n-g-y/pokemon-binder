@@ -29,6 +29,9 @@ def backup_files():
     return [n for n in out if BACKUP_RE.fullmatch(n)]
 
 
+SECRET_SETTINGS = ("psaToken",)   # kept out of backups, so a backup file is safe to keep anywhere
+
+
 def make_backup(target, photos=True):
     """A zip of your data as JSON files (the same layout every version uses), plus the tab icon and (unless
     photos=False) your card photos. backup.json says whether photos are in it, so restoring one without them
@@ -40,6 +43,8 @@ def make_backup(target, photos=True):
             z.writestr("backup.json", json.dumps({"app": "pokemon-binder", "version": APP_VERSION, "created": now_iso(),
                                                   "photos": bool(photos)}))
             for k, obj in docs:
+                if k == "settings.json" and isinstance(obj, dict):
+                    obj = {s: v for s, v in obj.items() if s not in SECRET_SETTINGS}
                 z.writestr(k, json.dumps(obj, indent=1))
             for name in backup_files():
                 if photos or "/photos/" not in name:
