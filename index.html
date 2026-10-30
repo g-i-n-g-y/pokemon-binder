@@ -1021,8 +1021,6 @@ body.at-show > .wrap:not(.show){display:none}
 .dr-mode button{flex:1;padding:10px 12px;font-size:15px}
 .show>*{align-self:stretch}
 @media (min-width:760px){.show .sw-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr))}.sw-more{grid-column:1/-1}.sw-empty{grid-column:1/-1}.sw-stats{max-width:560px}}
-.sw-pick{height:44px;display:flex;align-items:center;gap:6px;padding:0 14px;white-space:nowrap}
-.sw-pick svg{width:16px;height:16px}
 .sw-chips{display:flex;gap:6px;flex-wrap:wrap}
 .sw-chips{align-items:center}
 .sw-chips span{padding:5px 10px;border-radius:999px;background:var(--dark-soft);border:1px solid var(--dark);font-size:13px}
@@ -1094,15 +1092,7 @@ body.at-show > .wrap:not(.show){display:none}
 .of-note.warn{color:var(--bad)}
 .of-tag{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .of-plan{font-size:13px;color:var(--ink)}
-#swBuy .sb-seller{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-#swBuy .sb-seller .chip{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;font-size:13px;cursor:pointer}
-#swBuy .sb-seller .chip[aria-pressed="true"]{border-color:var(--dark);background:var(--dark-soft)}
-#swBuy .sb-seller .chip svg{width:16px;height:16px}
 #swBuy .sb-save{height:52px;font-size:16px}
-#swBuy .sb-manual{display:flex;gap:8px}
-#swBuy .sb-manual select{flex:0 0 124px;height:44px;min-width:0}
-#swBuy .sb-scan{flex:none;width:44px;height:44px}
-#swBuy .sb-scan svg{width:20px;height:20px}
 .sw-find .sw-psa{flex:none;width:44px;height:44px}
 .sw-find .sw-psa svg{width:20px;height:20px}
 #psaDlg .sheet{display:flex;flex-direction:column;gap:14px}
@@ -1168,12 +1158,6 @@ a.psa-scan{text-decoration:none}
 .sl-newrow .btn{flex:none;height:44px}
 .sl-list .ui-row{width:100%;text-align:left}
 .sl-list .ui-row[aria-current="true"]{background:var(--dark-soft)}
-.sel-sug{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.sel-sug:empty{display:none}
-.sel-sug .sug-l{flex-basis:100%;font-size:12px;color:var(--muted)}
-.sel-sug .chip{display:inline-flex;align-items:center;height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;font-size:13px;cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sel-sug .chip[aria-pressed="true"]{border-color:var(--dark);background:var(--dark-soft)}
-#swBuy .sb-manual input{flex:1;min-width:0;height:44px}
 #swBuy #sbLink a{color:var(--dark)}
 #swPick .sp-list,#xlDlg .sp-list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
 #swPick .sp-list label,#xlDlg .sp-list label{display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:56px;cursor:pointer}

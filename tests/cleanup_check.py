@@ -47,7 +47,9 @@ def main():
     ids = re.findall(r'\sid="([^"]+)"', page[:page.index("<script>", en)])
     report("page: ids used twice", [i for i, c in collections.Counter(ids).items() if c > 1])
     classes = set(re.findall(r"\.([a-zA-Z][\w-]*)", re.sub(r"url\([^)]*\)|\d+\.\d+", "", css)))
-    report("page: styles for classes nothing uses", [c for c in classes if not re.search(r"(?<![\w-])" + re.escape(c) + r"(?![\w-])", rest)])
+    built = tuple(re.findall(r'"([a-z][\w]*-)"\s*\+', rest))   # names built from pieces, like "cv-"+key
+    report("page: styles for classes nothing uses", [c for c in classes if not c.startswith(built)
+                                                      and not re.search(r"(?<![\w-])" + re.escape(c) + r"(?![\w-])", rest)])
 
     print()
     print("Nothing to clean up." if not found else f"{len(found)} item(s) to look at. Some may be built from pieces "
