@@ -6,11 +6,6 @@ app/card.js: error TS2362: The left-hand side of an arithmetic operation must be
 app/card.js: error TS2362: The left-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
 app/card.js: error TS2363: The right-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
 app/card.js: error TS2363: The right-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
-app/copy.js: error TS2339: Property 'cond' does not exist on type 'any[]'.
-app/copy.js: error TS2339: Property 'cond' does not exist on type 'any[]'.
-app/copy.js: error TS2339: Property 'cond' does not exist on type 'any[]'.
-app/copy.js: error TS2339: Property 'cond' does not exist on type 'any[]'.
-app/copy.js: error TS2339: Property 'sales' does not exist on type 'any[]'.
 app/core.js: error TS2322: Type 'number' is not assignable to type 'string'.
 app/core.js: error TS2345: Argument of type 'Date' is not assignable to parameter of type 'number'.
 app/core.js: error TS2362: The left-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.

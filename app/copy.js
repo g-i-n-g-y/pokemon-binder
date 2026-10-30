@@ -193,7 +193,7 @@ const chart={n:null, pts:[], X:null, Y:null, W:0, lineEl:null, dotEl:null, idx:-
 const dayStr = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 // One condition's prices, one point per day: saved change days carried forward, ending with today's live price
 function condLine(n, c){
-  const got=Array.isArray(state.seriesCache[n]) ? state.seriesCache[n] : null, live=((state.info[n]||{}).cond||{})[c], t=todayStr();
+  const got=/** @type {any} */ (Array.isArray(state.seriesCache[n]) ? state.seriesCache[n] : null), live=((state.info[n]||{}).cond||{})[c], t=todayStr();
   const pts=(got && got.cond && got.cond[c] || []).map(p=>[p[0],p[1]]);
   if(live && live[0]!=null){ if(pts.length && pts[pts.length-1][0]===t) pts[pts.length-1][1]=live[0]; else if(!pts.length || pts[pts.length-1][0]<t) pts.push([t,live[0]]); }
   if(!pts.length) return [];
@@ -210,7 +210,7 @@ function drawSpark(n){
   let mode=recall("nd-chart-cond")||"price"; if(mode!=="price" && !CH_CONDS.includes(mode)) mode="price";
   let range=+(recall("nd-chart-range")||0); if(!CH_RANGES.some(r=>r[1]===range)) range=0;
   const priceLine=series(n);   // also asks the server for this card's history when it isn't loaded yet
-  const info=state.info[n]||{}, got=Array.isArray(state.seriesCache[n]) ? state.seriesCache[n] : null, sales=got && got.sales || {};
+  const info=state.info[n]||{}, got=/** @type {any} */ (Array.isArray(state.seriesCache[n]) ? state.seriesCache[n] : null), sales=got && got.sales || {};
   // the readout: the latest price, or the day under your finger
   const read=document.createElement("div"); read.className="ch-read"; read.setAttribute("aria-live","polite");
   const rv=document.createElement("b"), rd=document.createElement("span"); read.append(rv,rd);
