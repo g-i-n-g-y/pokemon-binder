@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v4.0 (October 30, 2026)
 
 - Behind the scenes: the page's styles and code moved out of `index.html` into 17 smaller files in an `app` folder, so changes are quicker and safer to make. Nothing looks or works differently. The phone app saves the new files too, so it still opens with no signal.
 - Behind the scenes: a type check (TypeScript's checker, run on the developer's PC only) now reads the page code for mistakes like misspelled names before each release.
