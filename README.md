@@ -8,9 +8,10 @@ A self-hosted Pokémon TCG collection tracker: one small Python server (standard
 - **Binders your way:** any English set, a Pokémon master set (every card of one Pokémon, like all the Totodile cards), or your own mix (Favorites, Trade pile). Owned cards in color, needed ones in greyscale.
 - **Real binder pages:** lay cards out 4, 9, 12 or 16 to a page, with a cover. **Find a card** searches every English card by name, number (like `80/111`) or set.
 - **Prices from recent sales:** TCGplayer's newest sales for each condition (LP and MP by default), with TCGdex market prices as a backup. Daily refresh, price history, biggest movers, a shopping list with a budget, and an upgrades list.
-- **Your copies:** condition, notes, front and back photos, and a purchase log (price, place, seller).
+- **At the card show:** card show mode lists every card you still need, with a big **Got it** button. Type a vendor's asking price to see if it's a good deal, what to offer and when to walk away. Scan a PSA slab's label to check it's real and see recent sales for that grade.
+- **Your copies:** condition, notes, front and back photos, and a purchase log (price, place, seller). Zoom in on a holo and it shimmers like the real card.
 - **Phone app (Android):** install it, open it with no signal, mark cards owned offline, sync when you're back.
-- **Safe and private:** privacy mode (eye button), automatic backups, one-file backup and restore, spreadsheet import and export, and updates only when you choose.
+- **Safe and private:** privacy mode (eye button), automatic backups, one-file backup and restore, spreadsheet import and export (with price trends), and updates only when you choose.
 
 Also: custom cards for anything the card database is missing, upcoming card shows in your towns, and five dark themes.
 
@@ -20,7 +21,7 @@ Also: custom cards for anything the card database is missing, upcoming card show
 
 ![The home page with a shelf of binders](screenshots/home.png)
 
-**The binder.** Owned cards in color, cards you still need in greyscale, with totals at the top and each card's price trend. Under the totals, a map of every binder page shows where the gaps are; tap a page to open it.
+**The binder.** Owned cards in color, cards you still need in greyscale, with totals at the top and each card's price trend. Filter by owned or needed, rarity, or name, and sort by number, rarity, Pokédex number or value.
 
 ![The binder's main page](screenshots/binder.png)
 
@@ -28,11 +29,11 @@ Also: custom cards for anything the card database is missing, upcoming card show
 
 ![The Pages view with the inside cover and page 1](screenshots/pages.png)
 
-**Card details.** The card and the price to buy one, from recent sales, with how it's worked out a tap away. Below are the newest sales for every condition, so you can see whether a different condition is worth it.
+**Card details.** The price to buy one, from recent sales, with its trend and how it's worked out a tap away. Type what a vendor is asking to see if it's a good deal, what to offer and when to walk away. Below are the newest sales for every condition, so you can see whether a different condition is worth it.
 
 ![Card details with prices and recent sales](screenshots/card-details.png)
 
-**Your copy.** Copies owned, condition, a purchase log with where you bought it and from whom, notes, and photos of your own card.
+**Your copy.** Copies owned, condition, a purchase log with where you bought it and from whom (one tap for eBay, TCGplayer, a card show or a place you've used before), notes, and photos of your own card.
 
 ![Card details, My copy tab](screenshots/my-copy.png)
 
@@ -177,6 +178,7 @@ docker exec <container name> python server.py --test neo4-1
 - **[Tracearr](https://github.com/connorgallopo/Tracearr)** by Connor Gallopo inspired the What's new window (versions grouped with Installed and Latest tags, opened from the version number), the update notice, and the sets menu that slides out and pushes the page over. I showed Claude (the AI assistant this app is built with) screenshots and a screen recording of Tracearr, and it wrote this app's own versions. None of Tracearr's code was used.
 - Card lists: [PokemonTCG/pokemon-tcg-data](https://github.com/PokemonTCG/pokemon-tcg-data); card images and set logos from the [Pokémon TCG API](https://pokemontcg.io)
 - Pokémon sprites and artwork (covers, master sets, Unown letters): [PokeAPI/sprites](https://github.com/PokeAPI/sprites)
+- PSA slab checks: PSA's public cert pages
 - Prices: TCGplayer recent sales, market prices from [TCGdex](https://tcgdex.dev) (TCGplayer and Cardmarket), and graded sales from PriceCharting (when it lets the server in; it often blocks home servers)
 - Euro to US dollar rate: [Frankfurter](https://frankfurter.dev)
 - Card show listings: [TreasureHunter.show](https://www.treasurehunter.show)
