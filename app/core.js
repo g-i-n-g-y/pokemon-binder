@@ -81,6 +81,11 @@ const buys = n => {
 };
 const whichBuy = b => b.d ? "the purchase from "+fmtDay(b.d)+(b.price?" ("+money(Number(b.price))+")":"") : "a copy logged before tracking"+(b.price?" ("+money(Number(b.price))+")":"");
 const isBlank = b => !b.price && !b.where && !(b.seller && b.seller.h);
+// Already had: marked that way, or a copy that's had no price, place or seller for 30 days (or is from before tracking).
+// If you'd bought it, you'd have added the price by now. Shown that way only; Edit can still add a price.
+const HAD_AFTER_DAYS = 30;
+const isHad = b => !!b.had || ((b.price==null || b.price==="") && !b.where && !(b.seller && b.seller.h)
+  && (!b.d || (Date.now() - new Date(b.d+"T12:00:00").getTime()) / 864e5 >= HAD_AFTER_DAYS));
 // In-page confirm box. Resolves true when the person confirms.
 function askConfirm(title, msg, okLabel, opts={}){
   return askChoice(title, msg, okLabel, opts).then(v=>v==="ok");

@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Already had, by default:** a copy that's gone 30 days with no price, place or seller (or was logged before tracking) now shows as **Already had** instead of "Price not added yet". If you did buy it, tap **Edit** and add the price.
+
 ## v4.0 (October 30, 2026)
 
 - Behind the scenes: the page's styles and code moved out of `index.html` into 17 smaller files in an `app` folder, so changes are quicker and safer to make. Nothing looks or works differently. The phone app saves the new files too, so it still opens with no signal.

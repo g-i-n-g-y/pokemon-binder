@@ -106,7 +106,7 @@ function editBuy(n,i){
   $("bDate").value=b.d||""; $("bPrice").value=(b.price==null?"":b.price); $("bWhere").value=b.where||""; drawWhereChips();
   $("bPlat").value=(b.seller&&b.seller.p)||""; $("bHandle").value=(b.seller&&b.seller.h)||""; $("bHandle").disabled=!$("bPlat").value;
   $("bRev").checked=!!b.rev; $("bRevRow").hidden=!hasReverses(n) && !b.rev;
-  $("bCancel").hidden=false; setHow(!!b.had); drawBSug();
+  $("bCancel").hidden=false; setHow(isHad(b)); drawBSug();
   handleOptions(); $("bPrice").focus();
 }
 $("bCancel").onclick=resetBuyForm;
@@ -134,7 +134,7 @@ function drawBuys(n){
     const se=sellerEl(b.seller); if(se) w.append(se);
     if(b.rev){ const rv=document.createElement("span"); rv.className="rv"; rv.textContent="Reverse holo"; w.append(rv); }
     const pr=document.createElement("span"); pr.className="pr";
-    if(b.had){ pr.classList.add("had"); pr.textContent="Already had"; }
+    if(isHad(b)){ pr.classList.add("had"); pr.textContent="Already had"; }
     else if(b.price==null || b.price===""){
       const inp=document.createElement("input"); inp.type="number"; inp.min="0"; inp.step="0.01"; inp.inputMode="decimal"; inp.placeholder="Paid $";
       inp.setAttribute("aria-label","What you paid on "+fmtDay(b.d));
@@ -154,8 +154,8 @@ function drawBuys(n){
     li.append(d,w,pr,ed,x); ul.append(li);
   });
   const total=paidFor(n);
-  const unpriced=list.filter(b=>!b.had && (b.price==null || b.price==="")).length;   // marked owned on the fly, price still to add
-  const had=list.filter(b=>b.had).length, paidN=list.length-unpriced-had;
+  const unpriced=list.filter(b=>!isHad(b) && (b.price==null || b.price==="")).length;   // marked owned on the fly, price still to add
+  const had=list.filter(isHad).length, paidN=list.length-unpriced-had;
   const bits=[];
   if(paidN) bits.push(money(total)+" total");
   if(had) bits.push(had===list.length ? "Already had" : had+" already had");
@@ -163,7 +163,7 @@ function drawBuys(n){
   $("dPaid").textContent=bits.join(" · ");
   if(unpriced){   // one tap for cards you've had for years and never paid for
     const hb=document.createElement("button"); hb.type="button"; hb.className="had-all"; hb.textContent=unpriced===1 ? "Already had it?" : "Already had these?";
-    hb.onclick=()=>{ save({purchases:buys(n).map(b=>!b.had && (b.price==null || b.price==="") ? {...b, had:true} : b)}); drawBuys(n); };
+    hb.onclick=()=>{ save({purchases:buys(n).map(b=>!isHad(b) && (b.price==null || b.price==="") ? {...b, had:true} : b)}); drawBuys(n); };
     $("dPaid").append(hb);
   }
   whereOptions(); handleOptions();
