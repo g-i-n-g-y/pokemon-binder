@@ -77,4 +77,7 @@ This repository is public. Never commit:
    The app only reads headings in that form.
 3. Run `python3 tests/smoke_test.py` (on Windows: `python tests/smoke_test.py`),
    and after feature releases also `tests/cleanup_check.py`. All must pass.
+   Also run `tests/api_check.py`: it compares every API answer with
+   `tests/api_answers.json`. If an answer changed on purpose, save the new
+   ones with `--save`; if not, it's a bug.
 4. Merge `next` into `main` and push.

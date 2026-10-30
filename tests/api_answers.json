@@ -1,0 +1,1795 @@
+[
+ {
+  "request": "GET /api/health",
+  "status": 200,
+  "body": {
+   "ok": true,
+   "uptime": "<varies>",
+   "version": "<version>"
+  }
+ },
+ {
+  "request": "GET /api/version",
+  "status": 200,
+  "body": {
+   "checked": "<varies>",
+   "commit": "",
+   "date": "",
+   "error": "",
+   "fonts.css": "<time>",
+   "github": false,
+   "icon-192.png": "<time>",
+   "icon-512.png": "<time>",
+   "index.html": "<time>",
+   "installed": "<varies>",
+   "paused": false,
+   "previous": [],
+   "repo": "",
+   "server.py": "<time>",
+   "source": "",
+   "storage": {
+    "file": "data/binder.db",
+    "kind": "database",
+    "size": "<varies>"
+   },
+   "subject": "",
+   "sw.js": "<time>",
+   "updatesFolder": false,
+   "version": "<version>"
+  }
+ },
+ {
+  "request": "GET /api/sets",
+  "status": 200,
+  "body": {
+   "keepDays": 30,
+   "removed": [],
+   "sets": [
+    {
+     "count": 3,
+     "custom": 0,
+     "id": "neo4",
+     "images": false,
+     "name": "Neo Destiny",
+     "owned": 1,
+     "pics": {
+      "saved": 0,
+      "total": 0
+     },
+     "printedTotal": 105,
+     "releaseDate": "2002/02/28",
+     "series": "Neo",
+     "total": 3,
+     "totals": {
+      "count": 3,
+      "full": 35.0,
+      "need": 10.0,
+      "owned": 1,
+      "paid": 20.0,
+      "value": 25.0
+     }
+    }
+   ]
+  }
+ },
+ {
+  "request": "GET /api/settings",
+  "status": 200,
+  "body": {
+   "auto": false,
+   "backup": true,
+   "lastAuto": "",
+   "lastSync": null,
+   "next": "",
+   "options": {
+    "graders": [
+     "PSA",
+     "BGS",
+     "CGC",
+     "SGC",
+     "TAG",
+     "ACE",
+     "Any"
+    ],
+    "grades": [
+     "10",
+     "9.5",
+     "9",
+     "8.5",
+     "8",
+     "7.5",
+     "7",
+     "6",
+     "5",
+     "4",
+     "3",
+     "2",
+     "1"
+    ],
+    "raw": [
+     "NM",
+     "LP",
+     "MP",
+     "HP",
+     "DMG"
+    ]
+   },
+   "otherHosts": [],
+   "psa": false,
+   "refreshAll": false,
+   "serverName": "",
+   "showBinders": [],
+   "slots": [
+    {
+     "c": "LP",
+     "t": "raw"
+    },
+    {
+     "c": "MP",
+     "t": "raw"
+    }
+   ],
+   "time": "03:00",
+   "tz": "America/New_York"
+  }
+ },
+ {
+  "request": "GET /api/home",
+  "status": 200,
+  "body": {
+   "binders": [
+    {
+     "count": 3,
+     "cover": {
+      "dex": 0,
+      "n": "1",
+      "name": "Card 1",
+      "shiny": false
+     },
+     "id": "neo4",
+     "name": "Neo Destiny",
+     "owned": 1,
+     "printedTotal": 105,
+     "releaseDate": "2002/02/28"
+    }
+   ],
+   "recent": [
+    {
+     "d": "2026-10-01",
+     "n": "1",
+     "name": "Card 1",
+     "set": "Neo Destiny",
+     "sid": "neo4"
+    }
+   ],
+   "working": []
+  }
+ },
+ {
+  "request": "GET /api/shows",
+  "status": 200,
+  "body": {
+   "areas": [
+    "Richmond"
+   ],
+   "auto": false,
+   "done": 0,
+   "error": "",
+   "firstScan": "",
+   "running": false,
+   "scanned": "",
+   "shows": [],
+   "today": "<today>",
+   "total": 0
+  }
+ },
+ {
+  "request": "GET /api/spending",
+  "status": 200,
+  "body": {
+   "log": [
+    {
+     "d": "2026-10-01",
+     "n": "1",
+     "name": "Card 1",
+     "price": 20,
+     "seller": null,
+     "set": "neo4",
+     "setName": "Neo Destiny",
+     "where": "eBay"
+    }
+   ],
+   "months": [
+    {
+     "count": 1,
+     "m": "2026-10",
+     "spent": 20.0
+    }
+   ],
+   "timeline": [
+    {
+     "d": "2026-10-11",
+     "spent": 20.0,
+     "value": 24.0
+    },
+    {
+     "d": "2026-10-12",
+     "spent": 20.0,
+     "value": 25.0
+    },
+    {
+     "d": "<today>",
+     "spent": 20.0,
+     "value": 25.0
+    }
+   ],
+   "today": "<today>",
+   "totals": {
+    "purchases": 1,
+    "spent": 20.0,
+    "undated": 0,
+    "value": 25.0
+   }
+  }
+ },
+ {
+  "request": "GET /api/backups",
+  "status": 200,
+  "body": {
+   "backups": []
+  }
+ },
+ {
+  "request": "GET /api/progress",
+  "status": 200,
+  "body": {
+   "images": {},
+   "pokedex": {
+    "done": 0,
+    "error": "",
+    "running": false,
+    "total": 0
+   },
+   "prices": {
+    "done": 0,
+    "message": "",
+    "name": "",
+    "priced": 0,
+    "running": false,
+    "set": "",
+    "total": 0
+   },
+   "shows": {
+    "done": 0,
+    "error": "",
+    "running": false,
+    "total": 0
+   }
+  }
+ },
+ {
+  "request": "GET /api/sellers",
+  "status": 200,
+  "body": {
+   "sellers": []
+  }
+ },
+ {
+  "request": "GET /api/habit",
+  "status": 200,
+  "body": {
+   "dear": {
+    "n": 1,
+    "r": 0.8
+   }
+  }
+ },
+ {
+  "request": "GET /api/show",
+  "status": 200,
+  "body": {
+   "binders": [
+    {
+     "id": "neo4",
+     "name": "Neo Destiny",
+     "need": 2,
+     "pk": 9
+    }
+   ],
+   "bought": 0,
+   "cards": [
+    {
+     "cond": {},
+     "custom": false,
+     "h90": [
+      9.0,
+      9.5,
+      2,
+      "2026-10-11"
+     ],
+     "last": "",
+     "n": "2",
+     "name": "Card 2",
+     "num": "2",
+     "price": 10.0,
+     "pt": "105",
+     "rarity": "Rare",
+     "recent": {},
+     "set": "Neo Destiny",
+     "sid": "neo4",
+     "slot": 1,
+     "src": "",
+     "t30": 11.1,
+     "t7": 0.0
+    },
+    {
+     "cond": {},
+     "custom": false,
+     "h90": null,
+     "last": "",
+     "n": "3",
+     "name": "Card 3",
+     "num": "3",
+     "price": 0,
+     "pt": "105",
+     "rarity": "Rare",
+     "recent": {},
+     "set": "Neo Destiny",
+     "sid": "neo4",
+     "slot": 2,
+     "src": "",
+     "t30": null,
+     "t7": null
+    }
+   ],
+   "habit": {
+    "dear": {
+     "n": 1,
+     "r": 0.8
+    }
+   },
+   "picked": [],
+   "sellers": [],
+   "spent": 0.0,
+   "today": "<today>"
+  }
+ },
+ {
+  "request": "GET /api/changelog",
+  "status": 200,
+  "body": {
+   "branch": "main",
+   "entries": [],
+   "error": "",
+   "latest": "",
+   "repo": "",
+   "running": "<version>",
+   "updateAvailable": false
+  }
+ },
+ {
+  "request": "GET /api/icon",
+  "status": 200,
+  "body": {
+   "custom": false
+  }
+ },
+ {
+  "request": "GET /api/set/neo4/state",
+  "status": 200,
+  "body": {
+   "cards": [
+    {
+     "n": "1",
+     "name": "Card 1",
+     "num": "1",
+     "pt": "105",
+     "rarity": "Rare",
+     "type": "Pokémon"
+    },
+    {
+     "n": "2",
+     "name": "Card 2",
+     "num": "2",
+     "pt": "105",
+     "rarity": "Rare",
+     "type": "Pokémon"
+    },
+    {
+     "n": "3",
+     "name": "Card 3",
+     "num": "3",
+     "pt": "105",
+     "rarity": "Rare",
+     "type": "Pokémon"
+    }
+   ],
+   "collection": {
+    "1": {
+     "cond": "LP",
+     "purchases": [
+      {
+       "d": "2026-10-01",
+       "price": 20,
+       "where": "eBay"
+      }
+     ],
+     "qty": 1
+    }
+   },
+   "layout": null,
+   "prices": {
+    "info": {
+     "1": {
+      "cond": {
+       "LP": [
+        25.0,
+        5,
+        "2026-10-01"
+       ]
+      },
+      "recent": {
+       "LP": [
+        [
+         "2026-10-01",
+         25.0
+        ]
+       ]
+      },
+      "src": "sales"
+     }
+    },
+    "p": {
+     "1": [
+      25.0
+     ],
+     "2": [
+      10.0
+     ]
+    },
+    "updated": "<time>"
+   },
+   "set": {
+    "id": "neo4",
+    "name": "Neo Destiny",
+    "printedTotal": 105,
+    "releaseDate": "2002/02/28",
+    "series": "Neo",
+    "total": 3
+   },
+   "shop": {},
+   "slots": [
+    {
+     "c": "LP",
+     "t": "raw"
+    },
+    {
+     "c": "MP",
+     "t": "raw"
+    }
+   ]
+  }
+ },
+ {
+  "request": "GET /api/set/neo4/history",
+  "status": 200,
+  "body": {
+   "2026-10-11": {
+    "1": 24.0,
+    "2": 9.0
+   },
+   "2026-10-12": {
+    "1": 25.0,
+    "2": 10.0
+   }
+  }
+ },
+ {
+  "request": "GET /api/set/neo4/history?card=1",
+  "status": 200,
+  "body": {
+   "card": "1",
+   "points": [
+    [
+     "2026-10-11",
+     24.0
+    ],
+    [
+     "2026-10-12",
+     25.0
+    ]
+   ]
+  }
+ },
+ {
+  "request": "GET /api/set/neo4/trends?today=2026-10-13",
+  "status": 200,
+  "body": {
+   "cards": {
+    "1": {
+     "at": {
+      "1": [
+       "2026-10-12",
+       25.0
+      ]
+     },
+     "count": 2,
+     "first": [
+      "2026-10-11",
+      24.0
+     ],
+     "h90": [
+      24.0,
+      24.5,
+      2,
+      "2026-10-11"
+     ],
+     "last": [
+      "2026-10-12",
+      25.0
+     ]
+    },
+    "2": {
+     "at": {
+      "1": [
+       "2026-10-12",
+       10.0
+      ]
+     },
+     "count": 2,
+     "first": [
+      "2026-10-11",
+      9.0
+     ],
+     "h90": [
+      9.0,
+      9.5,
+      2,
+      "2026-10-11"
+     ],
+     "last": [
+      "2026-10-12",
+      10.0
+     ]
+    }
+   },
+   "first": "2026-10-11",
+   "today": "2026-10-13"
+  }
+ },
+ {
+  "request": "GET /api/set/neo4/dexnums",
+  "status": 200,
+  "body": {
+   "dex": {},
+   "ready": true
+  }
+ },
+ {
+  "request": "GET /api/set/neo4/template.csv",
+  "status": 200,
+  "body": {
+   "text": "﻿Set #,Card Name,Rarity,Qty,Condition,Your Cost,Notes\r\n1,Card 1,Rare,1,LP,20.00,\r\n2,Card 2,Rare,0,,,\r\n3,Card 3,Rare,0,,,\r\n"
+  }
+ },
+ {
+  "request": "GET /api/export.xlsx",
+  "status": 200,
+  "body": {
+   "zip": [
+    "[Content_Types].xml",
+    "_rels/.rels",
+    "xl/_rels/workbook.xml.rels",
+    "xl/styles.xml",
+    "xl/workbook.xml",
+    "xl/worksheets/sheet1.xml"
+   ]
+  }
+ },
+ {
+  "request": "GET /api/find?q=Totodile%2080/111",
+  "status": 200,
+  "body": {
+   "building": false,
+   "cards": [
+    {
+     "date": "2000/12/16",
+     "img": "",
+     "in": [],
+     "n": "neo1-80",
+     "name": "Totodile",
+     "num": "80",
+     "pt": 111,
+     "rarity": "Common",
+     "set": "Neo Genesis",
+     "setId": "neo1",
+     "type": "Pokémon"
+    }
+   ],
+   "count": 1,
+   "done": 0,
+   "error": "",
+   "q": "Totodile 80/111",
+   "ready": true,
+   "sets": [],
+   "total": 0
+  }
+ },
+ {
+  "request": "GET /api/find?q=neo%20genesis",
+  "status": 200,
+  "body": {
+   "building": false,
+   "cards": [],
+   "count": 0,
+   "done": 0,
+   "error": "",
+   "q": "neo genesis",
+   "ready": true,
+   "sets": [
+    {
+     "date": "2000/12/16",
+     "id": "neo1",
+     "inBinder": false,
+     "name": "Neo Genesis",
+     "pt": 111,
+     "series": "Neo",
+     "total": 111
+    }
+   ],
+   "total": 0
+  }
+ },
+ {
+  "request": "GET /api/find?q=1/105",
+  "status": 200,
+  "body": {
+   "building": false,
+   "cards": [
+    {
+     "date": "2002/02/28",
+     "img": "",
+     "in": [
+      {
+       "n": "1",
+       "qty": 1,
+       "sid": "neo4"
+      }
+     ],
+     "n": "neo4-1",
+     "name": "Card 1",
+     "num": "1",
+     "pt": 105,
+     "rarity": "Rare",
+     "set": "Neo Destiny",
+     "setId": "neo4",
+     "type": "Pokémon"
+    }
+   ],
+   "count": 1,
+   "done": 0,
+   "error": "",
+   "q": "1/105",
+   "ready": true,
+   "sets": [],
+   "total": 0
+  }
+ },
+ {
+  "request": "GET /api/find/set/neo1",
+  "status": 200,
+  "body": {
+   "building": false,
+   "cards": [
+    {
+     "date": "2000/12/16",
+     "img": "",
+     "in": [],
+     "n": "neo1-80",
+     "name": "Totodile",
+     "num": "80",
+     "pt": 111,
+     "rarity": "Common",
+     "set": "Neo Genesis",
+     "setId": "neo1",
+     "type": "Pokémon"
+    },
+    {
+     "date": "2000/12/16",
+     "img": "",
+     "in": [],
+     "n": "neo1-81",
+     "name": "Totodile",
+     "num": "81",
+     "pt": 111,
+     "rarity": "Common",
+     "set": "Neo Genesis",
+     "setId": "neo1",
+     "type": "Pokémon"
+    }
+   ],
+   "done": 0,
+   "error": "",
+   "ready": true,
+   "set": {
+    "date": "2000/12/16",
+    "id": "neo1",
+    "inBinder": false,
+    "name": "Neo Genesis",
+    "pt": 111,
+    "series": "Neo",
+    "total": 111
+   },
+   "total": 0
+  }
+ },
+ {
+  "request": "GET /manifest.webmanifest",
+  "status": 200,
+  "body": {
+   "background_color": "#111213",
+   "display": "standalone",
+   "icons": [
+    {
+     "purpose": "any maskable",
+     "sizes": "192x192",
+     "src": "icon-192.png",
+     "type": "image/png"
+    },
+    {
+     "purpose": "any maskable",
+     "sizes": "512x512",
+     "src": "icon-512.png",
+     "type": "image/png"
+    }
+   ],
+   "id": "./",
+   "name": "Pokémon Binder",
+   "scope": "./",
+   "short_name": "Binder",
+   "start_url": "./",
+   "theme_color": "#111213"
+  }
+ },
+ {
+  "request": "GET /set/neo4/img/1.png",
+  "status": 404,
+  "body": {
+   "text": "not found"
+  }
+ },
+ {
+  "request": "GET /api/set/nope/state",
+  "status": 404,
+  "body": {
+   "error": "Set not in binder"
+  }
+ },
+ {
+  "request": "GET /api/set/neo4/history?card=../x",
+  "status": 400,
+  "body": {
+   "error": "bad card"
+  }
+ },
+ {
+  "request": "PUT /api/set/neo4/card/2",
+  "status": 200,
+  "body": {
+   "ok": true
+  }
+ },
+ {
+  "request": "PUT /api/set/neo4/card/3",
+  "status": 400,
+  "body": {
+   "error": "bad json"
+  }
+ },
+ {
+  "request": "PUT /api/settings",
+  "status": 200,
+  "body": {
+   "next": "",
+   "ok": true
+  }
+ },
+ {
+  "request": "PUT /api/settings",
+  "status": 400,
+  "body": {
+   "error": "Use letters, numbers, spaces, dots or dashes for the server name (24 at most)"
+  }
+ },
+ {
+  "request": "POST /api/set/neo4/card/3/buy",
+  "status": 200,
+  "body": {
+   "added": true,
+   "ok": true
+  }
+ },
+ {
+  "request": "POST /api/set/neo4/card/3/buy",
+  "status": 200,
+  "body": {
+   "added": false,
+   "ok": true
+  }
+ },
+ {
+  "request": "POST /api/sync",
+  "status": 200,
+  "body": {
+   "applied": 1,
+   "at": "<time>",
+   "backup": "before-sync-<stamp>.zip",
+   "ok": true,
+   "skipped": 0
+  }
+ },
+ {
+  "request": "POST /api/sets/own",
+  "status": 200,
+  "body": {
+   "added": "<time>",
+   "id": "my-1",
+   "kind": "own",
+   "name": "Favorites",
+   "printedTotal": 0,
+   "releaseDate": "",
+   "series": "My binder",
+   "total": 0
+  }
+ },
+ {
+  "request": "POST /api/set/my-1/cards",
+  "status": 200,
+  "body": {
+   "already": false,
+   "n": "base1-4"
+  }
+ },
+ {
+  "request": "POST /api/set/my-1/cards",
+  "status": 400,
+  "body": {
+   "error": "That card isn't in the card list"
+  }
+ },
+ {
+  "request": "POST /api/set/neo4/cards",
+  "status": 200,
+  "body": {
+   "already": false,
+   "n": "neo1-80"
+  }
+ },
+ {
+  "request": "PUT /api/set/neo4/layout",
+  "status": 200,
+  "body": {
+   "order": "num",
+   "pockets": 9,
+   "slots": [
+    "2",
+    null,
+    "1"
+   ]
+  }
+ },
+ {
+  "request": "PUT /api/set/neo4/layout",
+  "status": 400,
+  "body": {
+   "error": "Pick 4, 9, 12 or 16 pockets a page"
+  }
+ },
+ {
+  "request": "PUT /api/sets/my-1/name",
+  "status": 200,
+  "body": {
+   "added": "<time>",
+   "id": "my-1",
+   "kind": "own",
+   "name": "Faves",
+   "printedTotal": 0,
+   "releaseDate": "",
+   "series": "My binder",
+   "total": 0
+  }
+ },
+ {
+  "request": "PUT /api/sets/neo4/name",
+  "status": 400,
+  "body": {
+   "error": "Only your own binders can be renamed"
+  }
+ },
+ {
+  "request": "POST /api/set/neo4/custom",
+  "status": 200,
+  "body": {
+   "custom": true,
+   "img": "",
+   "n": "c1",
+   "name": "Promo Pikachu",
+   "num": "P1",
+   "rarity": "Promo",
+   "set": "",
+   "tcg": null,
+   "type": ""
+  }
+ },
+ {
+  "request": "PUT /api/set/neo4/shop",
+  "status": 200,
+  "body": {
+   "ok": true
+  }
+ },
+ {
+  "request": "GET /api/set/neo4/state",
+  "status": 200,
+  "body": {
+   "cards": [
+    {
+     "n": "1",
+     "name": "Card 1",
+     "num": "1",
+     "pt": "105",
+     "rarity": "Rare",
+     "type": "Pokémon"
+    },
+    {
+     "n": "2",
+     "name": "Card 2",
+     "num": "2",
+     "pt": "105",
+     "rarity": "Rare",
+     "type": "Pokémon"
+    },
+    {
+     "n": "3",
+     "name": "Card 3",
+     "num": "3",
+     "pt": "105",
+     "rarity": "Rare",
+     "type": "Pokémon"
+    },
+    {
+     "added": "<today>",
+     "date": "2000/12/16",
+     "extra": true,
+     "img": "",
+     "n": "neo1-80",
+     "name": "Totodile",
+     "num": "80",
+     "pt": 111,
+     "rarity": "Common",
+     "set": "Neo Genesis",
+     "src": "neo1",
+     "type": "Pokémon"
+    },
+    {
+     "custom": true,
+     "img": "",
+     "n": "c1",
+     "name": "Promo Pikachu",
+     "num": "P1",
+     "rarity": "Promo",
+     "set": "",
+     "tcg": null,
+     "type": ""
+    }
+   ],
+   "collection": {
+    "1": {
+     "cond": "LP",
+     "got": "<varies>",
+     "purchases": [
+      {
+       "d": "2026-10-01",
+       "price": 20,
+       "where": "eBay"
+      },
+      {
+       "d": "2026-10-19",
+       "id": "apisync0001",
+       "price": 2.0,
+       "where": ""
+      }
+     ],
+     "qty": 2
+    },
+    "2": {
+     "cond": "MP",
+     "got": "<varies>",
+     "purchases": [
+      {
+       "d": "2026-10-13",
+       "price": 7.5,
+       "where": "Card show"
+      },
+      {
+       "d": "",
+       "had": true,
+       "price": null,
+       "rev": true,
+       "where": ""
+      }
+     ],
+     "qty": 2
+    },
+    "3": {
+     "cond": "LP",
+     "got": "<varies>",
+     "purchases": [
+      {
+       "d": "2026-10-18",
+       "id": "apicheck0001",
+       "price": 4.5,
+       "seller": {
+        "h": "CardGuy",
+        "p": "instagram"
+       },
+       "where": "Show"
+      }
+     ],
+     "qty": 1
+    }
+   },
+   "layout": {
+    "order": "num",
+    "pockets": 9,
+    "slots": [
+     "2",
+     null,
+     "1"
+    ]
+   },
+   "prices": {
+    "info": {
+     "1": {
+      "cond": {
+       "LP": [
+        25.0,
+        5,
+        "2026-10-01"
+       ]
+      },
+      "recent": {
+       "LP": [
+        [
+         "2026-10-01",
+         25.0
+        ]
+       ]
+      },
+      "src": "sales"
+     },
+     "c1": {
+      "tcgId": null
+     }
+    },
+    "p": {
+     "1": [
+      25.0
+     ],
+     "2": [
+      10.0
+     ]
+    },
+    "updated": "<time>"
+   },
+   "set": {
+    "id": "neo4",
+    "name": "Neo Destiny",
+    "printedTotal": 105,
+    "releaseDate": "2002/02/28",
+    "series": "Neo",
+    "total": 3
+   },
+   "shop": {
+    "mode": "mine",
+    "order": [
+     "3",
+     "2"
+    ],
+    "upg": {
+     "from": [
+      "MP"
+     ],
+     "to": "NM"
+    }
+   },
+   "slots": [
+    {
+     "c": "LP",
+     "t": "raw"
+    },
+    {
+     "c": "MP",
+     "t": "raw"
+    }
+   ]
+  }
+ },
+ {
+  "request": "GET /api/set/my-1/state",
+  "status": 200,
+  "body": {
+   "cards": [
+    {
+     "added": "<today>",
+     "date": "1999/01/09",
+     "extra": true,
+     "img": "",
+     "n": "base1-4",
+     "name": "Charizard",
+     "num": "4",
+     "pt": 102,
+     "rarity": "Rare Holo",
+     "set": "Base",
+     "src": "base1",
+     "type": "Pokémon"
+    }
+   ],
+   "collection": {},
+   "layout": null,
+   "prices": {},
+   "set": {
+    "added": "<time>",
+    "id": "my-1",
+    "kind": "own",
+    "name": "Faves",
+    "printedTotal": 0,
+    "releaseDate": "",
+    "series": "My binder",
+    "total": 0
+   },
+   "shop": {},
+   "slots": [
+    {
+     "c": "LP",
+     "t": "raw"
+    },
+    {
+     "c": "MP",
+     "t": "raw"
+    }
+   ]
+  }
+ },
+ {
+  "request": "GET /api/set/my-1/dexnums",
+  "status": 200,
+  "body": {
+   "dex": {
+    "base1-4": 6
+   },
+   "ready": true
+  }
+ },
+ {
+  "request": "GET /api/home",
+  "status": 200,
+  "body": {
+   "binders": [
+    {
+     "count": 5,
+     "cover": {
+      "dex": 0,
+      "n": "1",
+      "name": "Card 1",
+      "shiny": false
+     },
+     "id": "neo4",
+     "name": "Neo Destiny",
+     "owned": 3,
+     "printedTotal": 105,
+     "releaseDate": "2002/02/28"
+    },
+    {
+     "count": 1,
+     "cover": {
+      "dex": 0,
+      "n": "base1-4",
+      "name": "Charizard",
+      "shiny": false
+     },
+     "id": "my-1",
+     "name": "Faves",
+     "owned": 0,
+     "printedTotal": 0,
+     "releaseDate": ""
+    }
+   ],
+   "recent": [
+    {
+     "d": "<time>",
+     "n": "1",
+     "name": "Card 1",
+     "set": "Neo Destiny",
+     "sid": "neo4"
+    },
+    {
+     "d": "<time>",
+     "n": "2",
+     "name": "Card 2",
+     "set": "Neo Destiny",
+     "sid": "neo4"
+    },
+    {
+     "d": "<time>",
+     "n": "3",
+     "name": "Card 3",
+     "set": "Neo Destiny",
+     "sid": "neo4"
+    }
+   ],
+   "working": []
+  }
+ },
+ {
+  "request": "GET /api/sets",
+  "status": 200,
+  "body": {
+   "keepDays": 30,
+   "removed": [],
+   "sets": [
+    {
+     "count": 5,
+     "custom": 1,
+     "id": "neo4",
+     "images": false,
+     "name": "Neo Destiny",
+     "owned": 3,
+     "pics": {
+      "saved": 0,
+      "total": 0
+     },
+     "printedTotal": 105,
+     "releaseDate": "2002/02/28",
+     "series": "Neo",
+     "total": 3,
+     "totals": {
+      "count": 5,
+      "full": 35.0,
+      "need": 0.0,
+      "owned": 3,
+      "paid": 34.0,
+      "value": 70.0
+     }
+    },
+    {
+     "added": "<time>",
+     "count": 1,
+     "custom": 0,
+     "id": "my-1",
+     "images": false,
+     "kind": "own",
+     "name": "Faves",
+     "owned": 0,
+     "pics": {
+      "saved": 0,
+      "total": 0
+     },
+     "printedTotal": 0,
+     "releaseDate": "",
+     "series": "My binder",
+     "total": 0,
+     "totals": {
+      "count": 1,
+      "full": 0.0,
+      "need": 0.0,
+      "owned": 0,
+      "paid": 0.0,
+      "value": 0.0
+     }
+    }
+   ]
+  }
+ },
+ {
+  "request": "GET /api/settings",
+  "status": 200,
+  "body": {
+   "auto": false,
+   "backup": true,
+   "lastAuto": "",
+   "lastSync": {
+    "at": "<time>",
+    "count": 1,
+    "undone": ""
+   },
+   "next": "",
+   "options": {
+    "graders": [
+     "PSA",
+     "BGS",
+     "CGC",
+     "SGC",
+     "TAG",
+     "ACE",
+     "Any"
+    ],
+    "grades": [
+     "10",
+     "9.5",
+     "9",
+     "8.5",
+     "8",
+     "7.5",
+     "7",
+     "6",
+     "5",
+     "4",
+     "3",
+     "2",
+     "1"
+    ],
+    "raw": [
+     "NM",
+     "LP",
+     "MP",
+     "HP",
+     "DMG"
+    ]
+   },
+   "otherHosts": [],
+   "psa": false,
+   "refreshAll": true,
+   "serverName": "",
+   "showBinders": [],
+   "slots": [
+    {
+     "c": "LP",
+     "t": "raw"
+    },
+    {
+     "c": "MP",
+     "t": "raw"
+    }
+   ],
+   "time": "04:15",
+   "tz": "America/New_York"
+  }
+ },
+ {
+  "request": "GET /api/spending",
+  "status": 200,
+  "body": {
+   "log": [
+    {
+     "d": "2026-10-19",
+     "n": "1",
+     "name": "Card 1",
+     "price": 2.0,
+     "seller": null,
+     "set": "neo4",
+     "setName": "Neo Destiny",
+     "where": ""
+    },
+    {
+     "d": "2026-10-18",
+     "n": "3",
+     "name": "Card 3",
+     "price": 4.5,
+     "seller": {
+      "h": "CardGuy",
+      "p": "instagram"
+     },
+     "set": "neo4",
+     "setName": "Neo Destiny",
+     "where": "Show"
+    },
+    {
+     "d": "2026-10-13",
+     "n": "2",
+     "name": "Card 2",
+     "price": 7.5,
+     "seller": null,
+     "set": "neo4",
+     "setName": "Neo Destiny",
+     "where": "Card show"
+    },
+    {
+     "d": "2026-10-01",
+     "n": "1",
+     "name": "Card 1",
+     "price": 20,
+     "seller": null,
+     "set": "neo4",
+     "setName": "Neo Destiny",
+     "where": "eBay"
+    },
+    {
+     "d": "",
+     "n": "2",
+     "name": "Card 2",
+     "price": 0,
+     "seller": null,
+     "set": "neo4",
+     "setName": "Neo Destiny",
+     "where": ""
+    }
+   ],
+   "months": [
+    {
+     "count": 4,
+     "m": "2026-10",
+     "spent": 34.0
+    }
+   ],
+   "timeline": [
+    {
+     "d": "2026-10-11",
+     "spent": 20.0,
+     "value": 48.0
+    },
+    {
+     "d": "2026-10-12",
+     "spent": 20.0,
+     "value": 50.0
+    },
+    {
+     "d": "<today>",
+     "spent": 34.0,
+     "value": 70.0
+    }
+   ],
+   "today": "<today>",
+   "totals": {
+    "purchases": 5,
+    "spent": 34.0,
+    "undated": 1,
+    "value": 70.0
+   }
+  }
+ },
+ {
+  "request": "GET /api/sellers",
+  "status": 200,
+  "body": {
+   "sellers": [
+    {
+     "h": "CardGuy",
+     "last": "2026-10-18",
+     "n": 1,
+     "p": "instagram"
+    }
+   ]
+  }
+ },
+ {
+  "request": "GET /api/habit",
+  "status": 200,
+  "body": {
+   "cheap": {
+    "n": 1,
+    "r": 0.75
+   },
+   "dear": {
+    "n": 2,
+    "r": 0.44
+   }
+  }
+ },
+ {
+  "request": "GET /api/show",
+  "status": 200,
+  "body": {
+   "binders": [
+    {
+     "id": "neo4",
+     "name": "Neo Destiny",
+     "need": 2,
+     "pk": 9
+    },
+    {
+     "id": "my-1",
+     "name": "Faves",
+     "need": 1,
+     "pk": 9
+    }
+   ],
+   "bought": 0,
+   "cards": [
+    {
+     "cond": {},
+     "custom": false,
+     "h90": null,
+     "last": "",
+     "n": "neo1-80",
+     "name": "Totodile",
+     "num": "80",
+     "price": 0,
+     "pt": 111,
+     "rarity": "Common",
+     "recent": {},
+     "set": "Neo Destiny",
+     "sid": "neo4",
+     "slot": 4,
+     "src": "",
+     "t30": null,
+     "t7": null
+    },
+    {
+     "cond": {},
+     "custom": true,
+     "h90": null,
+     "last": "",
+     "n": "c1",
+     "name": "Promo Pikachu",
+     "num": "P1",
+     "price": 0,
+     "pt": "",
+     "rarity": "Promo",
+     "recent": {},
+     "set": "Neo Destiny",
+     "sid": "neo4",
+     "slot": 5,
+     "src": "",
+     "t30": null,
+     "t7": null
+    },
+    {
+     "cond": {},
+     "custom": false,
+     "h90": null,
+     "last": "",
+     "n": "base1-4",
+     "name": "Charizard",
+     "num": "4",
+     "price": 0,
+     "pt": 102,
+     "rarity": "Rare Holo",
+     "recent": {},
+     "set": "Faves",
+     "sid": "my-1",
+     "slot": 0,
+     "src": "",
+     "t30": null,
+     "t7": null
+    }
+   ],
+   "habit": {
+    "cheap": {
+     "n": 1,
+     "r": 0.75
+    },
+    "dear": {
+     "n": 2,
+     "r": 0.44
+    }
+   },
+   "picked": [],
+   "sellers": [
+    {
+     "h": "CardGuy",
+     "last": "2026-10-18",
+     "n": 1,
+     "p": "instagram"
+    }
+   ],
+   "spent": 0.0,
+   "today": "<today>"
+  }
+ },
+ {
+  "request": "GET /api/progress",
+  "status": 200,
+  "body": {
+   "images": {},
+   "pokedex": {
+    "done": 0,
+    "error": "",
+    "running": false,
+    "total": 0
+   },
+   "prices": {
+    "done": 0,
+    "message": "",
+    "name": "",
+    "priced": 0,
+    "running": false,
+    "set": "",
+    "total": 0
+   },
+   "shows": {
+    "done": 0,
+    "error": "",
+    "running": false,
+    "total": 0
+   }
+  }
+ },
+ {
+  "request": "DELETE /api/set/neo4/cards/neo1-80",
+  "status": 200,
+  "body": {
+   "ok": true
+  }
+ },
+ {
+  "request": "DELETE /api/set/neo4/cards/1",
+  "status": 400,
+  "body": {
+   "error": "Only cards you added yourself can be taken out"
+  }
+ },
+ {
+  "request": "GET /api/set/neo4/state",
+  "status": 200,
+  "body": {
+   "cards": [
+    {
+     "n": "1",
+     "name": "Card 1",
+     "num": "1",
+     "pt": "105",
+     "rarity": "Rare",
+     "type": "Pokémon"
+    },
+    {
+     "n": "2",
+     "name": "Card 2",
+     "num": "2",
+     "pt": "105",
+     "rarity": "Rare",
+     "type": "Pokémon"
+    },
+    {
+     "n": "3",
+     "name": "Card 3",
+     "num": "3",
+     "pt": "105",
+     "rarity": "Rare",
+     "type": "Pokémon"
+    },
+    {
+     "custom": true,
+     "img": "",
+     "n": "c1",
+     "name": "Promo Pikachu",
+     "num": "P1",
+     "rarity": "Promo",
+     "set": "",
+     "tcg": null,
+     "type": ""
+    }
+   ],
+   "collection": {
+    "1": {
+     "cond": "LP",
+     "got": "<varies>",
+     "purchases": [
+      {
+       "d": "2026-10-01",
+       "price": 20,
+       "where": "eBay"
+      },
+      {
+       "d": "2026-10-19",
+       "id": "apisync0001",
+       "price": 2.0,
+       "where": ""
+      }
+     ],
+     "qty": 2
+    },
+    "2": {
+     "cond": "MP",
+     "got": "<varies>",
+     "purchases": [
+      {
+       "d": "2026-10-13",
+       "price": 7.5,
+       "where": "Card show"
+      },
+      {
+       "d": "",
+       "had": true,
+       "price": null,
+       "rev": true,
+       "where": ""
+      }
+     ],
+     "qty": 2
+    },
+    "3": {
+     "cond": "LP",
+     "got": "<varies>",
+     "purchases": [
+      {
+       "d": "2026-10-18",
+       "id": "apicheck0001",
+       "price": 4.5,
+       "seller": {
+        "h": "CardGuy",
+        "p": "instagram"
+       },
+       "where": "Show"
+      }
+     ],
+     "qty": 1
+    }
+   },
+   "layout": {
+    "order": "num",
+    "pockets": 9,
+    "slots": [
+     "2",
+     null,
+     "1"
+    ]
+   },
+   "prices": {
+    "info": {
+     "1": {
+      "cond": {
+       "LP": [
+        25.0,
+        5,
+        "2026-10-01"
+       ]
+      },
+      "recent": {
+       "LP": [
+        [
+         "2026-10-01",
+         25.0
+        ]
+       ]
+      },
+      "src": "sales"
+     },
+     "c1": {
+      "tcgId": null
+     }
+    },
+    "p": {
+     "1": [
+      25.0
+     ],
+     "2": [
+      10.0
+     ]
+    },
+    "updated": "<time>"
+   },
+   "set": {
+    "id": "neo4",
+    "name": "Neo Destiny",
+    "printedTotal": 105,
+    "releaseDate": "2002/02/28",
+    "series": "Neo",
+    "total": 3
+   },
+   "shop": {
+    "mode": "mine",
+    "order": [
+     "3",
+     "2"
+    ],
+    "upg": {
+     "from": [
+      "MP"
+     ],
+     "to": "NM"
+    }
+   },
+   "slots": [
+    {
+     "c": "LP",
+     "t": "raw"
+    },
+    {
+     "c": "MP",
+     "t": "raw"
+    }
+   ]
+  }
+ }
+]
