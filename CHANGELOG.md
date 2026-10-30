@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Upgrades shows which conditions are picked:** each picked condition (MP, HP, DMG) has a ✓, unpicked ones are dimmed, and a thin line separates the buttons, so two picked ones no longer look like one.
+
 ## v3.35.1 (October 26, 2026)
 
 - **Pick the site first when adding a seller:** the Seller pop-up now shows the sites (Instagram, TikTok, Whatnot, eBay and more) as buttons under the search box, so you can pick where they sell before typing their name. Pasting a link still picks the site for you.

@@ -184,6 +184,12 @@ dialog#zoom::backdrop{background:transparent}
 .upg-opts{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 16px;margin-top:10px}
 .upg-opts .grp{display:flex;flex-direction:column;gap:4px}
 .upg-opts .k{font-size:13px;color:var(--muted)}
+/* Upgrades: pick any number of conditions, so each picked one gets a check mark (unlike one-choice switches) */
+#upgFrom button{white-space:nowrap}
+#upgFrom button+button{box-shadow:inset 1px 0 0 var(--line)}   /* a divider, so two picked buttons don't merge into one block */
+#upgFrom button::before{content:"";display:inline-block;width:12px;margin-right:4px;text-align:left}
+#upgFrom button[aria-pressed="true"]::before{content:"✓"}
+#upgFrom button[aria-pressed="false"]{color:var(--muted)}
 .btnrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}   /* a row of buttons (backups, custom card picture) */
 .dtabs button{white-space:nowrap}
 .tabpane{display:flex;flex-direction:column;gap:18px}
@@ -1430,7 +1436,7 @@ html,body{overscroll-behavior-y:none}
         <h2 class="sec">Upgrades</h2>
         <p class="note">Cards you own in a worn condition, and what a better copy costs right now. "After selling yours" takes off what your current copy sells for.</p>
         <div class="upg-opts">
-          <div class="grp"><span class="k">Upgrade cards I own in</span>
+          <div class="grp"><span class="k">Upgrade cards I own in (pick any)</span>
             <div class="seg" id="upgFrom" role="group" aria-label="Conditions to upgrade">
               <button type="button" data-c="MP" aria-pressed="false">MP</button>
               <button type="button" data-c="HP" aria-pressed="true">HP</button>
