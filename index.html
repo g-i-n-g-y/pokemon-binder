@@ -330,6 +330,10 @@ table.shop.no-trend .c-trend{display:none}
 .stale-key .stale{margin:0;flex:none}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
 .two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.st-two.mv-empty>.panel{grid-column:1/-1}
+.st-two.mv-empty .mv-panel{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;padding-block:14px}
+.st-two.mv-empty .mv-panel h2{margin:0}
+.st-two.mv-empty .mv-panel .note{margin:0}
 .chart{position:relative;min-height:60px}
 .chart svg{display:block;width:100%;height:auto;overflow:visible}
 .chart .empty-note{font-size:14px;color:var(--muted);padding:12px 0}
@@ -1474,12 +1478,12 @@ html,body{overscroll-behavior-y:none}
       <div class="chart" id="chLine"></div>
     </div>
 
-    <div class="two">
+    <div class="two st-two" id="stTwo">
       <div class="panel">
         <h2 class="sec">Spending per month</h2>
         <div class="chart" id="chBars"></div>
       </div>
-      <div class="panel">
+      <div class="panel mv-panel">
         <h2 class="sec" id="moversTitle">Biggest movers this week</h2>
         <div id="movers"></div>
       </div>
@@ -4627,7 +4631,7 @@ function drawStats(){
   $("tMonth").textContent=money0(mo?mo.spent:0); $("tMonthN").textContent=(mo?mo.count:0)+" purchase"+((mo&&mo.count===1)?"":"s");
   const avg=sp.months.length ? sp.months.reduce((a,m)=>a+m.spent,0)/sp.months.length : 0;
   $("tAvg").textContent=money0(avg); $("tAvgN").textContent=sp.months.length ? "over "+sp.months.length+" month"+(sp.months.length===1?"":"s") : "No dated purchases yet";
-  drawLine(sp.timeline); drawBars(sp.months); drawMovers(); drawLog(sp.log);
+  drawLine(sp.timeline); drawMovers(); drawBars(sp.months); drawLog(sp.log);   // movers first: it decides how wide the spending chart is
 }
 const NS="http://www.w3.org/2000/svg";
 function el(tag, attrs, text){ const e=document.createElementNS(NS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); if(text!=null) e.textContent=text; return e; }
@@ -4687,7 +4691,7 @@ function drawBars(months){
   const box=$("chBars"); box.replaceChildren();
   if(!months.length){ box.append(note("Log a purchase with a date to see monthly spending.")); return; }
   const ms=months.slice(-12);
-  const W=420,H=220,L=48,R=8,Tp=20,B=28;
+  const H=220,L=48,R=8,Tp=20,B=28, W=Math.max(420, Math.round((box.clientWidth||420)*H/260));   // wider box: wider drawing, same height (about 260px)
   const ymax=niceMax(Math.max(...ms.map(m=>m.spent))*1.1);
   const bw=(W-L-R)/ms.length, Y=v=>Tp+(1-v/ymax)*(H-Tp-B);
   const svg=el("svg",{viewBox:"0 0 "+W+" "+H,role:"img","aria-label":"Spending per month"});
@@ -4718,6 +4722,7 @@ function drawMovers(){
   const box=$("movers"); box.replaceChildren();
   $("moversTitle").textContent="Biggest movers · "+periodName().toLowerCase()+" · "+(state.set.name||"");
   const rows=state.cards.map(c=>({c,t:trend(c.n)})).filter(r=>r.t && r.t.from>=1 && Math.abs(r.t.pct)>=0.5);
+  $("stTwo").classList.toggle("mv-empty", !rows.length);   // nothing moved: spending gets the full row, movers shrinks to one line
   if(!rows.length){
     const first=state.histFirst;
     box.append(note(first ? "No price changes yet. Prices have been saved daily since "+fmtDay(first)+"." : "Movers appear once "+srv()+" has saved prices for a few days."));
