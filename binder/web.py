@@ -87,6 +87,9 @@ class Handler(BaseHTTPRequestHandler):
     def end_headers(self):
         # browsers must use the type we say (never guess a file is a web page)
         self.send_header("X-Content-Type-Options", "nosniff")
+        # no other website may show the binder inside its own page (where a hidden frame could trick your clicks)
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Content-Security-Policy", "frame-ancestors 'none'")
         super().end_headers()
 
     def send(self, code, body=b"", ctype="application/json", cache=None, etag=None):

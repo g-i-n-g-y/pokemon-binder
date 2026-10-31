@@ -13,6 +13,7 @@ The binder shows these in **Settings → About → Check for updates**.
 ## Unreleased
 
 - Behind the scenes: the price chart's code moved out of `app/copy.js` into its own file, `app/chart.js`. Nothing looks or works differently. The phone app saves the new file too, so the chart still works with no signal.
+- **Safety:** other websites can no longer show the binder inside their own page. That stops a trick where a hidden copy of the binder sits under a fake button, so a click meant for something else presses Restore or Delete instead.
 
 ## v4.6.1 (October 31, 2026)
 
