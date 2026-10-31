@@ -315,12 +315,13 @@ function drawSpark(n){
     plot.append(m); chart.samples=null; return;
   }
   // size the drawing to the space it has, so text and dots stay crisp (redrawn if that changes)
-  const W=Math.round(plot.clientWidth)||340, H=W<500 ? 186 : 206, PT=34, PB=38, PX=8;
+  // PR: room on the right for the price axis; DB: room at the bottom for dates; B: where the plot ends
+  const W=Math.round(plot.clientWidth)||340, H=W<500 ? 204 : 224, PT=34, PB=56, PX=8, PR=44, DB=18, B=H-DB;
   const t0=Date.parse(pts[0][0]+"T12:00:00"), t1=Date.parse(pts[pts.length-1][0]+"T12:00:00");
   const k0=pts[0][0];
   const dots=salesOnly ? [] : dotConds.flatMap(c=>(sales[c]||[]).filter(s=>s[0]>=k0));
   const ys=pts.map(p=>p[1]).concat(dots.map(s=>s[1])), y0=Math.min(...ys), y1=Math.max(...ys);
-  const X=d=>PX+(t1===t0?0.5:(Date.parse(d+"T12:00:00")-t0)/(t1-t0))*(W-2*PX), Y=v=>H-PB-(y1===y0?0.5:(v-y0)/(y1-y0))*(H-PT-PB);
+  const X=d=>PX+(t1===t0?0.5:(Date.parse(d+"T12:00:00")-t0)/(t1-t0))*(W-PX-PR), Y=v=>H-PB-(y1===y0?0.5:(v-y0)/(y1-y0))*(H-PT-PB);
   // the curve goes through each day the price changed (plus the first and last), so it eases from one price to the next
   const keyPts=pts.filter((p,i)=>i===0 || i===pts.length-1 || p[1]!==pts[i-1][1]).map(p=>[X(p[0]),Y(p[1])]);
   // while a condition's daily prices build up, the line goes through its saved sales (one point per day, the
@@ -341,10 +342,27 @@ function drawSpark(n){
   grad.append(mk("stop",{offset:"0", "stop-color":color, "stop-opacity":"0.28"}), mk("stop",{offset:"1", "stop-color":color, "stop-opacity":"0"}));
   const clip=mk("clipPath",{id:gid+"c"}), clipRect=mk("rect",{x:"0", y:"0", width:String(W), height:String(H)});
   clip.append(clipRect); defs.append(grad,clip); svg.append(defs);
+  // the price axis: a few round prices as faint lines with their value on the right, and dates along the bottom
+  const span=y1-y0 || Math.max(1,y1*0.1), raw=span/3, mag=Math.pow(10,Math.floor(Math.log10(raw))), f=raw/mag;
+  const step=(f<=1 ? 1 : f<=2 ? 2 : f<=2.5 ? 2.5 : f<=5 ? 5 : 10)*mag;
+  const axisMoney=v=>"$"+(step<1 ? v.toFixed(2) : v>=10000 ? Math.round(v/1000)+"k" : Math.round(v).toLocaleString("en-US"));
+  const lo0=y1===y0 ? y0-step : y0, hi0=y1===y0 ? y0+step : y1;
+  for(let v=Math.ceil(lo0/step)*step; v<=hi0+step*1e-6; v+=step){
+    const y=y1===y0 ? Y(y0)+(y0-v)/step*20 : Y(v); if(y<PT-8 || y>B-4) continue;
+    svg.append(mk("line",{x1:String(PX), x2:String(W-PR+4), y1:y.toFixed(1), y2:y.toFixed(1), class:"ch-grid"}));
+    const t=mk("text",{x:String(W-2), y:(y+4).toFixed(1), "text-anchor":"end", class:"ch-axis"}); t.textContent=axisMoney(v); svg.append(t);
+  }
+  const nDates=W<420 ? 3 : 4, short=d=>new Date(d+"T12:00:00").toLocaleDateString("en-US",{month:"short", day:"numeric"});
+  for(let i=0;i<nDates;i++){
+    const tt=t0+(t1-t0)*i/(nDates-1), d=dayStr(new Date(tt)), x=X(d);
+    const t=mk("text",{x:x.toFixed(1), y:String(H-3), "text-anchor":i===0 ? "start" : i===nDates-1 ? "end" : "middle", class:"ch-axis"});
+    t.textContent=short(d); svg.append(t);
+    if(t1===t0) break;
+  }
   const g=mk("g",{"clip-path":"url(#"+gid+"c)"}); svg.append(g);
   let area=null, lineP=null;
   if(curve){
-    area=mk("path",{d:curve.d+"L"+keyPts[keyPts.length-1][0].toFixed(1)+","+H+"L"+keyPts[0][0].toFixed(1)+","+H+"Z", fill:"url(#"+gid+")"});
+    area=mk("path",{d:curve.d+"L"+curvePts[curvePts.length-1][0].toFixed(1)+","+B+"L"+curvePts[0][0].toFixed(1)+","+B+"Z", fill:"url(#"+gid+")"});
     lineP=mk("path",{d:curve.d, fill:"none", stroke:color, "stroke-width":"2.5", "stroke-linejoin":"round", "stroke-linecap":"round"});
     g.append(area,lineP);
   }
@@ -356,7 +374,7 @@ function drawSpark(n){
   if(hi>lo){
     const hiP=pts.find(p=>p[1]===hi), loP=pts.find(p=>p[1]===lo);
     const lab=(p,word,above)=>{
-      const x=X(p[0]), anchor=x<44 ? "start" : x>W-44 ? "end" : "middle", tx=Math.max(4,Math.min(W-4,x));
+      const x=X(p[0]), anchor=x<44 ? "start" : x>W-PR-36 ? "end" : "middle", tx=Math.max(4,Math.min(W-PR-2,x));
       const yv=above ? Y(p[1])-10 : Y(p[1])+32, yw=yv-14;
       const t1=mk("text",{x:tx, y:yw, "text-anchor":anchor, class:"ch-hl-k"}); t1.textContent=word;
       const t2=mk("text",{x:tx, y:yv, "text-anchor":anchor, class:"ch-hl-v"}); t2.textContent=money(p[1]);
@@ -364,15 +382,30 @@ function drawSpark(n){
     };
     lab(hiP,"High",true); lab(loP,"Low",false);
   }
-  chart.lineEl=mk("line",{y1:"0", y2:String(H), stroke:"var(--ink)", "stroke-width":"1", opacity:"0.35", visibility:"hidden"});
+  chart.lineEl=mk("line",{y1:"0", y2:String(B), stroke:"var(--ink)", "stroke-width":"1", opacity:"0.35", visibility:"hidden"});
   chart.dotEl=mk("circle",{r:"6", fill:color, stroke:"var(--surface)", "stroke-width":"2.5", visibility:"hidden"});
   svg.append(chart.lineEl, chart.dotEl);
   plot.append(svg); plot.tabIndex=0; plot.setAttribute("aria-label",(salesOnly ? "Sales chart" : "Price chart")+". Use the left and right arrow keys to read each "+(salesOnly ? "sale" : "day")+".");
   chart.pts=pts; chart.X=X; chart.Y=Y; chart.W=W; chart.H=H; chart.at=curve ? curve.at : null;
+  // View price data: every day the price changed (and each saved sale), newest first
+  const det=document.createElement("details"); det.className="ch-data"; det.open=!!chart.tableOpen;
+  det.addEventListener("toggle",()=>{ chart.tableOpen=det.open; });
+  const sum=document.createElement("summary"); sum.textContent="View price data";
+  const tbl=document.createElement("table"), cp=document.createElement("caption"), thead=document.createElement("thead"), tb=document.createElement("tbody");
+  cp.textContent=label+(salesOnly ? " sales saved so far" : " price, each day it changed")+(range ? ", last "+rangeName : "");
+  const hr=document.createElement("tr"); for(const t of ["Date","Price"]){ const th=document.createElement("th"); th.scope="col"; th.textContent=t; hr.append(th); } thead.append(hr);
+  for(let i=pts.length-1;i>=0;i--){
+    const p=pts[i]; if(!(i<salesOnly || i===0 || i===pts.length-1 || p[1]!==pts[i-1][1])) continue;
+    const tr=document.createElement("tr"), td1=document.createElement("td"), td2=document.createElement("td");
+    td1.textContent=fmtDay(p[0])+(i<salesOnly ? " · sale" : ""); td2.textContent=money(p[1]); tr.append(td1,td2); tb.append(tr);
+  }
+  tbl.append(cp,thead,tb); const wrap=document.createElement("div"); wrap.className="ch-table"; wrap.append(tbl);
+  det.append(sum,wrap); box.append(det);
   if(salesOnly) cap.append("For now the line goes through the "+salesOnly+" sale"+(salesOnly===1 ? "" : "s")+" saved since "+fmtDay(pts[0][0])+". "
     +(mode==="price" ? "It switches to your saved prices after a few days." : "It switches to "+mode+"'s saved daily prices once they build up (from "+fmtDay(all.length ? all[0][0] : todayStr())+")."));
   // movement: a new card's line draws itself in; switching condition or range slides the line into its new shape
-  const N=72, samples=curve ? Array.from({length:N},(_,i)=>curve.at(PX+i*(W-2*PX)/(N-1))) : null;
+  const x0=curvePts.length ? curvePts[0][0] : PX, x1=curvePts.length ? curvePts[curvePts.length-1][0] : W-PR;
+  const N=72, samples=curve ? Array.from({length:N},(_,i)=>curve.at(x0+i*(x1-x0)/(N-1))) : null;
   cancelAnimationFrame(chart.anim);
   const prev=chart.samples; chart.samples=samples;
   if(quiet || !chMotion()) return;
@@ -382,12 +415,12 @@ function drawSpark(n){
     chart.anim=requestAnimationFrame(grow);
   } else if(lineP && area){
     const final=lineP.getAttribute("d"), finalArea=area.getAttribute("d"), start=performance.now();
-    const path=ys=>"M"+ys.map((y,i)=>(PX+i*(W-2*PX)/(N-1)).toFixed(1)+","+y.toFixed(1)).join("L");
+    const path=ys=>"M"+ys.map((y,i)=>(x0+i*(x1-x0)/(N-1)).toFixed(1)+","+y.toFixed(1)).join("L");
     const step=now=>{
       const k=Math.min(1,(now-start)/320), e=k<.5 ? 4*k*k*k : 1-Math.pow(-2*k+2,3)/2;
       if(k<1){
         const d=path(samples.map((y,i)=>prev[i]+(y-prev[i])*e));
-        lineP.setAttribute("d",d); area.setAttribute("d",d+"L"+(W-PX)+","+H+"L"+PX+","+H+"Z");
+        lineP.setAttribute("d",d); area.setAttribute("d",d+"L"+x1.toFixed(1)+","+B+"L"+x0.toFixed(1)+","+B+"Z");
         chart.anim=requestAnimationFrame(step);
       } else { lineP.setAttribute("d",final); area.setAttribute("d",finalArea); }
     };

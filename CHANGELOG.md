@@ -13,6 +13,7 @@ The binder shows these in **Settings → About → Check for updates**.
 ## Unreleased
 
 - **Market price history:** the server now keeps the market prices it already gets from TCGdex (TCGplayer's market price and Cardmarket's 30-day average) day by day, so each card builds a steady trend even when it rarely sells. A new **Market** tile on the chart shows it. Saved only when the price changes, so it stays small, and it's in your backups.
+- **Price chart:** faint lines with round prices on the right ($300, $400…) and dates along the bottom make it easy to read the chart without dragging. Under it, **View price data** opens a list of each day the price changed (and each saved sale), newest first.
 
 ## v4.5.1 (October 30, 2026)
 
