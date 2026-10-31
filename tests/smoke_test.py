@@ -1,17 +1,18 @@
 """Smoke test for Pokemon Binder: run it before every release.
 
-    python3 tests/smoke_test.py
+    python3 tests/smoke_test.py [--quiet]
 
 It copies the program files (APP_FILES in server.py) into a temporary folder, writes a small binder in the old JSON layout,
 starts the binder on a spare port (nothing outside the temporary folder is touched, no downloads are needed),
 and checks that the main pages answer, data moves into the database, saves stick, and backups restore.
-Prints PASS or FAIL for each check and exits with 1 if anything failed. Python standard library only.
+Prints PASS or FAIL for each check (--quiet: only the failures and the summary) and exits with 1 if anything failed. Python standard library only.
 """
 import ast, io, json, os, re, shutil, socket, subprocess, sys, tempfile, time, urllib.error, urllib.request, zipfile
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 failed = []
+QUIET = "--quiet" in sys.argv
 
 
 def app_files():
@@ -28,7 +29,8 @@ def copy_app(dst_root):
 
 
 def check(name, ok, detail=""):
-    print(("PASS  " if ok else "FAIL  ") + name + ("" if ok or not detail else f"  ({detail})"))
+    if not (ok and QUIET):
+        print(("PASS  " if ok else "FAIL  ") + name + ("" if ok or not detail else f"  ({detail})"))
     if not ok:
         failed.append(name)
 

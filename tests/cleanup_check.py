@@ -1,11 +1,11 @@
 """Cleanup check for Pokemon Binder: run it after every middle-number release (v3.19, v3.20, ...).
 
-    python3 tests/cleanup_check.py
+    python3 tests/cleanup_check.py [--quiet]
 
 Lists leftover code that nothing uses any more and names that are used twice (the later one silently
 replaces the earlier one, which is how Settings > About > Status broke in v3.19). It changes nothing:
 review each item, remove what's really unused, then run tests/smoke_test.py and compare screenshots.
-Exits with 1 if anything is listed. Python standard library only.
+Exits with 1 if anything is listed (--quiet: only the items to look at and the summary). Python standard library only.
 """
 import ast, collections, os, re, sys
 
@@ -17,7 +17,8 @@ found = []
 
 def report(title, items):
     items = sorted(set(items))
-    print(("OK    " if not items else "CHECK ") + title + ("" if not items else ": " + ", ".join(items)))
+    if items or "--quiet" not in sys.argv:
+        print(("OK    " if not items else "CHECK ") + title + ("" if not items else ": " + ", ".join(items)))
     found.extend(items)
 
 
