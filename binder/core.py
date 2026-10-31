@@ -77,7 +77,7 @@ def write_file_json(path, obj):
 DB_FILE = os.path.join(DATA, "binder.db")
 DB_SCHEMA = 1
 SET_FILES = ("collection", "prices", "history", "tcg_ids", "slots", "shop", "pc_urls", "tcgdex_ids", "custom", "cards",
-             "extra", "layout", "cond_history", "sales_log")
+             "extra", "layout", "cond_history", "sales_log", "market_history")
 DOC_RE = re.compile(rf"(?:settings|sets|shows)\.json|sets/{SID_RE}/(?:{'|'.join(SET_FILES)})\.json")
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);

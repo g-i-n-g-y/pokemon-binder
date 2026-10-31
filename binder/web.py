@@ -400,7 +400,8 @@ class Handler(BaseHTTPRequestHandler):
                 if not re.fullmatch(NUM_RE, card):
                     return self.send(400, {"error": "bad card"})
                 return self.send(200, {"card": card, "points": card_series(m.group(1), card),
-                                       "cond": card_cond_series(m.group(1), card), "sales": card_sales(m.group(1), card)},
+                                       "cond": card_cond_series(m.group(1), card), "sales": card_sales(m.group(1), card),
+                                       "market": card_market_series(m.group(1), card)},
                                  cache="no-store")
             return self.send(200, read_json(sdir(m.group(1), "history.json"), {}), cache="no-store")
         if path == "/api/habit":   # what you usually pay vs. the price, for the vendor price check

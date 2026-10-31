@@ -195,9 +195,14 @@ const chart={n:null, key:"", pts:[], salesOnly:0, W:0, H:0, X:null, Y:null, at:n
 const chMotion = () => !matchMedia("(prefers-reduced-motion: reduce)").matches;
 const dayStr = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 // One condition's prices, one point per day: saved change days carried forward, ending with today's live price
+// (c can also be "MKT": the market price from TCGdex, TCGplayer's when there is one, else Cardmarket's)
+function marketNow(n){ const m=(state.info[n]||{}).mkt||{}; return m.tp!=null ? m.tp : m.cm30!=null ? m.cm30 : null; }
 function condLine(n, c){
-  const got=/** @type {any} */ (Array.isArray(state.seriesCache[n]) ? state.seriesCache[n] : null), live=((state.info[n]||{}).cond||{})[c], t=todayStr();
-  const pts=(got && got.cond && got.cond[c] || []).map(p=>[p[0],p[1]]);
+  const got=/** @type {any} */ (Array.isArray(state.seriesCache[n]) ? state.seriesCache[n] : null), t=todayStr();
+  const live=c==="MKT" ? (marketNow(n)!=null ? [marketNow(n)] : null) : ((state.info[n]||{}).cond||{})[c];
+  const saved=c==="MKT" ? (got && got.market && ((state.info[n]||{}).mkt||{}).tp==null && got.market.Cardmarket || got && got.market && got.market.TCGplayer)
+    : got && got.cond && got.cond[c];
+  const pts=(saved || []).map(p=>[p[0],p[1]]);
   if(live && live[0]!=null){ if(pts.length && pts[pts.length-1][0]===t) pts[pts.length-1][1]=live[0]; else if(!pts.length || pts[pts.length-1][0]<t) pts.push([t,live[0]]); }
   if(!pts.length) return [];
   const out=[]; let i=0, val=pts[0][1];
@@ -233,11 +238,11 @@ function drawSpark(n){
   const fresh=chart.n!==n, quiet=chart.quiet; chart.quiet=false;
   box.replaceChildren();
   chart.n=n; chart.pts=[]; chart.idx=-1; chart.lineEl=null; chart.salesOnly=0;
-  let mode=recall("nd-chart-cond")||"price"; if(mode!=="price" && !CH_CONDS.includes(mode)) mode="price";
+  let mode=recall("nd-chart-cond")||"price"; if(mode!=="price" && mode!=="MKT" && !CH_CONDS.includes(mode)) mode="price";
   let range=+(recall("nd-chart-range")||0); if(!CH_RANGES.some(r=>r[1]===range)) range=0;
   const priceLine=series(n);   // also asks the server for this card's history when it isn't loaded yet
   const info=state.info[n]||{}, got=/** @type {any} */ (Array.isArray(state.seriesCache[n]) ? state.seriesCache[n] : null), sales=got && got.sales || {};
-  const label=mode==="price" ? "Price" : mode, rangeName=(CH_RANGES.find(r=>r[1]===range)||["All"])[0];
+  const label=mode==="price" ? "Price" : mode==="MKT" ? "Market" : mode, rangeName=(CH_RANGES.find(r=>r[1]===range)||["All"])[0];
   // the readout: big price, then how it changed today and over the range (the date instead, while you drag)
   const top=document.createElement("div"); top.className="ch-top"; top.setAttribute("aria-live","polite");
   const big=document.createElement("div"); big.className="ch-big";
@@ -253,11 +258,11 @@ function drawSpark(n){
   }
   // the condition tiles, each with its latest average; the row swipes sideways if it doesn't fit
   const tiles=document.createElement("div"); tiles.className="ch-tiles"; tiles.setAttribute("role","group"); tiles.setAttribute("aria-label","Which price");
-  for(const c of ["price"].concat(CH_CONDS)){
-    const v=c==="price" ? basePrice(n) : ((info.cond||{})[c]||[])[0];
+  for(const c of ["price","MKT"].concat(CH_CONDS)){
+    const v=c==="price" ? basePrice(n) : c==="MKT" ? marketNow(n) : ((info.cond||{})[c]||[])[0];
     const b=document.createElement("button"); b.type="button"; b.className="ch-tile"; b.setAttribute("aria-pressed",String(c===mode));
-    if(c!=="price" && v==null && !(got && got.cond && got.cond[c])) b.classList.add("none");
-    const l=document.createElement("small"); l.textContent=c==="price" ? "Price" : c;
+    if(c!=="price" && v==null && !(c==="MKT" ? got && got.market && Object.keys(got.market).length : got && got.cond && got.cond[c])) b.classList.add("none");
+    const l=document.createElement("small"); l.textContent=c==="price" ? "Price" : c==="MKT" ? "Market" : c;
     const p=document.createElement("b"); p.textContent=v ? money(v) : "–";
     b.append(l,p); b.onclick=()=>{ store("nd-chart-cond", c==="price" ? undefined : c); drawSpark(n); };
     tiles.append(b);
@@ -279,7 +284,7 @@ function drawSpark(n){
     return d;
   };
   // the sale dots: this condition's, or on Price the conditions your price is made from
-  const dotConds=mode==="price" ? activeSlots().filter(sl=>sl.t==="raw").map(sl=>sl.c) : [mode];
+  const dotConds=mode==="price" ? activeSlots().filter(sl=>sl.t==="raw").map(sl=>sl.c) : mode==="MKT" ? [] : [mode];
   // No line yet (each condition's line builds up one price check at a time): show the sales saved so far instead,
   // ending with today's average, so the chart is useful from the first day
   if(pts.length<2){
@@ -304,6 +309,7 @@ function drawSpark(n){
   if(pts.length<2){
     const m=document.createElement("div"); m.className="ch-msg";
     m.textContent = mode==="price" ? "Price trend appears after a few days of saved prices."
+      : mode==="MKT" ? (!all.length ? "No market price for this card yet." : "The market price trend builds up from "+fmtDay(all[0][0])+".")
       : !all.length ? "No "+mode+" sales saved yet."
       : "Each condition's trend builds up from "+fmtDay(all[0][0])+".";
     plot.append(m); chart.samples=null; return;

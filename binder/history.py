@@ -71,6 +71,51 @@ def snapshot_cond_history(sid, prices=None):
         write_json(sdir(sid, "cond_history.json"), hist)
     if sales_changed:
         write_json(sdir(sid, "sales_log.json"), sales)
+    snapshot_market_history(sid, info, today)
+
+
+MARKET_SOURCES = ("TCGplayer", "Cardmarket")
+
+
+def snapshot_market_history(sid, info, today):
+    """Keep TCGdex's market prices for each card day by day (TCGplayer market price and Cardmarket's 30-day average,
+    in dollars), so the chart has a steady Market line even when a card rarely sells. market_history.json is
+    {day: {card: [TCGplayer, Cardmarket]}}, again only the cards whose numbers changed since their last saved day."""
+    hist = read_json(sdir(sid, "market_history.json"), {})
+    hist = hist if isinstance(hist, dict) else {}
+    last = {}
+    for d in sorted(hist):
+        if d < today and isinstance(hist[d], dict):
+            last.update(hist[d])
+    row = dict(hist.get(today) or {})
+    for n, inf in info.items():
+        mkt = inf.get("mkt") if isinstance(inf, dict) and isinstance(inf.get("mkt"), dict) else None
+        if mkt is None:
+            continue
+        vals = [round(mkt[k], 2) if _is_num(mkt.get(k)) else None for k in ("tp", "cm30")]
+        if any(v is not None for v in vals) and last.get(n) != vals:
+            row[n] = vals
+        else:
+            row.pop(n, None)
+    if row != (hist.get(today) or {}):
+        if row:
+            hist[today] = row
+        else:
+            hist.pop(today, None)
+        write_json(sdir(sid, "market_history.json"), hist)
+
+
+def card_market_series(sid, n):
+    """One card's market prices: {"TCGplayer": [[day, price], ...], "Cardmarket": [...]}, only the days they changed."""
+    hist = read_json(sdir(sid, "market_history.json"), {})
+    out = {k: [] for k in MARKET_SOURCES}
+    for d in sorted(hist if isinstance(hist, dict) else {}):
+        vals = hist[d].get(n) if isinstance(hist[d], dict) else None
+        if isinstance(vals, list):
+            for k, v in zip(MARKET_SOURCES, vals):
+                if _is_num(v):
+                    out[k].append([d, v])
+    return {k: pts for k, pts in out.items() if pts}
 
 
 def card_cond_series(sid, n):
