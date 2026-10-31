@@ -13,6 +13,7 @@
   "status": 200,
   "body": {
    "app/card.js": "<time>",
+   "app/chart.js": "<time>",
    "app/copy.js": "<time>",
    "app/core.js": "<time>",
    "app/data.js": "<time>",

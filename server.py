@@ -71,8 +71,8 @@ SPRITES = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/poke
 # so a later version can be split into more files. Versions before v3.0 only ever had these two.
 # Keep it one plain list with no brackets inside: older versions read it with a simple pattern.
 APP_FILES = ("server.py", "index.html", "fonts.css", "sw.js", "icon-192.png", "icon-512.png",
-             "app/style.css", "app/core.js", "app/grid.js", "app/card.js", "app/copy.js", "app/settings.js",
-             "app/updates.js", "app/sets.js", "app/data.js", "app/shop.js", "app/stats.js", "app/find.js",
+             "app/style.css", "app/core.js", "app/grid.js", "app/card.js", "app/copy.js", "app/chart.js",
+             "app/settings.js", "app/updates.js", "app/sets.js", "app/data.js", "app/shop.js", "app/stats.js", "app/find.js",
              "app/pages.js", "app/show.js", "app/psa.js", "app/offline.js", "app/start.js",
              "binder/core.py", "binder/cards.py", "binder/psa.py", "binder/images.py", "binder/prices.py", "binder/history.py",
              "binder/shows.py", "binder/spreadsheet.py", "binder/backup.py", "binder/sync.py", "binder/web.py", "binder/pricetest.py",

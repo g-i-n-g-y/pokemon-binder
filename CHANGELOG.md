@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- Behind the scenes: the price chart's code moved out of `app/copy.js` into its own file, `app/chart.js`. Nothing looks or works differently. The phone app saves the new file too, so the chart still works with no signal.
+
 ## v4.6.1 (October 31, 2026)
 
 - **Fix:** the scroll bar in the chart's **View price data** list is now thin, rounded and in your theme's colors, like the card window's, instead of a thick grey bar.
