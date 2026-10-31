@@ -291,7 +291,7 @@ function drawSpark(n){
   chart.reset=()=>{
     bv.textContent=latest ? money(latest[1]) : (mode==="price" && basePrice(n) ? money(basePrice(n)) : "–");
     sub.replaceChildren();
-    if(salesOnly || pts.length<2){ const d=document.createElement("div"); d.textContent=latest ? when(latest[0]) : ""; sub.append(d); return; }
+    if(pts.length<2){ const d=document.createElement("div"); d.textContent=latest ? when(latest[0]) : ""; sub.append(d); return; }
     if(all.length>1) sub.append(change(all[all.length-2][1], all[all.length-1][1], "Today"));
     sub.append(change(pts[0][1], pts[pts.length-1][1], range ? rangeName+" change" : "since "+fmtDay(pts[0][0])));
   };
@@ -317,8 +317,13 @@ function drawSpark(n){
   const X=d=>PX+(t1===t0?0.5:(Date.parse(d+"T12:00:00")-t0)/(t1-t0))*(W-2*PX), Y=v=>H-PB-(y1===y0?0.5:(v-y0)/(y1-y0))*(H-PT-PB);
   // the curve goes through each day the price changed (plus the first and last), so it eases from one price to the next
   const keyPts=pts.filter((p,i)=>i===0 || i===pts.length-1 || p[1]!==pts[i-1][1]).map(p=>[X(p[0]),Y(p[1])]);
-  const curve=salesOnly ? null : smoothLine(keyPts.filter((p,i)=>i===0 || p[0]>keyPts[i-1][0]));
-  const up=pts[pts.length-1][1]>=pts[0][1], color=salesOnly ? "var(--dark)" : up ? "var(--good)" : "var(--bad)";
+  // while a condition's daily prices build up, the line goes through its saved sales (one point per day, the
+  // average when there were several), ending at today's average
+  const byDay=[];
+  if(salesOnly) for(const p of pts){ const l=byDay[byDay.length-1]; if(l && l[0]===p[0]){ l[1]+=p[1]; l[2]++; } else byDay.push([p[0],p[1],1]); }
+  const curvePts=salesOnly ? byDay.map(d=>[X(d[0]),Y(d[1]/d[2])]) : keyPts;
+  const curve=curvePts.length>1 ? smoothLine(curvePts.filter((p,i)=>i===0 || p[0]>curvePts[i-1][0])) : null;
+  const up=pts[pts.length-1][1]>=pts[0][1], color=up ? "var(--good)" : "var(--bad)";
   const ns="http://www.w3.org/2000/svg", svg=document.createElementNS(ns,"svg");
   svg.setAttribute("viewBox","0 0 "+W+" "+H); svg.setAttribute("width",String(W)); svg.setAttribute("height",String(H)); svg.setAttribute("role","img");
   const lo=Math.min(...pts.map(p=>p[1])), hi=Math.max(...pts.map(p=>p[1]));
@@ -338,9 +343,9 @@ function drawSpark(n){
     g.append(area,lineP);
   }
   for(const s of dots) g.append(mk("circle",{cx:X(s[0]), cy:Y(s[1]), r:"2.5", fill:"var(--ink)", opacity:"0.35"}));
-  for(const s of pts.slice(0,salesOnly)) g.append(mk("circle",{cx:X(s[0]), cy:Y(s[1]), r:"4", fill:"var(--dark)", opacity:"0.8"}));
+  for(const s of pts.slice(0,salesOnly)) g.append(mk("circle",{cx:X(s[0]), cy:Y(s[1]), r:"3", fill:"var(--ink)", opacity:"0.45"}));
   const last=pts[pts.length-1];
-  if(!salesOnly || pts.length>salesOnly) g.append(mk("circle",{cx:X(last[0]), cy:curve ? curve.at(X(last[0])) : Y(last[1]), r:"4", fill:color, stroke:"var(--surface)", "stroke-width":"2"}));
+  if(curve || pts.length>salesOnly) g.append(mk("circle",{cx:X(last[0]), cy:curve ? curve.at(X(last[0])) : Y(last[1]), r:"4", fill:color, stroke:"var(--surface)", "stroke-width":"2"}));
   // High and Low labels at the highest and lowest points (not on a flat line)
   if(hi>lo){
     const hiP=pts.find(p=>p[1]===hi), loP=pts.find(p=>p[1]===lo);
@@ -358,8 +363,8 @@ function drawSpark(n){
   svg.append(chart.lineEl, chart.dotEl);
   plot.append(svg); plot.tabIndex=0; plot.setAttribute("aria-label",(salesOnly ? "Sales chart" : "Price chart")+". Use the left and right arrow keys to read each "+(salesOnly ? "sale" : "day")+".");
   chart.pts=pts; chart.X=X; chart.Y=Y; chart.W=W; chart.H=H; chart.at=curve ? curve.at : null;
-  if(salesOnly) cap.append(salesOnly+" sale"+(salesOnly===1 ? "" : "s")+" saved since "+fmtDay(pts[0][0])+". "
-    +(mode==="price" ? "The price line appears after a few days of saved prices." : "The "+mode+" line builds up from "+fmtDay(all.length ? all[0][0] : todayStr())+"."));
+  if(salesOnly) cap.append("For now the line goes through the "+salesOnly+" sale"+(salesOnly===1 ? "" : "s")+" saved since "+fmtDay(pts[0][0])+". "
+    +(mode==="price" ? "It switches to your saved prices after a few days." : "It switches to "+mode+"'s saved daily prices once they build up (from "+fmtDay(all.length ? all[0][0] : todayStr())+")."));
   // movement: a new card's line draws itself in; switching condition or range slides the line into its new shape
   const N=72, samples=curve ? Array.from({length:N},(_,i)=>curve.at(PX+i*(W-2*PX)/(N-1))) : null;
   cancelAnimationFrame(chart.anim);

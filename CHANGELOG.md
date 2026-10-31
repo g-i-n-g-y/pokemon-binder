@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Price chart:** every condition now has a line from the first day. While a condition's saved daily prices build up, its line goes through the sales your server has saved (one point per day), ending at today's average. It switches to the saved daily prices once there are a few days of them.
+
 ## v4.5 (October 30, 2026)
 
 - **Smoother price chart:** the line now curves smoothly from price to price (it never invents a high or low), runs the full width of the card, and is green when the price went up over the range or red when it went down. **High** and **Low** labels mark the extremes.
