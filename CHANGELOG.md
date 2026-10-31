@@ -10,6 +10,13 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Smoother price chart:** the line now curves smoothly from price to price (it never invents a high or low), runs the full width of the card, and is green when the price went up over the range or red when it went down. **High** and **Low** labels mark the extremes.
+- A bigger readout shows the price with how much it changed **today** and over the range (like "↑ $18.34 (15.0%) 1M change"), and the date while you drag.
+- The line draws itself in when you open a card and slides into its new shape when you switch condition or range. The dot glides with your finger, with a tiny buzz on each new day on phones.
+- Conditions are now tiles you can swipe sideways, each with its latest price, and there's a new **2W** range. Swiping up or down on the chart or tiles still scrolls the page.
+
 ## v4.4.1 (October 30, 2026)
 
 - **Price chart:** while a condition's line is still building up, the chart now shows the sales your server has already saved for it (on their real dates), plus today's average, instead of an empty box. Drag along to read each sale.

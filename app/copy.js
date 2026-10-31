@@ -184,12 +184,15 @@ $("dBuyForm").addEventListener("submit",e=>{
   l.sort((a,b)=>(a.d||"").localeCompare(b.d||""));
   save({purchases:l}); resetBuyForm(); drawBuys(n); condOptions(n);
 });
-// The card's price chart: drag a finger (or the mouse) along it to read the price on any day, tap a condition to
-// see its own line, and pick how far back. An up-or-down swipe that starts on the chart always scrolls the page:
-// it only reads prices after a sideways move or a press and hold (touch-action: pan-y does the scrolling part).
+// The card's price chart: a smooth line (green when the price went up over the range, red when it went down) you can
+// drag a finger or the mouse along to read the price on any day, condition tiles to switch lines, and how far back.
+// An up-or-down swipe that starts on the chart always scrolls the page: it only reads prices after a sideways move
+// or a press and hold (touch-action: pan-y does the scrolling part).
 const CH_CONDS=["NM","LP","MP","HP","DMG"];
-const CH_RANGES=[["1M",30],["3M",91],["6M",182],["1Y",365],["All",0]];
-const chart={n:null, pts:[], X:null, Y:null, W:0, lineEl:null, dotEl:null, idx:-1, show:null, reset:null};
+const CH_RANGES=[["2W",14],["1M",30],["3M",91],["6M",182],["1Y",365],["All",0]];
+const chart={n:null, key:"", pts:[], salesOnly:0, W:0, H:0, X:null, Y:null, at:null, idx:-1, show:null, reset:null,
+             lineEl:null, dotEl:null, samples:null, anim:0, quiet:false, Wprev:0};
+const chMotion = () => !matchMedia("(prefers-reduced-motion: reduce)").matches;
 const dayStr = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 // One condition's prices, one point per day: saved change days carried forward, ending with today's live price
 function condLine(n, c){
@@ -204,114 +207,200 @@ function condLine(n, c){
   }
   return out;
 }
+// A smooth line through points [[x,y],...] that never overshoots them (monotone cubic), so it can't invent a high
+// or a low. Returns the SVG path and at(x), the line's height at any x.
+function smoothLine(P){
+  const n=P.length, h=[], s=[], m=[];
+  for(let i=0;i<n-1;i++){ h[i]=P[i+1][0]-P[i][0]; s[i]=(P[i+1][1]-P[i][1])/(h[i]||1); }
+  m[0]=s[0]||0; m[n-1]=s[n-2]||0;
+  for(let i=1;i<n-1;i++) m[i] = s[i-1]*s[i]<=0 ? 0 : 3*(h[i-1]+h[i])/((2*h[i]+h[i-1])/s[i-1]+(h[i]+2*h[i-1])/s[i]);
+  let d="M"+P[0][0].toFixed(1)+","+P[0][1].toFixed(1);
+  for(let i=0;i<n-1;i++){
+    const q=h[i]/3;
+    d+="C"+(P[i][0]+q).toFixed(1)+","+(P[i][1]+m[i]*q).toFixed(1)+" "+(P[i+1][0]-q).toFixed(1)+","+(P[i+1][1]-m[i+1]*q).toFixed(1)+" "+P[i+1][0].toFixed(1)+","+P[i+1][1].toFixed(1);
+  }
+  const at=x=>{
+    if(n<2 || x<=P[0][0]) return P[0][1];
+    if(x>=P[n-1][0]) return P[n-1][1];
+    let i=0; while(i<n-2 && x>P[i+1][0]) i++;
+    const t=(x-P[i][0])/(h[i]||1), t2=t*t, t3=t2*t;
+    return (2*t3-3*t2+1)*P[i][1]+(t3-2*t2+t)*h[i]*m[i]+(-2*t3+3*t2)*P[i+1][1]+(t3-t2)*h[i]*m[i+1];
+  };
+  return {d, at};
+}
 function drawSpark(n){
-  const box=$("dSpark"); box.replaceChildren();
-  chart.n=n; chart.pts=[]; chart.idx=-1; chart.lineEl=null;
+  const box=$("dSpark");
+  const fresh=chart.n!==n, quiet=chart.quiet; chart.quiet=false;
+  box.replaceChildren();
+  chart.n=n; chart.pts=[]; chart.idx=-1; chart.lineEl=null; chart.salesOnly=0;
   let mode=recall("nd-chart-cond")||"price"; if(mode!=="price" && !CH_CONDS.includes(mode)) mode="price";
   let range=+(recall("nd-chart-range")||0); if(!CH_RANGES.some(r=>r[1]===range)) range=0;
   const priceLine=series(n);   // also asks the server for this card's history when it isn't loaded yet
   const info=state.info[n]||{}, got=/** @type {any} */ (Array.isArray(state.seriesCache[n]) ? state.seriesCache[n] : null), sales=got && got.sales || {};
-  // the readout: the latest price, or the day under your finger
-  const read=document.createElement("div"); read.className="ch-read"; read.setAttribute("aria-live","polite");
-  const rv=document.createElement("b"), rd=document.createElement("span"); read.append(rv,rd);
+  const label=mode==="price" ? "Price" : mode, rangeName=(CH_RANGES.find(r=>r[1]===range)||["All"])[0];
+  // the readout: big price, then how it changed today and over the range (the date instead, while you drag)
+  const top=document.createElement("div"); top.className="ch-top"; top.setAttribute("aria-live","polite");
+  const big=document.createElement("div"); big.className="ch-big";
+  const bv=document.createElement("b"), bl=document.createElement("span"); bl.className="ch-lab"; bl.textContent=label; big.append(bv,bl);
+  const sub=document.createElement("div"); sub.className="ch-sub";
+  top.append(big,sub);
   const plot=document.createElement("div"); plot.className="ch-plot";
-  // the condition buttons, each with its latest average
-  const conds=document.createElement("div"); conds.className="seg ch-btns"; conds.setAttribute("role","group"); conds.setAttribute("aria-label","Which price");
-  for(const c of ["price"].concat(CH_CONDS)){
-    const v=c==="price" ? basePrice(n) : ((info.cond||{})[c]||[])[0];
-    const b=document.createElement("button"); b.type="button"; b.setAttribute("aria-pressed",String(c===mode));
-    if(c!=="price" && v==null && !(got && got.cond && got.cond[c])) b.classList.add("none");
-    const l=document.createElement("span"); l.textContent=c==="price" ? "Price" : c;
-    const sm=document.createElement("small"); sm.textContent=v ? money0(v) : "–";
-    b.append(l,sm); b.onclick=()=>{ store("nd-chart-cond", c==="price" ? undefined : c); drawSpark(n); };
-    conds.append(b);
-  }
-  const ranges=document.createElement("div"); ranges.className="seg ch-btns ch-range"; ranges.setAttribute("role","group"); ranges.setAttribute("aria-label","How far back");
-  for(const [label,days] of CH_RANGES){
-    const b=document.createElement("button"); b.type="button"; b.textContent=String(label); b.setAttribute("aria-pressed",String(days===range));
+  const ranges=document.createElement("div"); ranges.className="ch-ranges"; ranges.setAttribute("role","group"); ranges.setAttribute("aria-label","How far back");
+  for(const [rl,days] of CH_RANGES){
+    const b=document.createElement("button"); b.type="button"; b.textContent=String(rl); b.setAttribute("aria-pressed",String(days===range));
     b.onclick=()=>{ store("nd-chart-range", days ? String(days) : undefined); drawSpark(n); };
     ranges.append(b);
   }
+  // the condition tiles, each with its latest average; the row swipes sideways if it doesn't fit
+  const tiles=document.createElement("div"); tiles.className="ch-tiles"; tiles.setAttribute("role","group"); tiles.setAttribute("aria-label","Which price");
+  for(const c of ["price"].concat(CH_CONDS)){
+    const v=c==="price" ? basePrice(n) : ((info.cond||{})[c]||[])[0];
+    const b=document.createElement("button"); b.type="button"; b.className="ch-tile"; b.setAttribute("aria-pressed",String(c===mode));
+    if(c!=="price" && v==null && !(got && got.cond && got.cond[c])) b.classList.add("none");
+    const l=document.createElement("small"); l.textContent=c==="price" ? "Price" : c;
+    const p=document.createElement("b"); p.textContent=v ? money(v) : "–";
+    b.append(l,p); b.onclick=()=>{ store("nd-chart-cond", c==="price" ? undefined : c); drawSpark(n); };
+    tiles.append(b);
+  }
   const cap=document.createElement("div"); cap.className="cap";
-  box.append(read,plot,conds,ranges,cap);
+  box.append(top,plot,ranges,tiles,cap);
+  // slide the tiles row only when the chosen tile would be hidden
+  requestAnimationFrame(()=>{ const on=/** @type {HTMLElement} */ (tiles.querySelector('[aria-pressed="true"]')); if(!on) return; const r=tiles.getBoundingClientRect(), o=on.getBoundingClientRect(); if(o.right>r.right+1) tiles.scrollLeft+=o.left-r.left-r.width/2+o.width/2; });
   // the line to draw, cut to the chosen range
   const all=mode==="price" ? priceLine : condLine(n,mode);
   let pts=all;
   if(range){ const cut=new Date(); cut.setDate(cut.getDate()-range); const k=dayStr(cut); pts=all.filter(p=>p[0]>=k); }
-  const label=mode==="price" ? "Price" : mode;
   const latest=all.length ? all[all.length-1] : null;
-  const when=d=>d===todayStr() ? "today" : fmtDay(d);
-  chart.reset=()=>{ rv.textContent=latest ? money(latest[1]) : (mode==="price" && basePrice(n) ? money(basePrice(n)) : "–"); rd.textContent=latest ? label+" · "+when(latest[0]) : label; };
-  chart.show=i=>{ const p=chart.pts[i]; if(!p) return; rv.textContent=money(p[1]); rd.textContent=label+" · "+when(p[0]); };
-  chart.reset();
+  const when=d=>d===todayStr() ? "Today" : fmtDay(d);
+  const change=(from,to,what)=>{
+    const d=document.createElement("div"), dd=to-from, up=dd>=0;
+    d.className=Math.abs(dd)<0.005 ? "" : up ? "pos" : "neg";
+    d.textContent=(Math.abs(dd)<0.005 ? "–" : up ? "↑" : "↓")+" "+money(Math.abs(dd))+" ("+(from ? (Math.abs(dd)/from*100).toFixed(1) : "0.0")+"%) "+what;
+    return d;
+  };
   // the sale dots: this condition's, or on Price the conditions your price is made from
   const dotConds=mode==="price" ? activeSlots().filter(sl=>sl.t==="raw").map(sl=>sl.c) : [mode];
   // No line yet (each condition's line builds up one price check at a time): show the sales saved so far instead,
   // ending with today's average, so the chart is useful from the first day
-  let salesOnly=0;
   if(pts.length<2){
     let sl=dotConds.flatMap(c=>(sales[c]||[]).map(s=>[s[0],s[1]])).sort((a,b)=>a[0]<b[0] ? -1 : a[0]>b[0] ? 1 : 0);
     if(range){ const cut=new Date(); cut.setDate(cut.getDate()-range); const k=dayStr(cut); sl=sl.filter(s=>s[0]>=k); }
-    if(!sl.length){
-      const m=document.createElement("div"); m.className="ch-msg";
-      m.textContent = mode==="price" ? "Price trend appears after a few days of saved prices."
-        : !all.length ? "No "+mode+" sales saved yet."
-        : "Each condition's trend builds up from "+fmtDay(all[0][0])+".";
-      plot.append(m); return;
-    }
-    salesOnly=sl.length;
-    pts = latest && latest[0]>=sl[sl.length-1][0] ? sl.concat([latest]) : sl;
+    if(sl.length){ chart.salesOnly=sl.length; pts = latest && latest[0]>=sl[sl.length-1][0] ? sl.concat([latest]) : sl; }
   }
-  chart.show=i=>{ const p=chart.pts[i]; if(!p) return; rv.textContent=money(p[1]); rd.textContent=label+(i<salesOnly ? " sale" : "")+" · "+when(p[0]); };
+  const salesOnly=chart.salesOnly;
+  chart.reset=()=>{
+    bv.textContent=latest ? money(latest[1]) : (mode==="price" && basePrice(n) ? money(basePrice(n)) : "–");
+    sub.replaceChildren();
+    if(salesOnly || pts.length<2){ const d=document.createElement("div"); d.textContent=latest ? when(latest[0]) : ""; sub.append(d); return; }
+    if(all.length>1) sub.append(change(all[all.length-2][1], all[all.length-1][1], "Today"));
+    sub.append(change(pts[0][1], pts[pts.length-1][1], range ? rangeName+" change" : "since "+fmtDay(pts[0][0])));
+  };
+  chart.show=i=>{
+    const p=chart.pts[i]; if(!p) return;
+    bv.textContent=money(p[1]);
+    sub.replaceChildren(); const d=document.createElement("div"); d.textContent=(i<salesOnly ? "Sale · " : "")+when(p[0]); sub.append(d);
+  };
+  chart.reset();
+  if(pts.length<2){
+    const m=document.createElement("div"); m.className="ch-msg";
+    m.textContent = mode==="price" ? "Price trend appears after a few days of saved prices."
+      : !all.length ? "No "+mode+" sales saved yet."
+      : "Each condition's trend builds up from "+fmtDay(all[0][0])+".";
+    plot.append(m); chart.samples=null; return;
+  }
+  // size the drawing to the space it has, so text and dots stay crisp (redrawn if that changes)
+  const W=Math.round(plot.clientWidth)||340, H=W<500 ? 186 : 206, PT=34, PB=38, PX=8;
+  const t0=Date.parse(pts[0][0]+"T12:00:00"), t1=Date.parse(pts[pts.length-1][0]+"T12:00:00");
   const k0=pts[0][0];
   const dots=salesOnly ? [] : dotConds.flatMap(c=>(sales[c]||[]).filter(s=>s[0]>=k0));
-  const W=360,H=120,P=6, t0=Date.parse(pts[0][0]+"T12:00:00"), t1=Date.parse(pts[pts.length-1][0]+"T12:00:00");
   const ys=pts.map(p=>p[1]).concat(dots.map(s=>s[1])), y0=Math.min(...ys), y1=Math.max(...ys);
-  const X=d=>P+(t1===t0?0.5:(Date.parse(d+"T12:00:00")-t0)/(t1-t0))*(W-2*P), Y=v=>H-P-(y1===y0?0.5:(v-y0)/(y1-y0))*(H-2*P);
-  const line=pts.map(p=>X(p[0]).toFixed(1)+","+Y(p[1]).toFixed(1)).join(" ");
-  const ns="http://www.w3.org/2000/svg", svg=document.createElementNS(ns,"svg"); svg.setAttribute("viewBox","0 0 "+W+" "+H); svg.setAttribute("role","img");
+  const X=d=>PX+(t1===t0?0.5:(Date.parse(d+"T12:00:00")-t0)/(t1-t0))*(W-2*PX), Y=v=>H-PB-(y1===y0?0.5:(v-y0)/(y1-y0))*(H-PT-PB);
+  // the curve goes through each day the price changed (plus the first and last), so it eases from one price to the next
+  const keyPts=pts.filter((p,i)=>i===0 || i===pts.length-1 || p[1]!==pts[i-1][1]).map(p=>[X(p[0]),Y(p[1])]);
+  const curve=salesOnly ? null : smoothLine(keyPts.filter((p,i)=>i===0 || p[0]>keyPts[i-1][0]));
+  const up=pts[pts.length-1][1]>=pts[0][1], color=salesOnly ? "var(--dark)" : up ? "var(--good)" : "var(--bad)";
+  const ns="http://www.w3.org/2000/svg", svg=document.createElementNS(ns,"svg");
+  svg.setAttribute("viewBox","0 0 "+W+" "+H); svg.setAttribute("width",String(W)); svg.setAttribute("height",String(H)); svg.setAttribute("role","img");
   const lo=Math.min(...pts.map(p=>p[1])), hi=Math.max(...pts.map(p=>p[1]));
   svg.setAttribute("aria-label", salesOnly ? label+" sales: "+salesOnly+" since "+fmtDay(pts[0][0])+", low "+money(lo)+", high "+money(hi)
     : label+" price chart: "+money(pts[0][1])+" on "+fmtDay(pts[0][0])+" to "+money(pts[pts.length-1][1])+" now, low "+money(lo)+", high "+money(hi));
   const mk=(tag,attrs)=>{ const e=document.createElementNS(ns,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); return e; };
-  if(!salesOnly){
-    svg.append(mk("polygon",{points:P+","+(H-P)+" "+line+" "+(W-P)+","+(H-P), fill:"var(--dark)", opacity:"0.12"}));
-    svg.append(mk("polyline",{points:line, fill:"none", stroke:"var(--dark)", "stroke-width":"2", "stroke-linejoin":"round", "stroke-linecap":"round"}));
+  const gid="chg"+Date.now();
+  const defs=mk("defs",{}), grad=mk("linearGradient",{id:gid, x1:"0", y1:"0", x2:"0", y2:"1"});
+  grad.append(mk("stop",{offset:"0", "stop-color":color, "stop-opacity":"0.28"}), mk("stop",{offset:"1", "stop-color":color, "stop-opacity":"0"}));
+  const clip=mk("clipPath",{id:gid+"c"}), clipRect=mk("rect",{x:"0", y:"0", width:String(W), height:String(H)});
+  clip.append(clipRect); defs.append(grad,clip); svg.append(defs);
+  const g=mk("g",{"clip-path":"url(#"+gid+"c)"}); svg.append(g);
+  let area=null, lineP=null;
+  if(curve){
+    area=mk("path",{d:curve.d+"L"+keyPts[keyPts.length-1][0].toFixed(1)+","+H+"L"+keyPts[0][0].toFixed(1)+","+H+"Z", fill:"url(#"+gid+")"});
+    lineP=mk("path",{d:curve.d, fill:"none", stroke:color, "stroke-width":"2.5", "stroke-linejoin":"round", "stroke-linecap":"round"});
+    g.append(area,lineP);
   }
-  for(const s of dots) svg.append(mk("circle",{cx:X(s[0]), cy:Y(s[1]), r:"2.5", fill:"var(--dark)", opacity:"0.45"}));
-  for(const s of pts.slice(0,salesOnly)) svg.append(mk("circle",{cx:X(s[0]), cy:Y(s[1]), r:"3.5", fill:"var(--dark)", opacity:"0.7"}));
+  for(const s of dots) g.append(mk("circle",{cx:X(s[0]), cy:Y(s[1]), r:"2.5", fill:"var(--ink)", opacity:"0.35"}));
+  for(const s of pts.slice(0,salesOnly)) g.append(mk("circle",{cx:X(s[0]), cy:Y(s[1]), r:"4", fill:"var(--dark)", opacity:"0.8"}));
   const last=pts[pts.length-1];
-  if(!salesOnly || pts.length>salesOnly)
-    svg.append(mk("circle",{cx:X(last[0]), cy:Y(last[1]), r:"4", fill:"var(--dark)", stroke:"var(--surface)", "stroke-width":"2"}));
-  chart.lineEl=mk("line",{y1:P, y2:H-P, stroke:"var(--ink)", "stroke-width":"1", opacity:"0.5", visibility:"hidden"});
-  chart.dotEl=mk("circle",{r:"4.5", fill:"var(--ink)", stroke:"var(--surface)", "stroke-width":"2", visibility:"hidden"});
+  if(!salesOnly || pts.length>salesOnly) g.append(mk("circle",{cx:X(last[0]), cy:curve ? curve.at(X(last[0])) : Y(last[1]), r:"4", fill:color, stroke:"var(--surface)", "stroke-width":"2"}));
+  // High and Low labels at the highest and lowest points (not on a flat line)
+  if(hi>lo){
+    const hiP=pts.find(p=>p[1]===hi), loP=pts.find(p=>p[1]===lo);
+    const lab=(p,word,above)=>{
+      const x=X(p[0]), anchor=x<44 ? "start" : x>W-44 ? "end" : "middle", tx=Math.max(4,Math.min(W-4,x));
+      const yv=above ? Y(p[1])-10 : Y(p[1])+32, yw=yv-14;
+      const t1=mk("text",{x:tx, y:yw, "text-anchor":anchor, class:"ch-hl-k"}); t1.textContent=word;
+      const t2=mk("text",{x:tx, y:yv, "text-anchor":anchor, class:"ch-hl-v"}); t2.textContent=money(p[1]);
+      svg.append(t1,t2);
+    };
+    lab(hiP,"High",true); lab(loP,"Low",false);
+  }
+  chart.lineEl=mk("line",{y1:"0", y2:String(H), stroke:"var(--ink)", "stroke-width":"1", opacity:"0.35", visibility:"hidden"});
+  chart.dotEl=mk("circle",{r:"6", fill:color, stroke:"var(--surface)", "stroke-width":"2.5", visibility:"hidden"});
   svg.append(chart.lineEl, chart.dotEl);
   plot.append(svg); plot.tabIndex=0; plot.setAttribute("aria-label",(salesOnly ? "Sales chart" : "Price chart")+". Use the left and right arrow keys to read each "+(salesOnly ? "sale" : "day")+".");
-  chart.pts=pts; chart.X=X; chart.Y=Y; chart.W=W;
-  if(salesOnly){
-    cap.append(salesOnly+" sale"+(salesOnly===1 ? "" : "s")+" saved since "+fmtDay(pts[0][0])+". "
-      +(mode==="price" ? "The price line appears after a few days of saved prices." : "The "+mode+" line builds up from "+fmtDay(all.length ? all[0][0] : todayStr())+"."));
-    return;
+  chart.pts=pts; chart.X=X; chart.Y=Y; chart.W=W; chart.H=H; chart.at=curve ? curve.at : null;
+  if(salesOnly) cap.append(salesOnly+" sale"+(salesOnly===1 ? "" : "s")+" saved since "+fmtDay(pts[0][0])+". "
+    +(mode==="price" ? "The price line appears after a few days of saved prices." : "The "+mode+" line builds up from "+fmtDay(all.length ? all[0][0] : todayStr())+"."));
+  // movement: a new card's line draws itself in; switching condition or range slides the line into its new shape
+  const N=72, samples=curve ? Array.from({length:N},(_,i)=>curve.at(PX+i*(W-2*PX)/(N-1))) : null;
+  cancelAnimationFrame(chart.anim);
+  const prev=chart.samples; chart.samples=samples;
+  if(quiet || !chMotion()) return;
+  if(fresh || !prev || !samples || prev.length!==N || chart.Wprev!==W){
+    clipRect.setAttribute("width","0"); const start=performance.now();
+    const grow=now=>{ const k=Math.min(1,(now-start)/650), e=1-Math.pow(1-k,3); clipRect.setAttribute("width",String(W*e)); if(k<1) chart.anim=requestAnimationFrame(grow); };
+    chart.anim=requestAnimationFrame(grow);
+  } else if(lineP && area){
+    const final=lineP.getAttribute("d"), finalArea=area.getAttribute("d"), start=performance.now();
+    const path=ys=>"M"+ys.map((y,i)=>(PX+i*(W-2*PX)/(N-1)).toFixed(1)+","+y.toFixed(1)).join("L");
+    const step=now=>{
+      const k=Math.min(1,(now-start)/320), e=k<.5 ? 4*k*k*k : 1-Math.pow(-2*k+2,3)/2;
+      if(k<1){
+        const d=path(samples.map((y,i)=>prev[i]+(y-prev[i])*e));
+        lineP.setAttribute("d",d); area.setAttribute("d",d+"L"+(W-PX)+","+H+"L"+PX+","+H+"Z");
+        chart.anim=requestAnimationFrame(step);
+      } else { lineP.setAttribute("d",final); area.setAttribute("d",finalArea); }
+    };
+    chart.anim=requestAnimationFrame(step);
   }
-  cap.append("Low "+money(lo)+" · High "+money(hi)+" since "+fmtDay(pts[0][0]));
-  const w=mode==="price" && !range ? trend(n) : null;
-  if(w){ cap.append(" · "+periodName()+" "); cap.append(trendEl(w)); }
+  chart.Wprev=W;
 }
-// Show one day on the chart, with a line and a dot, and its price in the readout
-function chartAt(i){
+// Show the line at a spot: the dot glides along the line under your finger, the readout shows that day
+function chartGlide(x){
   if(!chart.pts.length || !chart.lineEl) return;
-  i=Math.max(0,Math.min(chart.pts.length-1,i)); chart.idx=i;
-  const p=chart.pts[i], x=chart.X(p[0]), y=chart.Y(p[1]);
-  chart.lineEl.setAttribute("x1",x); chart.lineEl.setAttribute("x2",x); chart.lineEl.setAttribute("visibility","visible");
-  chart.dotEl.setAttribute("cx",x); chart.dotEl.setAttribute("cy",y); chart.dotEl.setAttribute("visibility","visible");
-  chart.show(i);
+  x=Math.max(0,Math.min(chart.W,x));
+  let best=0, bd=Infinity; chart.pts.forEach((p,i)=>{ const d=Math.abs(chart.X(p[0])-x); if(d<bd){ bd=d; best=i; } });
+  const snap=!chart.at;   // sales only: the dot sits on each sale
+  const px=snap ? chart.X(chart.pts[best][0]) : x, py=snap ? chart.Y(chart.pts[best][1]) : chart.at(x);
+  chart.lineEl.setAttribute("x1",px); chart.lineEl.setAttribute("x2",px); chart.lineEl.setAttribute("visibility","visible");
+  chart.dotEl.setAttribute("cx",px); chart.dotEl.setAttribute("cy",py); chart.dotEl.setAttribute("visibility","visible");
+  if(best!==chart.idx){ chart.idx=best; chart.show(best); return true; }
+  return false;
 }
-// the day nearest a spot on screen
+function chartAt(i){ if(chart.pts[i]) chartGlide(chart.X(chart.pts[i][0])); }
 function chartAtX(clientX){
-  const svg=$("dSpark").querySelector(".ch-plot svg"); if(!svg || !chart.pts.length) return;
-  const r=svg.getBoundingClientRect(), vx=(clientX-r.left)/r.width*chart.W;
-  let best=0, bd=Infinity; chart.pts.forEach((p,i)=>{ const d=Math.abs(chart.X(p[0])-vx); if(d<bd){ bd=d; best=i; } });
-  chartAt(best);
+  const svg=$("dSpark").querySelector(".ch-plot svg"); if(!svg) return false;
+  const r=svg.getBoundingClientRect();
+  return chartGlide((clientX-r.left)/r.width*chart.W);
 }
 function chartOff(){
   chart.idx=-1;
@@ -322,11 +411,12 @@ function chartOff(){
 (()=>{
   const box=$("dSpark");
   let start=null, reading=false, hold=0;
+  const buzz=()=>{ try{ if(navigator.vibrate) navigator.vibrate(4); }catch(_){} };   // a tiny tick on each new day (phones)
   const stop=()=>{ clearTimeout(hold); start=null; reading=false; chartOff(); };
   box.addEventListener("pointerdown",e=>{
     if(e.pointerType==="mouse" || !e.target.closest(".ch-plot svg")) return;
     start={x:e.clientX, y:e.clientY, id:e.pointerId}; reading=false;
-    clearTimeout(hold); hold=setTimeout(()=>{ if(start){ reading=true; chartAtX(start.x); } },300);   // press and hold
+    clearTimeout(hold); hold=setTimeout(()=>{ if(start){ reading=true; chartAtX(start.x); buzz(); } },300);   // press and hold
   });
   box.addEventListener("pointermove",e=>{
     if(e.pointerType==="mouse"){ if(e.target.closest(".ch-plot svg")) chartAtX(e.clientX); else if(chart.idx>=0) chartOff(); return; }
@@ -339,17 +429,22 @@ function chartOff(){
       reading=true;
       const plot=e.target.closest(".ch-plot"); if(plot && plot.setPointerCapture) try{ plot.setPointerCapture(e.pointerId); }catch(_){}
     }
-    chartAtX(e.clientX);
+    if(chartAtX(e.clientX)) buzz();
   });
   for(const ev of ["pointerup","pointercancel"]) box.addEventListener(ev,e=>{ if(e.pointerType!=="mouse") stop(); });
   box.addEventListener("pointerleave",e=>{ if(e.pointerType==="mouse") chartOff(); });
   box.addEventListener("contextmenu",e=>{ if(e.target.closest(".ch-plot")) e.preventDefault(); });   // press and hold reads prices, not a menu
   box.addEventListener("keydown",e=>{
     if(!e.target.classList || !e.target.classList.contains("ch-plot") || !chart.pts.length) return;
-    if(e.key==="ArrowLeft" || e.key==="ArrowRight"){ e.preventDefault(); chartAt(chart.idx<0 ? chart.pts.length-1 : chart.idx+(e.key==="ArrowLeft"?-1:1)); }
+    if(e.key==="ArrowLeft" || e.key==="ArrowRight"){ e.preventDefault(); chartAt(chart.idx<0 ? chart.pts.length-1 : Math.max(0,Math.min(chart.pts.length-1,chart.idx+(e.key==="ArrowLeft"?-1:1)))); }
     else if(e.key==="Escape" && chart.idx>=0){ e.preventDefault(); e.stopPropagation(); chartOff(); }
   });
   box.addEventListener("focusout",e=>{ if(e.target.classList && e.target.classList.contains("ch-plot")) chartOff(); });
+  // the chart is drawn to fit its space: draw it again (without movement) when that space changes size
+  if(window.ResizeObserver) new ResizeObserver(()=>{
+    const plot=box.querySelector(".ch-plot"); if(!plot || chart.n==null || !$("dlg").open) return;
+    const w=Math.round(plot.clientWidth); if(w && chart.W && Math.abs(w-chart.W)>2){ chart.quiet=true; drawSpark(chart.n); }
+  }).observe(box);
 })();
 let tNote; $("dNote").oninput=e=>{ clearTimeout(tNote); tNote=setTimeout(()=>save({note:e.target.value}),700); };
 let photoSide="front";
