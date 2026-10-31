@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Price chart:** while a condition's line is still building up, the chart now shows the sales your server has already saved for it (on their real dates), plus today's average, instead of an empty box. Drag along to read each sale.
+
 ## v4.4 (October 30, 2026)
 
 - **Price chart:** the small price trend on each card is now a chart you can drag a finger (or the mouse) along to read the price on any day. Tap **NM, LP, MP, HP** or **DMG** to see that condition's own line, each with its latest average, or **Price** for your usual price. Pick **1M, 3M, 6M, 1Y** or **All**; your choices are remembered on each device. Dots show individual sales.

@@ -244,35 +244,55 @@ function drawSpark(n){
   chart.reset=()=>{ rv.textContent=latest ? money(latest[1]) : (mode==="price" && basePrice(n) ? money(basePrice(n)) : "–"); rd.textContent=latest ? label+" · "+when(latest[0]) : label; };
   chart.show=i=>{ const p=chart.pts[i]; if(!p) return; rv.textContent=money(p[1]); rd.textContent=label+" · "+when(p[0]); };
   chart.reset();
-  if(pts.length<2){
-    const m=document.createElement("div"); m.className="ch-msg";
-    m.textContent = mode==="price" ? "Price trend appears after a few days of saved prices."
-      : !all.length ? "No "+mode+" sales saved yet."
-      : "Each condition's trend builds up from "+fmtDay(all[0][0])+".";
-    plot.append(m); return;
-  }
   // the sale dots: this condition's, or on Price the conditions your price is made from
   const dotConds=mode==="price" ? activeSlots().filter(sl=>sl.t==="raw").map(sl=>sl.c) : [mode];
+  // No line yet (each condition's line builds up one price check at a time): show the sales saved so far instead,
+  // ending with today's average, so the chart is useful from the first day
+  let salesOnly=0;
+  if(pts.length<2){
+    let sl=dotConds.flatMap(c=>(sales[c]||[]).map(s=>[s[0],s[1]])).sort((a,b)=>a[0]<b[0] ? -1 : a[0]>b[0] ? 1 : 0);
+    if(range){ const cut=new Date(); cut.setDate(cut.getDate()-range); const k=dayStr(cut); sl=sl.filter(s=>s[0]>=k); }
+    if(!sl.length){
+      const m=document.createElement("div"); m.className="ch-msg";
+      m.textContent = mode==="price" ? "Price trend appears after a few days of saved prices."
+        : !all.length ? "No "+mode+" sales saved yet."
+        : "Each condition's trend builds up from "+fmtDay(all[0][0])+".";
+      plot.append(m); return;
+    }
+    salesOnly=sl.length;
+    pts = latest && latest[0]>=sl[sl.length-1][0] ? sl.concat([latest]) : sl;
+  }
+  chart.show=i=>{ const p=chart.pts[i]; if(!p) return; rv.textContent=money(p[1]); rd.textContent=label+(i<salesOnly ? " sale" : "")+" · "+when(p[0]); };
   const k0=pts[0][0];
-  const dots=dotConds.flatMap(c=>(sales[c]||[]).filter(s=>s[0]>=k0));
+  const dots=salesOnly ? [] : dotConds.flatMap(c=>(sales[c]||[]).filter(s=>s[0]>=k0));
   const W=360,H=120,P=6, t0=Date.parse(pts[0][0]+"T12:00:00"), t1=Date.parse(pts[pts.length-1][0]+"T12:00:00");
   const ys=pts.map(p=>p[1]).concat(dots.map(s=>s[1])), y0=Math.min(...ys), y1=Math.max(...ys);
   const X=d=>P+(t1===t0?0.5:(Date.parse(d+"T12:00:00")-t0)/(t1-t0))*(W-2*P), Y=v=>H-P-(y1===y0?0.5:(v-y0)/(y1-y0))*(H-2*P);
   const line=pts.map(p=>X(p[0]).toFixed(1)+","+Y(p[1]).toFixed(1)).join(" ");
   const ns="http://www.w3.org/2000/svg", svg=document.createElementNS(ns,"svg"); svg.setAttribute("viewBox","0 0 "+W+" "+H); svg.setAttribute("role","img");
   const lo=Math.min(...pts.map(p=>p[1])), hi=Math.max(...pts.map(p=>p[1]));
-  svg.setAttribute("aria-label",label+" price chart: "+money(pts[0][1])+" on "+fmtDay(pts[0][0])+" to "+money(pts[pts.length-1][1])+" now, low "+money(lo)+", high "+money(hi));
+  svg.setAttribute("aria-label", salesOnly ? label+" sales: "+salesOnly+" since "+fmtDay(pts[0][0])+", low "+money(lo)+", high "+money(hi)
+    : label+" price chart: "+money(pts[0][1])+" on "+fmtDay(pts[0][0])+" to "+money(pts[pts.length-1][1])+" now, low "+money(lo)+", high "+money(hi));
   const mk=(tag,attrs)=>{ const e=document.createElementNS(ns,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); return e; };
-  svg.append(mk("polygon",{points:P+","+(H-P)+" "+line+" "+(W-P)+","+(H-P), fill:"var(--dark)", opacity:"0.12"}));
-  svg.append(mk("polyline",{points:line, fill:"none", stroke:"var(--dark)", "stroke-width":"2", "stroke-linejoin":"round", "stroke-linecap":"round"}));
+  if(!salesOnly){
+    svg.append(mk("polygon",{points:P+","+(H-P)+" "+line+" "+(W-P)+","+(H-P), fill:"var(--dark)", opacity:"0.12"}));
+    svg.append(mk("polyline",{points:line, fill:"none", stroke:"var(--dark)", "stroke-width":"2", "stroke-linejoin":"round", "stroke-linecap":"round"}));
+  }
   for(const s of dots) svg.append(mk("circle",{cx:X(s[0]), cy:Y(s[1]), r:"2.5", fill:"var(--dark)", opacity:"0.45"}));
+  for(const s of pts.slice(0,salesOnly)) svg.append(mk("circle",{cx:X(s[0]), cy:Y(s[1]), r:"3.5", fill:"var(--dark)", opacity:"0.7"}));
   const last=pts[pts.length-1];
-  svg.append(mk("circle",{cx:X(last[0]), cy:Y(last[1]), r:"4", fill:"var(--dark)", stroke:"var(--surface)", "stroke-width":"2"}));
+  if(!salesOnly || pts.length>salesOnly)
+    svg.append(mk("circle",{cx:X(last[0]), cy:Y(last[1]), r:"4", fill:"var(--dark)", stroke:"var(--surface)", "stroke-width":"2"}));
   chart.lineEl=mk("line",{y1:P, y2:H-P, stroke:"var(--ink)", "stroke-width":"1", opacity:"0.5", visibility:"hidden"});
   chart.dotEl=mk("circle",{r:"4.5", fill:"var(--ink)", stroke:"var(--surface)", "stroke-width":"2", visibility:"hidden"});
   svg.append(chart.lineEl, chart.dotEl);
-  plot.append(svg); plot.tabIndex=0; plot.setAttribute("aria-label","Price chart. Use the left and right arrow keys to read each day.");
+  plot.append(svg); plot.tabIndex=0; plot.setAttribute("aria-label",(salesOnly ? "Sales chart" : "Price chart")+". Use the left and right arrow keys to read each "+(salesOnly ? "sale" : "day")+".");
   chart.pts=pts; chart.X=X; chart.Y=Y; chart.W=W;
+  if(salesOnly){
+    cap.append(salesOnly+" sale"+(salesOnly===1 ? "" : "s")+" saved since "+fmtDay(pts[0][0])+". "
+      +(mode==="price" ? "The price line appears after a few days of saved prices." : "The "+mode+" line builds up from "+fmtDay(all.length ? all[0][0] : todayStr())+"."));
+    return;
+  }
   cap.append("Low "+money(lo)+" · High "+money(hi)+" since "+fmtDay(pts[0][0]));
   const w=mode==="price" && !range ? trend(n) : null;
   if(w){ cap.append(" · "+periodName()+" "); cap.append(trendEl(w)); }
