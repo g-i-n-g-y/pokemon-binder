@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Fix:** the scroll bar in the chart's **View price data** list is now thin, rounded and in your theme's colors, like the card window's, instead of a thick grey bar.
+
 ## v4.6 (October 30, 2026)
 
 - **Market price history:** the server now keeps the market prices it already gets from TCGdex (TCGplayer's market price and Cardmarket's 30-day average) day by day, so each card builds a steady trend even when it rarely sells. A new **Market** tile on the chart shows it. Saved only when the price changes, so it stays small, and it's in your backups.

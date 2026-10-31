@@ -381,6 +381,13 @@ table.shop.no-trend .c-trend{display:none}
 .ch-data{margin-top:8px;font-size:13px;color:var(--muted)}
 .ch-data summary{cursor:pointer;padding:8px 0;width:fit-content}
 .ch-table{max-height:240px;overflow:auto;overscroll-behavior:contain;border:1px solid var(--line);border-radius:8px}
+/* the same thin, rounded scroll bar as the card window's, in the theme's colors */
+.ch-table::-webkit-scrollbar{width:10px}
+.ch-table::-webkit-scrollbar-button{display:none;width:0;height:0}
+.ch-table::-webkit-scrollbar-track{background:transparent;margin:6px 0}
+.ch-table::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;border:3px solid var(--surface)}
+.ch-table::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+@supports not selector(::-webkit-scrollbar){.ch-table{scrollbar-width:thin;scrollbar-color:var(--line) transparent}}
 .ch-table table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
 .ch-table caption{text-align:left;font-size:12px;padding:8px 10px 4px}
 .ch-table th,.ch-table td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:left}
