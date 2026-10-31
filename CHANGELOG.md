@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v4.4.1 (October 30, 2026)
 
 - **Price chart:** while a condition's line is still building up, the chart now shows the sales your server has already saved for it (on their real dates), plus today's average, instead of an empty box. Drag along to read each sale.
 
