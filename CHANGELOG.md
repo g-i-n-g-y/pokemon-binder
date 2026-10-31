@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v4.5 (October 30, 2026)
 
 - **Smoother price chart:** the line now curves smoothly from price to price (it never invents a high or low), runs the full width of the card, and is green when the price went up over the range or red when it went down. **High** and **Low** labels mark the extremes.
 - A bigger readout shows the price with how much it changed **today** and over the range (like "↑ $18.34 (15.0%) 1M change"), and the date while you drag.
