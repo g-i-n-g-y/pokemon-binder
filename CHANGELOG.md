@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v4.8 (November 1, 2026)
 
 - **Settings → Prices → JustTCG prices** has a **Binder** list now: pick any binder there to set whether it uses JustTCG and to fill its chart history, from the home page or any binder. The list shows which binders use JustTCG. Before, it only showed the binder you had open.
 - **Fix:** filling chart history from JustTCG now fills the older **Price** line even when JustTCG only has history for one of your price conditions (say LP but not MP): it uses the one it has. Before, that card's Price line stayed empty, though its condition tiles were filled. **Chart history** now says which conditions the filled cards got, and **View price data** says which condition a JustTCG day came from (like "JustTCG LP/MP").
