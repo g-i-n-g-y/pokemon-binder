@@ -7,7 +7,7 @@ A self-hosted Pokémon TCG collection tracker: one small Python server (standard
 
 - **Binders your way:** any English set, a Pokémon master set (every card of one Pokémon, like all the Totodile cards), or your own mix (Favorites, Trade pile). Owned cards in color, needed ones in greyscale.
 - **Real binder pages:** lay cards out 4, 9, 12 or 16 to a page, with a cover. **Find a card** searches every English card by name, number (like `80/111`) or set.
-- **Prices from recent sales:** TCGplayer's newest sales for each condition (LP and MP by default), with TCGdex market prices as a backup. Daily refresh, price history with a chart you can drag along for each condition (NM to DMG), biggest movers, a shopping list with a budget, and an upgrades list.
+- **Prices from recent sales:** TCGplayer's newest sales for each condition (LP and MP by default), with TCGdex market prices as a backup (and, with your own free key, [JustTCG](#justtcg-prices-optional) prices and a year of chart history). Daily refresh, price history with a chart you can drag along for each condition (NM to DMG), biggest movers, a shopping list with a budget, and an upgrades list.
 - **At the card show:** card show mode lists every card you still need, with a big **Got it** button. Type a vendor's asking price to see if it's a good deal, what to offer and when to walk away. Scan a PSA slab's label to check it's real and see recent sales for that grade.
 - **Your copies:** condition, notes, front and back photos, and a purchase log (price, place, seller). Zoom in on a holo and it shimmers like the real card.
 - **Phone app (Android):** install it, open it with no signal, mark cards owned offline, sync when you're back.
@@ -58,7 +58,7 @@ Your collection, purchases, photos, and prices are stored only on the machine ru
 | File | What it is |
 |---|---|
 | `server.py` | The web server: starts the binder and runs the files in `binder/` |
-| `binder/` | The rest of the server, one file per part: storage, cards, prices, PSA, pictures, card shows, spreadsheets, backups, phone sync, web pages and updates (since v4.0) |
+| `binder/` | The rest of the server, one file per part: storage, cards, prices, JustTCG, PSA, pictures, card shows, spreadsheets, backups, phone sync, web pages and updates (since v4.0) |
 | `index.html` | The binder page (its layout) |
 | `app/` | The page's styles (`style.css`) and code, one file per part: the grid, card details, Pages, card show mode and so on (since v4.0) |
 | `fonts.css` | The page's fonts, built in so the binder doesn't ask Google for them (since v3.5) |
@@ -96,6 +96,7 @@ Backups live in `backups/` and old versions in `previous/`, both next to `server
 | Extra parameters | `-w /app` |
 | Post arguments | `python -u server.py` |
 | Variable (optional) | `BINDER_HOSTS`: extra names the binder answers to, like a reverse proxy name (IP addresses, one-word names and Tailscale names already work) |
+| Variable (optional) | `JUSTTCG_API_KEY`: your JustTCG key, with **Password Mask** on (see [JustTCG prices](#justtcg-prices-optional)) |
 
 Without Docker: put the program files in a folder and run `python server.py` (Python 3.9 or newer), then open `http://localhost:8080`.
 
@@ -118,6 +119,7 @@ Without Docker: put the program files in a folder and run `python server.py` (Py
          - /etc/localtime:/etc/localtime:ro   # the server's clock, so the nightly price check runs at night
        # environment:
        #   BINDER_HOSTS: binder.example.com   # only if you use a reverse proxy name
+       #   JUSTTCG_API_KEY: ${JUSTTCG_API_KEY}   # from a .env file next to this one (see JustTCG prices)
        healthcheck:
          test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/health"]
          interval: 2m
@@ -134,6 +136,30 @@ Without Docker: put the program files in a folder and run `python server.py` (Py
 4. Open `http://<your server's address>:8765` (or `http://localhost:8765` on the same computer).
 
 Your collection is saved in `binder/data/` and backups in `binder/backups/`, so they survive `docker compose down` and new images. Updates still only install from **Settings → About**; restarting the container never installs one.
+
+## JustTCG prices (optional)
+
+[JustTCG](https://justtcg.com) is a card price service with a free plan (1,000 requests a month, 100 a day, for personal use). With your own key the binder can:
+
+- use JustTCG's price when a card has no recent TCGplayer sales for your price options (before TCGdex's market price)
+- fill the price chart with a year of JustTCG's daily prices, for the days before the binder started saving that card
+
+**Get a key:** sign up for the free plan at justtcg.com and copy your API key from its dashboard.
+
+**Give it to the binder** in one of these ways. Either way the key stays on the server: the page is only told that a key is set, backups leave it out, it's only ever sent to JustTCG, and it's blanked out of the server's log.
+
+- **Unraid:** edit the binder's container, click **Add another Path, Port, Variable**, and fill in Config Type `Variable`, Name `JustTCG key`, Key `JUSTTCG_API_KEY`, Value: your key, **Password Mask: Yes** (so it shows as dots). Apply, and the container restarts with it. Unraid keeps it with the container's settings, not in the binder's folder.
+- **Docker Compose:** put `JUSTTCG_API_KEY=your key` in a file called `.env` next to `docker-compose.yml`, and remove the `#` from the `environment:` and `JUSTTCG_API_KEY` lines. Keep `.env` out of anything you share.
+- **Without Docker:** paste it into **Settings → Prices → JustTCG key** (a password box).
+
+Then in **Settings → Prices → JustTCG prices**:
+
+| Setting | What it does |
+|---|---|
+| **Check key** | Tries the key (1 request) and shows how many requests are left today and this month |
+| **Use JustTCG for** (this binder) | **Off** (the default), **When I refresh** (only when you tap Refresh prices) or **Also nightly**. Only cards with no recent sales are asked about, 20 to a request, each at most once a week |
+| **Most requests a month / a day** | The most the binder uses (600 and 25 to start). It also always leaves JustTCG's last 100 for the month unused |
+| **Chart history** (this binder) | Fills a year of chart history and says how many requests it needs first. A set binder gets 20 cards per request (all of Neo Destiny in about 7); other binders take 1 request per card you own. Each card is filled once, and the binder's own saved prices are never changed. A single card can also be filled from under its chart |
 
 ## Phone app (Android)
 
@@ -168,6 +194,7 @@ Optional environment variables:
 | `GITHUB_BRANCH` | `main` | Branch to update from |
 | `GITHUB_TOKEN` | (none) | Only needed if you update from a private copy |
 | `BINDER_UPDATES` | `/updates` | Folder used for updates when `GITHUB_REPO` is empty |
+| `JUSTTCG_API_KEY` | (none) | Your [JustTCG](#justtcg-prices-optional) key. Overrides one typed in Settings |
 
 ## Price test for one card
 
@@ -181,7 +208,7 @@ docker exec <container name> python server.py --test neo4-1
 - Card lists: [PokemonTCG/pokemon-tcg-data](https://github.com/PokemonTCG/pokemon-tcg-data); card images and set logos from the [Pokémon TCG API](https://pokemontcg.io)
 - Pokémon sprites and artwork (covers, master sets, Unown letters): [PokeAPI/sprites](https://github.com/PokeAPI/sprites)
 - PSA slab checks: PSA's public cert pages
-- Prices: TCGplayer recent sales, market prices from [TCGdex](https://tcgdex.dev) (TCGplayer and Cardmarket), and graded sales from PriceCharting (when it lets the server in; it often blocks home servers)
+- Prices: TCGplayer recent sales, market prices from [TCGdex](https://tcgdex.dev) (TCGplayer and Cardmarket), [JustTCG](https://justtcg.com) (with your own key), and graded sales from PriceCharting (when it lets the server in; it often blocks home servers)
 - Euro to US dollar rate: [Frankfurter](https://frankfurter.dev)
 - Card show listings: [TreasureHunter.show](https://www.treasurehunter.show)
 - Master set checklists linked from Pokémon binders: [PokéCottage](https://pokecottage.com)
