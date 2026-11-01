@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v4.7 (November 1, 2026)
 
 - **New:** the chart's **View price data** list has a **From** column that says where each price came from: a TCGplayer sale, the average of TCGplayer sales, eBay sales through PriceCharting, TCGplayer's market price, or a price you typed. The binder starts saving this with this version, so older days show –.
 - **New:** **Settings → Prices → JustTCG prices** takes a free JustTCG key, the first step toward using JustTCG's prices. On Docker you can set it as the `JUSTTCG_API_KEY` variable instead (on Unraid, turn on Password Mask). **Check key** tries it and shows how many requests are left today and this month. The key stays on the server: the page is only told that one is set, backups leave it out, it's only ever sent to JustTCG, and it's blanked out of the server's log.
