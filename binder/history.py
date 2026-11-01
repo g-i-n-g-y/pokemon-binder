@@ -72,6 +72,7 @@ def snapshot_cond_history(sid, prices=None):
     if sales_changed:
         write_json(sdir(sid, "sales_log.json"), sales)
     snapshot_market_history(sid, info, today)
+    snapshot_src_history(sid, info, today)
 
 
 MARKET_SOURCES = ("TCGplayer", "Cardmarket")
@@ -103,6 +104,37 @@ def snapshot_market_history(sid, info, today):
         else:
             hist.pop(today, None)
         write_json(sdir(sid, "market_history.json"), hist)
+
+
+def snapshot_src_history(sid, info, today):
+    """Where each card's price came from that day (tcgplayer, pricecharting, tcgdex or manual), for the chart's
+    price list. src_history.json is {day: {card: source}}, again only the cards whose source changed."""
+    hist = read_json(sdir(sid, "src_history.json"), {})
+    hist = hist if isinstance(hist, dict) else {}
+    last = {}
+    for d in sorted(hist):
+        if d < today and isinstance(hist[d], dict):
+            last.update(hist[d])
+    row = dict(hist.get(today) or {})
+    for n, inf in info.items():
+        src = inf.get("src") if isinstance(inf, dict) else None
+        if isinstance(src, str) and src and last.get(n) != src:
+            row[n] = src
+        else:
+            row.pop(n, None)
+    if row != (hist.get(today) or {}):
+        if row:
+            hist[today] = row
+        else:
+            hist.pop(today, None)
+        write_json(sdir(sid, "src_history.json"), hist)
+
+
+def card_src_series(sid, n):
+    """One card's price sources: [[day, source], ...], only the days it changed."""
+    hist = read_json(sdir(sid, "src_history.json"), {})
+    return [[d, hist[d][n]] for d in sorted(hist if isinstance(hist, dict) else {})
+            if isinstance(hist[d], dict) and isinstance(hist[d].get(n), str)]
 
 
 def card_market_series(sid, n):

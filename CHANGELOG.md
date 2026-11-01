@@ -10,6 +10,10 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **New:** the chart's **View price data** list has a **From** column that says where each price came from: a TCGplayer sale, the average of TCGplayer sales, eBay sales through PriceCharting, TCGplayer's market price, or a price you typed. The binder starts saving this with this version, so older days show –.
+
 ## v4.6.2 (October 31, 2026)
 
 - Behind the scenes: the price chart's code moved out of `app/copy.js` into its own file, `app/chart.js`. Nothing looks or works differently. The phone app saves the new file too, so the chart still works with no signal.

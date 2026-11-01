@@ -157,6 +157,13 @@ assert len(server.card_sales("neo4", "1")["LP"]) == 3
 # market prices from TCGdex are kept day by day too
 server.snapshot_cond_history("neo4", {"info": {"1": {"mkt": {"tp": 31.5, "cm30": 28.0}}}})
 assert server.card_market_series("neo4", "1") == {"TCGplayer": [[server.today_local(), 31.5]], "Cardmarket": [[server.today_local(), 28.0]]}, server.card_market_series("neo4", "1")
+# where each card's price came from is saved too, only when it changes
+server.snapshot_cond_history("neo4", {"info": {"1": {"src": "tcgplayer"}}})
+server.write_json(server.sdir("neo4", "src_history.json"), {"2026-01-01": {"1": "tcgplayer"}})   # pretend that was an older day
+server.snapshot_cond_history("neo4", {"info": {"1": {"src": "tcgplayer"}}})
+assert server.card_src_series("neo4", "1") == [["2026-01-01", "tcgplayer"]], server.card_src_series("neo4", "1")
+server.snapshot_cond_history("neo4", {"info": {"1": {"src": "tcgdex"}}})
+assert server.card_src_series("neo4", "1") == [["2026-01-01", "tcgplayer"], [server.today_local(), "tcgdex"]], server.card_src_series("neo4", "1")
 # card pictures only come from the card picture websites
 assert server.fetch_image("unittest", {"n": "x1", "img": "http://127.0.0.1:8080/api/backup"}) is None
 assert server.fetch_image("unittest", {"n": "x2", "img": "https://images.pokemontcg.io.evil.example/x.png"}) is None

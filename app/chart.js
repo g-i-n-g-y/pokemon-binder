@@ -7,6 +7,8 @@
 // or a press and hold (touch-action: pan-y does the scrolling part).
 const CH_CONDS=["NM","LP","MP","HP","DMG"];
 const CH_RANGES=[["2W",14],["1M",30],["3M",91],["6M",182],["1Y",365],["All",0]];
+// where a card's main price came from, as the server saves it (see main_price)
+const CH_SRC={tcgplayer:"TCGplayer sales", pricecharting:"eBay · PriceCharting", tcgdex:"TCGplayer market", manual:"Your price"};
 const chart={n:null, key:"", pts:[], salesOnly:0, W:0, H:0, X:null, Y:null, at:null, idx:-1, show:null, reset:null,
              lineEl:null, dotEl:null, samples:null, anim:0, quiet:false, Wprev:0};
 const chMotion = () => !matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -209,15 +211,22 @@ function drawSpark(n){
   det.addEventListener("toggle",()=>{ chart.tableOpen=det.open; });
   const sum=document.createElement("summary"); sum.textContent="View price data";
   const tbl=document.createElement("table"), cp=document.createElement("caption"), thead=document.createElement("thead"), tb=document.createElement("tbody");
-  cp.textContent=label+(salesOnly ? " sales saved so far" : " price, each day it changed")+(range ? ", last "+rangeName : "");
-  const hr=document.createElement("tr"); for(const t of ["Date","Price"]){ const th=document.createElement("th"); th.scope="col"; th.textContent=t; hr.append(th); } thead.append(hr);
+  cp.textContent=label+(salesOnly ? " sales saved so far" : (mode==="price" ? "" : " price")+", each day it changed")+(range ? ", last "+rangeName : "");
+  const hr=document.createElement("tr"); for(const t of ["Date","From","Price"]){ const th=document.createElement("th"); th.scope="col"; th.textContent=t; hr.append(th); } thead.append(hr);
+  // where each row's price came from: on Price, the source saved for that day (today's is the live one)
+  const srcDays=got && got.src || [], mktName=info.mkt && info.mkt.tp==null && got && got.market && got.market.Cardmarket ? "Cardmarket" : "TCGplayer market";
+  const srcOn=d=>{ if(d===todayStr() && info.src) return CH_SRC[info.src]||""; let s=""; for(const [k,v] of srcDays){ if(k>d) break; s=v; } return CH_SRC[s]||""; };
+  const from=(p,i)=>i<salesOnly ? "TCGplayer sale" : mode==="price" ? srcOn(p[0]) : mode==="MKT" ? mktName : "TCGplayer sales";
+  let unknown=false;
   for(let i=pts.length-1;i>=0;i--){
     const p=pts[i]; if(!(i<salesOnly || i===0 || i===pts.length-1 || p[1]!==pts[i-1][1])) continue;
-    const tr=document.createElement("tr"), td1=document.createElement("td"), td2=document.createElement("td");
-    td1.textContent=fmtDay(p[0])+(i<salesOnly ? " · sale" : ""); td2.textContent=money(p[1]); tr.append(td1,td2); tb.append(tr);
+    const tr=document.createElement("tr"), td1=document.createElement("td"), td2=document.createElement("td"), td3=document.createElement("td");
+    const f=from(p,i); if(!f) unknown=true;
+    td1.textContent=fmtDay(p[0]); td3.className="ch-src"; td3.textContent=f||"–"; td2.textContent=money(p[1]); tr.append(td1,td3,td2); tb.append(tr);
   }
   tbl.append(cp,thead,tb); const wrap=document.createElement("div"); wrap.className="ch-table"; wrap.append(tbl);
   det.append(sum,wrap); box.append(det);
+  if(unknown){ const nt=document.createElement("div"); nt.className="ch-note"; nt.textContent="– means that day is from before the binder saved where prices came from."; det.append(nt); }
   if(salesOnly) cap.append("For now the line goes through the "+salesOnly+" sale"+(salesOnly===1 ? "" : "s")+" saved since "+fmtDay(pts[0][0])+". "
     +(mode==="price" ? "It switches to your saved prices after a few days." : "It switches to "+mode+"'s saved daily prices once they build up (from "+fmtDay(all.length ? all[0][0] : todayStr())+")."));
   // movement: a new card's line draws itself in; switching condition or range slides the line into its new shape
