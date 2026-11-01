@@ -216,7 +216,8 @@ function drawSpark(n){
   // where each row's price came from: on Price, the source saved for that day (today's is the live one)
   const srcDays=got && got.src || [], mktName=info.mkt && info.mkt.tp==null && got && got.market && got.market.Cardmarket ? "Cardmarket" : "TCGplayer market";
   const srcOn=d=>{ if(d===todayStr() && info.src) return CH_SRC[info.src]||""; let s=""; for(const [k,v] of srcDays){ if(k>d) break; s=v; } return CH_SRC[s]||""; };
-  const from=(p,i)=>i<salesOnly ? "TCGplayer sale" : mode==="price" ? srcOn(p[0]) : mode==="MKT" ? mktName : "TCGplayer sales";
+  const jtUntil=(got && got.jt && got.jt.until) || {};   // days before these come from JustTCG's history
+  const from=(p,i)=>i<salesOnly ? "TCGplayer sale" : mode==="price" ? srcOn(p[0]) : mode==="MKT" ? mktName : jtUntil[mode] && p[0]<jtUntil[mode] ? "JustTCG" : "TCGplayer sales";
   let unknown=false;
   for(let i=pts.length-1;i>=0;i--){
     const p=pts[i]; if(!(i<salesOnly || i===0 || i===pts.length-1 || p[1]!==pts[i-1][1])) continue;
@@ -227,6 +228,7 @@ function drawSpark(n){
   tbl.append(cp,thead,tb); const wrap=document.createElement("div"); wrap.className="ch-table"; wrap.append(tbl);
   det.append(sum,wrap); box.append(det);
   if(unknown){ const nt=document.createElement("div"); nt.className="ch-note"; nt.textContent="– means that day is from before the binder saved where prices came from."; det.append(nt); }
+  if(got && got.jt && got.jt.can && !got.jt.filled) box.append(jtFillLink(n));
   if(salesOnly) cap.append("For now the line goes through the "+salesOnly+" sale"+(salesOnly===1 ? "" : "s")+" saved since "+fmtDay(pts[0][0])+". "
     +(mode==="price" ? "It switches to your saved prices after a few days." : "It switches to "+mode+"'s saved daily prices once they build up (from "+fmtDay(all.length ? all[0][0] : todayStr())+")."));
   // movement: a new card's line draws itself in; switching condition or range slides the line into its new shape
@@ -253,6 +255,20 @@ function drawSpark(n){
     chart.anim=requestAnimationFrame(step);
   }
   chart.Wprev=W;
+}
+// Fill the past year from JustTCG's price history (1 request), for the days before the binder saved this card
+function jtFillLink(n){
+  const row=document.createElement("div"); row.className="ch-note ch-jt";
+  const b=document.createElement("button"); b.type="button"; b.className="hm-link"; b.textContent="Fill the past year from JustTCG (1 request)";
+  const msg=document.createElement("span"); msg.setAttribute("aria-live","polite");
+  b.onclick=()=>{
+    b.disabled=true; msg.textContent=" Filling…";
+    fetch("api/set/"+enc(state.sid)+"/justtcg/fill?card="+enc(n),{method:"POST"})
+      .then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error||"Couldn't fill it"); return j; }))
+      .then(j=>{ if(!j.found){ msg.textContent=" JustTCG doesn't have this card."; return; } delete state.seriesCache[n]; chart.quiet=false; drawSpark(n); })
+      .catch(e=>{ b.disabled=false; msg.textContent=" "+((e&&e.message&&e.message!=="Failed to fetch") ? e.message : "Couldn't reach "+srv()+"."); });
+  };
+  row.append(b,msg); return row;
 }
 // Show the line at a spot: the dot glides along the line under your finger, the readout shows that day
 function chartGlide(x){

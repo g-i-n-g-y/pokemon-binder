@@ -111,7 +111,7 @@ function loadSeries(n){
   state.seriesCache[n]="loading";
   fetch("api/set/"+enc(sid)+"/history?card="+enc(n)).then(r=>r.json()).then(j=>{
     if(state.sid!==sid || !Array.isArray(j.points)) return;
-    state.seriesCache[n]=Object.assign(j.points,{cond:j.cond||{}, sales:j.sales||{}, market:j.market||{}, src:j.src||[]});   // plus each condition's line and sales, and where the price came from, for the chart
+    state.seriesCache[n]=Object.assign(j.points,{cond:j.cond||{}, sales:j.sales||{}, market:j.market||{}, src:j.src||[], jt:j.jt||{}});   // plus each condition's line and sales, and where the price came from, for the chart
     if(state.open===n && $("dlg").open) drawSpark(n);
   }).catch(()=>{ if(state.seriesCache[n]==="loading") delete state.seriesCache[n]; });
 }

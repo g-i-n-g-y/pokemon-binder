@@ -7,7 +7,7 @@ starts the binder on a spare port (nothing outside the temporary folder is touch
 and checks that the main pages answer, data moves into the database, saves stick, and backups restore.
 Prints PASS or FAIL for each check (--quiet: only the failures and the summary) and exits with 1 if anything failed. Python standard library only.
 """
-import ast, io, json, os, re, shutil, socket, subprocess, sys, tempfile, threading, time, urllib.error, urllib.request, zipfile
+import ast, io, json, os, re, shutil, socket, subprocess, sys, tempfile, threading, time, urllib.error, urllib.parse, urllib.request, zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -194,6 +194,27 @@ mp = server.main_price(got["3"], slots, backup=False)
 assert mp[0] == 35.0 and mp[3] == "justtcg", mp
 assert server.main_price(dict(got["3"], cond={"LP": [25.0, 5, "2026-10-01"]}), slots, False)[3] == "tcgplayer"
 assert server.main_price({"jt": {"LP": [40.0, "2020-01-01"]}}, slots, False) is None, "a stale JustTCG price was used"
+# JustTCG chart history: a set binder asks for one card (to learn the set), then the set 20 cards to a request
+st = server.read_json(server.SETTINGS, {}); st.update(jtDay=10); server.write_json(server.SETTINGS, st)
+server.write_json(server.sdir("neo4", "tcg_ids.json"), {"neo4-1": "5001", "neo4-2": "5002", "neo4-3": "5003"})
+plan = server.jt_fill_plan("neo4")
+assert plan == {"cards": 3, "requests": 2}, plan
+before = server.jt_counts()["dayUsed"]
+assert server.jt_start_fill("neo4")
+while server.jt_fill["running"]:
+    time.sleep(0.2)
+assert server.jt_counts()["dayUsed"] - before == 2 and server.jt_fill_plan("neo4")["cards"] == 0, (server.jt_counts(), server.jt_fill)
+doc = server.jt_history_doc("neo4")
+assert doc["set"] == "neo-destiny-pokemon" and set(doc["cards"]) == {"1", "2", "3"}, doc.keys()
+lp = doc["cards"]["2"]["c"]["LP"]
+assert [p[1] for p in lp] == [43.0, 42.0, 41.0, 40.0], lp   # only the days the price changed, Unlimited not 1st Edition
+# the chart: JustTCG's days go in front of the binder's own, never over them
+own_start = server.today_local()
+pts, cond, src, about = server.jt_chart("neo4", "2", [[own_start, 50.0]], {"LP": [[own_start, 51.0]]}, [], slots)
+assert pts[-1] == [own_start, 50.0] and len(pts) >= 299 and pts[0][1] == 38.0 and pts[1][1] == 37.0, pts[:2]   # LP/MP average, a point a day
+assert all(p[0] < own_start for p in pts[:-1]) and cond["LP"][-1] == [own_start, 51.0] and cond["LP"][0][1] == 43.0
+assert src[0] == [pts[0][0], "justtcg"] and src[1] == [own_start, ""] and about["until"] == {"LP": own_start, "MP": server.today_local(), "price": own_start}, (src, about)
+assert server.jt_chart("neo4", "9", [], {}, [], slots)[3] == {"filled": False}
 print("ok")
 """
 
@@ -208,7 +229,20 @@ class FakeJustTcg(BaseHTTPRequestHandler):
     def do_GET(self):
         key = self.headers.get("x-api-key", "")
         FakeJustTcg.seen.append((self.path, key))
-        if key == JT_GOOD:
+        q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        if key == JT_GOOD and self.path.startswith("/cards?"):   # a year of history: one card, or a page of a set
+            day = 86400
+            hist = lambda base: [{"t": int(time.time()) - k * day, "p": base + (k // 100)} for k in range(300, 0, -1)]
+            card = lambda pid: {"tcgplayerId": pid, "set": "neo-destiny-pokemon", "variants": [
+                {"condition": "Lightly Played", "printing": "Unlimited Holofoil", "price": 40.0, "priceHistory": hist(40)},
+                {"condition": "Moderately Played", "printing": "Unlimited Holofoil", "price": 30.0, "priceHistory": hist(30)},
+                {"condition": "Lightly Played", "printing": "1st Edition Holofoil", "price": 900.0, "priceHistory": hist(900)}]}
+            if q.get("tcgplayerId"):
+                cards, meta = [card(q["tcgplayerId"][0])], {"hasMore": False}
+            else:
+                cards, meta = [card(pid) for pid in ("5001", "5002", "5003")], {"hasMore": False}
+            code, body = 200, {"data": cards, "meta": meta, "_metadata": {"apiRequestsRemaining": 900}}
+        elif key == JT_GOOD:
             code, body = 200, {"data": [], "_metadata": {"apiDailyLimit": 100, "apiDailyRequestsRemaining": 97, "apiRequestLimit": 1000,
                                                      "apiRequestsRemaining": 990, "apiRateLimit": 10, "apiPlan": "Free Tier"}}
         else:

@@ -403,10 +403,12 @@ class Handler(BaseHTTPRequestHandler):
             if card:   # one card's chart
                 if not re.fullmatch(NUM_RE, card):
                     return self.send(400, {"error": "bad card"})
-                return self.send(200, {"card": card, "points": card_series(m.group(1), card),
-                                       "cond": card_cond_series(m.group(1), card), "sales": card_sales(m.group(1), card),
-                                       "market": card_market_series(m.group(1), card), "src": card_src_series(m.group(1), card)},
-                                 cache="no-store")
+                sid = m.group(1)
+                points, cond, src, jt = jt_chart(sid, card, card_series(sid, card), card_cond_series(sid, card),
+                                                 card_src_series(sid, card), set_slots(sid))
+                return self.send(200, {"card": card, "points": points, "cond": cond, "sales": card_sales(sid, card),
+                                       "market": card_market_series(sid, card), "src": src,
+                                       "jt": dict(jt, can=bool(justtcg_key()[0]))}, cache="no-store")
             return self.send(200, read_json(sdir(m.group(1), "history.json"), {}), cache="no-store")
         if path == "/api/habit":   # what you usually pay vs. the price, for the vendor price check
             return self.send(200, pay_habit(), cache="no-store")
@@ -422,8 +424,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(400, {"error": "bad date"})
         if path == "/api/sellers":
             return self.send(200, {"sellers": all_sellers()}, cache="no-store")
-        if path == "/api/justtcg":
-            return self.send(200, justtcg_status(), cache="no-store")
+        if path == "/api/justtcg":   # ?set=<binder> adds what filling its chart history would take
+            sid = (urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("set") or [""])[0]
+            out = justtcg_status()
+            if sid and self.in_binder(sid):
+                out["fill"] = jt_fill_status(sid)
+            return self.send(200, out, cache="no-store")
         m = re.fullmatch(r"/api/psa/(\d{1,14})", path)
         if m:
             try:
@@ -761,6 +767,22 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, justtcg_check())
             except JustTcgError as e:
                 return self.send(e.code, dict(justtcg_status(), error=str(e)))
+        m = re.fullmatch(rf"/api/set/({SID_RE})/justtcg/fill", path)
+        if m:   # fill chart history from JustTCG: ?card=<n> for one card (1 request), else the whole binder
+            sid = m.group(1)
+            card = (urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("card") or [""])[0]
+            if not self.in_binder(sid) or (card and not re.fullmatch(NUM_RE, card)):
+                return self.send(400, {"error": "That binder or card isn't here"})
+            if not justtcg_key()[0]:
+                return self.send(400, {"error": "Add your JustTCG key in Settings → Prices first."})
+            if card:
+                try:
+                    return self.send(200, jt_fill_card(sid, card))
+                except JustTcgError as e:
+                    return self.send(e.code, {"error": str(e)})
+            if not jt_start_fill(sid):
+                return self.send(409, {"error": "Chart history is already being filled. Try again when it's done."})
+            return self.send(200, {"ok": True, "fill": jt_fill_status(sid)})
         if path == "/api/sync/undo":
             try:
                 return self.send(200, dict(undo_sync(), ok=True))

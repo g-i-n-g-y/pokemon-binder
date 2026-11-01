@@ -523,6 +523,10 @@
   "body": {
    "card": "1",
    "cond": {},
+   "jt": {
+    "can": false,
+    "filled": false
+   },
    "market": {},
    "points": [
     [

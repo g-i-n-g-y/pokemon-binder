@@ -200,8 +200,30 @@ $("icReset").onclick=()=>fetch("api/icon",{method:"DELETE"}).then(()=>{ setIcon(
 // Settings > Prices: the JustTCG key (only where it's set ever comes back from the server) and requests left
 let jtWhere="";
 function loadJtSetting(){
-  fetch("api/justtcg").then(r=>r.json()).then(drawJtSetting).catch(()=>{});
+  fetch("api/justtcg"+(state.sid ? "?set="+enc(state.sid) : "")).then(r=>r.json()).then(drawJtSetting).catch(()=>{});
 }
+// Settings > Prices: fill this binder's chart history from JustTCG (the server works through it in the background)
+let jtFillTimer=0;
+function drawJtFill(f){
+  clearTimeout(jtFillTimer);
+  $("stJtFillRow").hidden=!jtWhere || !f;
+  if(!f) return;
+  $("stJtFillSet").textContent=state.set.name || "this binder";
+  const job=f.job||{}, b=$("stJtFill"), multi=!!f.owned;
+  b.disabled=!!job.running || !f.cards; b.textContent=job.running ? "Filling…" : "Fill";
+  $("stJtFillS").textContent=job.running ? "Working: "+job.done+" of about "+job.total+" requests, about 7 seconds each."
+    : (job.message ? job.message+" " : "")+(f.cards ? "A year of JustTCG prices for "+f.cards+" "+(multi ? "owned " : "")+"card"+(f.cards===1?"":"s")+" not filled yet, about "+f.requests+" request"+(f.requests===1?"":"s")+". Only days before the binder saved each card."
+      : "Every card"+(multi ? " you own" : "")+" is filled.");
+  if(job.running) jtFillTimer=setTimeout(()=>{ if($("settings").open) loadJtSetting(); }, 4000);
+}
+$("stJtFill").onclick=()=>{
+  if(!state.sid) return;
+  $("stJtFill").disabled=true;
+  fetch("api/set/"+enc(state.sid)+"/justtcg/fill",{method:"POST"})
+    .then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error||"Couldn't start"); return j; }))
+    .then(()=>{ state.seriesCache={}; loadJtSetting(); })
+    .catch(e=>{ jtSay((e&&e.message&&e.message!=="Failed to fetch") ? e.message : "Couldn't reach "+srv()+"."); loadJtSetting(); });
+};
 function drawJtSetting(s){
   jtWhere=(s&&s.key)||"";
   const docker=jtWhere==="docker", inp=$("stJt");
@@ -213,6 +235,7 @@ function drawJtSetting(s){
   $("stJtSet").textContent=state.set.name || "this binder";
   $("stJtMode").value=(s&&s.binders&&s.binders[state.sid]) || "off";
   if(lim){ jtPick($("stJtMonth"), lim.month); jtPick($("stJtDay"), lim.day); }
+  drawJtFill(state.sid && s ? s.fill : null);
   $("stJtUse").hidden=!jtWhere || !used;
   if(jtWhere && used) $("stJtUseS").textContent=[
     "The binder used "+n(used.month)+" of its "+n(lim.month)+" this month, "+n(used.day)+" of "+n(lim.day)+" today",
