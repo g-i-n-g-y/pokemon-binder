@@ -26,10 +26,19 @@ function slotSelect(opts, val, label){
   opts.forEach(([v,t])=>{ const o=document.createElement("option"); o.value=v; o.textContent=t; sel.append(o); });
   sel.value=val; return sel;
 }
+// Settings > Prices: the default price average, and the open binder's own (or that it follows the default)
 function drawSlots(){
-  const box=$("slotRows"); box.replaceChildren();
+  slotRowsIn($("slotRows"), state.slots, saveSlots);
+  if(state.defSlots) slotRowsIn($("slotDefRows"), state.defSlots, saveDefSlots);
+  $("slotBinder").hidden=!state.sid;
+  const own=(state.ownSlots||[]).includes(state.sid), name=state.set.name||"This binder";
+  $("slotOwn").textContent=own ? name+" has its own choice." : name+" follows the default. Changing it here gives it its own.";
+  $("slotUseDef").hidden=!own;
+}
+function slotRowsIn(box, cur, save){
+  box.replaceChildren();
   const o=state.slotOpts || {raw:["NM","LP","MP","HP","DMG"], graders:["PSA","BGS","CGC","SGC","TAG","ACE","Any"], grades:["10","9.5","9","8.5","8","7.5","7","6","5","4","3","2","1"]};
-  state.slots.forEach((sl,i)=>{
+  cur.forEach((sl,i)=>{
     const row=document.createElement("div"); row.className="slotrow";
     const k=document.createElement("span"); k.className="k"; k.textContent="Price "+(i+1);
     const sels=document.createElement("div"); sels.className="sels";
@@ -40,11 +49,11 @@ function drawSlots(){
     const g=slotSelect(o.grades.map(x=>[x,"Grade "+x]), sl.g||"9", "Price "+(i+1)+" grade");
     c.hidden = sl.t!=="raw"; co.hidden = g.hidden = sl.t!=="graded";
     sels.append(c,co,g);
-    const save=()=>{
+    const change=()=>{
       const next = t.value==="raw" ? {t:"raw",c:c.value} : t.value==="graded" ? {t:"graded",co:co.value,g:g.value} : {t:"none"};
-      const slots=state.slots.slice(); slots[i]=next; saveSlots(slots);
+      const slots=cur.slice(); slots[i]=next; save(slots);
     };
-    [t,c,co,g].forEach(x=>x.onchange=save);
+    [t,c,co,g].forEach(x=>x.onchange=change);
     row.append(k,sels); box.append(row);
   });
 }
@@ -74,12 +83,50 @@ async function saveSlots(slots){
         const b=document.createElement("button"); b.className="btn"; b.type="button"; b.textContent="Refresh now";
         b.onclick=()=>{ $("settings").close(); $("refresh").click(); }; msg.append(b);
       } else msg.append("Saved. Prices updated.");
-      return state.sid && loadState();
+      return (state.sid ? loadState() : Promise.resolve()).then(()=>getSlots()).then(()=>drawSlots());
     })
     .catch(e=>{ drawSlots(); msg.textContent=(e&&e.message&&e.message!=="Failed to fetch") ? e.message : "Couldn't save. Check that "+srv()+" is online."; });
 }
+async function saveDefSlots(slots){
+  const msg=$("slotDefMsg"), before=slotsText(state.defSlots), after=slotsText(slots);
+  const others=(state.ownSlots||[]).length;
+  const ul=document.createElement("ul"); ul.className="changes";
+  [ "Binders that follow the default switch to the "+(slots[1].t==="none" ? after+" price" : "combined "+after+" average")+" right away, using sales already saved.",
+    others ? others+" binder"+(others===1 ? " has its" : "s have their")+" own choice and keep"+(others===1 ? "s it" : " it")+". You can switch "+(others===1 ? "it" : "them")+" to the default next." : null,
+    "The price history chart starts following the new price from today. Older days stay as they were."
+  ].filter(Boolean).forEach(t=>{ const li=document.createElement("li"); li.textContent=t; ul.append(li); });
+  const ok=await askConfirm("Change the default price average?", before+"  →  "+after, "Change", {safe:true, body:ul});
+  if(!ok){ drawSlots(); return; }
+  msg.textContent="Saving…";
+  fetch("api/settings",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({slots})})
+    .then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error||"Couldn't save"); return j; }))
+    .then(()=>{
+      state.defSlots=slots; msg.replaceChildren("Saved."+(others ? " "+others+" binder"+(others===1 ? " still has its" : "s still have their")+" own choice." : ""));
+      if(others){ const b=document.createElement("button"); b.className="btn"; b.type="button"; b.textContent="Use the default for all binders"; b.onclick=useDefaultEverywhere; msg.append(b); }
+      return state.sid ? loadState() : null;
+    })
+    .then(()=>getSlots()).then(()=>drawSlots())
+    .catch(e=>{ drawSlots(); msg.textContent=(e&&e.message&&e.message!=="Failed to fetch") ? e.message : "Couldn't save. Check that "+srv()+" is online."; });
+}
+function useDefaultEverywhere(){
+  $("slotDefMsg").textContent="Saving…";
+  fetch("api/settings",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({slotsAll:true})})
+    .then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error||"Couldn't save"); return j; }))
+    .then(()=>{ $("slotDefMsg").textContent="Every binder follows the default now."; return state.sid ? loadState() : null; })
+    .then(()=>getSlots()).then(()=>drawSlots())
+    .catch(e=>{ $("slotDefMsg").textContent=(e&&e.message&&e.message!=="Failed to fetch") ? e.message : "Couldn't save. Check that "+srv()+" is online."; });
+}
+$("slotUseDef").onclick=()=>{
+  if(!state.sid) return;
+  $("slotMsg").textContent="Saving…";
+  fetch("api/set/"+enc(state.sid)+"/slots",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({useDefault:true})})
+    .then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error||"Couldn't save"); return j; }))
+    .then(j=>{ state.slots=j.slots||state.slots; $("slotMsg").textContent="Saved. "+(state.set.name||"This binder")+" follows the default now."; return loadState(); })
+    .then(()=>getSlots()).then(()=>drawSlots())
+    .catch(e=>{ $("slotMsg").textContent=(e&&e.message&&e.message!=="Failed to fetch") ? e.message : "Couldn't save. Check that "+srv()+" is online."; });
+};
 function getSlots(){
-  return fetch("api/settings").then(r=>r.json()).then(s=>{ if(s.options) state.slotOpts=s.options; setServerName(s.serverName); state.lastSync=s.lastSync||null; pendUI(); if($("stHosts") && document.activeElement!==$("stHosts")) $("stHosts").value=(s.otherHosts||[]).join(", "); return s; }).catch(()=>null);
+  return fetch("api/settings").then(r=>r.json()).then(s=>{ if(s.options) state.slotOpts=s.options; if(s.slots) state.defSlots=s.slots; state.ownSlots=s.ownSlots||[]; setServerName(s.serverName); state.lastSync=s.lastSync||null; pendUI(); if($("stHosts") && document.activeElement!==$("stHosts")) $("stHosts").value=(s.otherHosts||[]).join(", "); return s; }).catch(()=>null);
 }
 // The server's name from Settings (like "Attic"), or "the server" when none is set.
 const srv = () => state.serverName || "the server";
@@ -198,30 +245,49 @@ $("icUp").onchange=e=>{
 };
 $("icReset").onclick=()=>fetch("api/icon",{method:"DELETE"}).then(()=>{ setIcon(); $("icMsg").textContent="Back to the default icon."; });
 // Settings > Prices: the JustTCG key (only where it's set ever comes back from the server) and requests left
-let jtWhere="";
+let jtWhere="", jtSid="";   // jtSid: the binder picked under JustTCG prices (the open one at first)
+const jtName = sid => ((state.sets||[]).find(x=>x.id===sid)||{}).name || sid;
 function loadJtSetting(){
-  fetch("api/justtcg"+(state.sid ? "?set="+enc(state.sid) : "")).then(r=>r.json()).then(drawJtSetting).catch(()=>{});
+  const ids=(state.sets||[]).map(x=>x.id);
+  if(!ids.includes(jtSid)) jtSid=ids.includes(state.sid) ? state.sid : ids[0] || "";
+  fetch("api/justtcg"+(jtSid ? "?set="+enc(jtSid) : "")).then(r=>r.json()).then(drawJtSetting).catch(()=>{});
 }
+// the binder picker: each binder with its JustTCG choice, so you can see at a glance which ones use it
+function drawJtBinders(modes){
+  const sel=$("stJtBinder"), say={refresh:"when I refresh", nightly:"also nightly"};
+  sel.replaceChildren();
+  for(const x of state.sets||[]){
+    const o=document.createElement("option"); o.value=x.id; o.textContent=x.name+(say[modes[x.id]] ? " · "+say[modes[x.id]] : "");
+    sel.append(o);
+  }
+  sel.value=jtSid;
+}
+$("stJtBinder").onchange=()=>{ jtSid=$("stJtBinder").value; delete $("stJtMsg").dataset.keep; loadJtSetting(); };
 // Settings > Prices: fill this binder's chart history from JustTCG (the server works through it in the background)
 let jtFillTimer=0;
 function drawJtFill(f){
   clearTimeout(jtFillTimer);
   $("stJtFillRow").hidden=!jtWhere || !f;
   if(!f) return;
-  $("stJtFillSet").textContent=state.set.name || "this binder";
   const job=f.job||{}, b=$("stJtFill"), multi=!!f.owned;
   b.disabled=!!job.running || !f.cards; b.textContent=job.running ? "Filling…" : "Fill";
   $("stJtFillS").textContent=job.running ? "Working: "+job.done+" of about "+job.total+" requests, about 7 seconds each."
-    : (job.message ? job.message+" " : "")+(f.cards ? "A year of JustTCG prices for "+f.cards+" "+(multi ? "owned " : "")+"card"+(f.cards===1?"":"s")+" not filled yet, about "+f.requests+" request"+(f.requests===1?"":"s")+". Only days before the binder saved each card."
-      : "Every card"+(multi ? " you own" : "")+" is filled.");
+    : (job.message && job.sid===jtSid ? job.message+" " : "")+(f.cards ? "A year of JustTCG prices for "+f.cards+" "+(multi ? "owned " : "")+"card"+(f.cards===1?"":"s")+" not filled yet, about "+f.requests+" request"+(f.requests===1?"":"s")+". Only days before the binder saved each card."
+      : "Every card"+(multi ? " you own" : "")+" is filled.")+jtGotText(f.got);
   if(job.running) jtFillTimer=setTimeout(()=>{ if($("settings").open) loadJtSetting(); }, 4000);
 }
+// which conditions the filled cards got: JustTCG only has history for conditions that sold or were listed
+function jtGotText(g){
+  if(!g || !g.filled) return "";
+  const have=["NM","LP","MP","HP","DMG"].filter(c=>g[c]).map(c=>c+" "+g[c]);
+  return " Filled "+g.filled+" card"+(g.filled===1?"":"s")+(have.length ? ", with a year for "+have.join(", ") : ", but JustTCG had no history for them")+".";
+}
 $("stJtFill").onclick=()=>{
-  if(!state.sid) return;
+  if(!jtSid) return;
   $("stJtFill").disabled=true;
-  fetch("api/set/"+enc(state.sid)+"/justtcg/fill",{method:"POST"})
+  fetch("api/set/"+enc(jtSid)+"/justtcg/fill",{method:"POST"})
     .then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error||"Couldn't start"); return j; }))
-    .then(()=>{ state.seriesCache={}; loadJtSetting(); })
+    .then(()=>{ if(jtSid===state.sid) state.seriesCache={}; loadJtSetting(); })
     .catch(e=>{ jtSay((e&&e.message&&e.message!=="Failed to fetch") ? e.message : "Couldn't reach "+srv()+"."); loadJtSetting(); });
 };
 function drawJtSetting(s){
@@ -231,14 +297,14 @@ function drawJtSetting(s){
   inp.placeholder=docker ? "Set by the server's Docker settings" : jtWhere ? "Saved · paste a new key to replace it" : "Paste your key";
   $("stJtRm").hidden=jtWhere!=="settings"; $("stJtCheck").hidden=!jtWhere;
   const u=s&&s.usage, used=s&&s.used, lim=s&&s.limits, n=v=>Number(v).toLocaleString();
-  $("stJtModeRow").hidden=!jtWhere || !state.sid; $("stJtMonthRow").hidden=$("stJtDayRow").hidden=!jtWhere;
-  $("stJtSet").textContent=state.set.name || "this binder";
-  $("stJtMode").value=(s&&s.binders&&s.binders[state.sid]) || "off";
+  $("stJtBinderRow").hidden=$("stJtModeRow").hidden=!jtWhere || !jtSid; $("stJtMonthRow").hidden=$("stJtDayRow").hidden=!jtWhere;
+  drawJtBinders((s&&s.binders)||{});
+  $("stJtMode").value=(s&&s.binders&&s.binders[jtSid]) || "off";
   if(lim){ jtPick($("stJtMonth"), lim.month); jtPick($("stJtDay"), lim.day); }
-  drawJtFill(state.sid && s ? s.fill : null);
+  drawJtFill(jtSid && s ? s.fill : null);
   $("stJtUse").hidden=!jtWhere || !used;
   if(jtWhere && used) $("stJtUseS").textContent=[
-    "The binder used "+n(used.month)+" of its "+n(lim.month)+" this month, "+n(used.day)+" of "+n(lim.day)+" today",
+    Srv()+" used "+n(used.month)+" of its "+n(lim.month)+" this month, "+n(used.day)+" of "+n(lim.day)+" today",
     u && u.at && u.apiRequestLimit!=null ? "JustTCG says "+n(u.apiRequestsRemaining)+" of "+n(u.apiRequestLimit)+" left this month"+(u.apiDailyLimit!=null ? ", "+n(u.apiDailyRequestsRemaining)+" of "+n(u.apiDailyLimit)+" today" : "")
       +" (as of "+new Date(u.at).toLocaleString([], {month:"short", day:"numeric", hour:"numeric", minute:"2-digit"})+")" : ""
   ].filter(Boolean).join(". ")+".";
@@ -258,8 +324,8 @@ function saveJtSetting(body, done){
 }
 $("stJtMode").onchange=()=>{
   const m=$("stJtMode").value;
-  saveJtSetting({jtBinder:{sid:state.sid, mode:m}}, m==="off" ? "JustTCG is off for "+(state.set.name||"this binder")+"."
-    : "Saved. "+(state.set.name||"This binder")+" asks JustTCG "+(m==="nightly" ? "on Refresh prices and in the nightly check." : "only when you tap Refresh prices."));
+  saveJtSetting({jtBinder:{sid:jtSid, mode:m}}, m==="off" ? "JustTCG is off for "+jtName(jtSid)+"."
+    : "Saved. "+jtName(jtSid)+" asks JustTCG "+(m==="nightly" ? "on Refresh prices and in the nightly check." : "only when you tap Refresh prices."));
 };
 $("stJtMonth").onchange=()=>saveJtSetting({jtMonth:+$("stJtMonth").value}, "Saved.");
 $("stJtDay").onchange=()=>saveJtSetting({jtDay:+$("stJtDay").value}, "Saved.");
@@ -279,7 +345,7 @@ $("stJtCheck").onclick=()=>{
   })).catch(()=>jtSay("Can't reach "+srv()+"."));
 };
 function loadSettings(){
-  loadPsaSetting(); loadJtSetting();
+  loadPsaSetting(); jtSid=""; loadJtSetting();   // the JustTCG binder picker starts on the open binder
   $("stSaved").textContent=""; $("slotMsg").textContent=""; drawSlots(); setIcon(Date.now()); loadAutoBackups(); importSetup();
   $("slotSet").textContent=state.set.name ? "for "+state.set.name : "";
   getSlots().then(s=>{ if(!s) throw 0; drawSlots(); return s; }).then(s=>{

@@ -148,6 +148,7 @@
     ]
    },
    "otherHosts": [],
+   "ownSlots": [],
    "psa": false,
    "refreshAll": false,
    "serverName": "",
@@ -1380,6 +1381,7 @@
     ]
    },
    "otherHosts": [],
+   "ownSlots": [],
    "psa": false,
    "refreshAll": true,
    "serverName": "",

@@ -10,6 +10,14 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- **Settings → Prices → JustTCG prices** has a **Binder** list now: pick any binder there to set whether it uses JustTCG and to fill its chart history, from the home page or any binder. The list shows which binders use JustTCG. Before, it only showed the binder you had open.
+- **Fix:** filling chart history from JustTCG now fills the older **Price** line even when JustTCG only has history for one of your price conditions (say LP but not MP): it uses the one it has. Before, that card's Price line stayed empty, though its condition tiles were filled. **Chart history** now says which conditions the filled cards got, and **View price data** says which condition a JustTCG day came from (like "JustTCG LP/MP").
+- **New:** **Settings → Prices → Default price average** sets the price for every binder that follows the default, like LP alone instead of the LP/MP average. A binder you've given its own choice keeps it; its section says whether it follows the default, with **Use the default** to switch it back, and after changing the default you can switch every binder to it at once.
+- **New:** under the price chart, a line says what the chosen tile is. **Price** is your binder's price from recent sales in your price conditions; **Market** is TCGplayer's own market price, usually for a Near Mint copy, so it's often higher and is only a second opinion.
+- A card's price chart always opens on **Price**, your binder's price. A tile you tap (like MP or Market) stays while that card is open, instead of being remembered for every card after it.
+
 ## v4.7 (November 1, 2026)
 
 - **New:** the chart's **View price data** list has a **From** column that says where each price came from: a TCGplayer sale, the average of TCGplayer sales, eBay sales through PriceCharting, TCGplayer's market price, or a price you typed. The binder starts saving this with this version, so older days show –.

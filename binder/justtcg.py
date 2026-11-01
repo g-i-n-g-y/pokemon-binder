@@ -313,10 +313,20 @@ def jt_fill_plan(sid):
     doc, cards = jt_history_doc(sid), jt_binder_cards(sid)
     if is_multi(sid):
         left = [n for n, (_, _, owned) in cards.items() if owned and n not in doc["cards"]]
-        return {"cards": len(left), "requests": len(left)}
+        return {"cards": len(left), "requests": len(left), "got": jt_filled_counts(doc)}
     left = [n for n in cards if n not in doc["cards"]]
     pages = -(-max(0, len(set_cards(sid)) - int(doc.get("next") or 0)) // JT_BATCH)
-    return {"cards": len(left), "requests": (pages + (0 if doc.get("set") else 1)) if left else 0}
+    return {"cards": len(left), "requests": (pages + (0 if doc.get("set") else 1)) if left else 0, "got": jt_filled_counts(doc)}
+
+
+def jt_filled_counts(doc):
+    """How many filled cards got a year of history for each condition: {"filled": cards, "NM": cards, ...}."""
+    out = {"filled": len(doc["cards"])}
+    for h in doc["cards"].values():
+        for c in (h.get("c") or {}) if isinstance(h, dict) else {}:
+            if c in COND_ORDER:
+                out[c] = out.get(c, 0) + 1
+    return out
 
 
 def jt_fill_status(sid):
@@ -410,8 +420,11 @@ def jt_chart(sid, n, points, cond, src, slots):
             until[c] = start
     raw = [sl["c"] for sl in slots if sl["t"] == "raw"]
     start = points[0][0] if points else today
-    if raw and len(raw) == len([sl for sl in slots if sl["t"] != "none"]) and all(jc.get(c) for c in raw):
-        # the binder's price average from JustTCG's conditions, each carried forward, one point a day like its own
+    # the Price line: the binder's price conditions JustTCG has (both, or just the one it has, like the backup price)
+    use = [c for c in raw if jc.get(c)] if raw and len(raw) == len([sl for sl in slots if sl["t"] != "none"]) else []
+    raw = use
+    if raw:
+        # their average, each carried forward, one point a day like the binder's own
         last, add, first = {}, [], min((jc[c][0][0] for c in raw), default="9999")
         day = datetime.strptime(first, "%Y-%m-%d") if first < start else None
         while day and len(add) < 800:
@@ -431,4 +444,5 @@ def jt_chart(sid, n, points, cond, src, slots):
             if points and (not src or src[0][0] > points[0][0]):   # own days from before sources were saved show "–"
                 lead.append([points[0][0], ""])
             points, src = add + points, lead + src
-    return points, cond, src, {"filled": True, "at": h.get("at", ""), "until": until}
+    return points, cond, src, {"filled": True, "at": h.get("at", ""), "until": until, "conds": [c for c in COND_ORDER if jc.get(c)],
+                               "priceFrom": use if "price" in until else []}

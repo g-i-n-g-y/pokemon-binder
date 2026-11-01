@@ -1161,6 +1161,7 @@ a.psa-scan{text-decoration:none}
 #psaDlg .psa-go{color:var(--muted);font-size:16px}
 #psaDlg .ui-h{margin:4px 0 -6px}
 .row-msg{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+#slotBinder:not([hidden]){display:contents}   /* the open binder's price average: spaced like the rest of the page */
 .h-chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:2px 0;scroll-padding:0 16px}
 .h-chips::-webkit-scrollbar{display:none}
 .h-chips:empty{display:none}

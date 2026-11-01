@@ -9,7 +9,7 @@ const CH_CONDS=["NM","LP","MP","HP","DMG"];
 const CH_RANGES=[["2W",14],["1M",30],["3M",91],["6M",182],["1Y",365],["All",0]];
 // where a card's main price came from, as the server saves it (see main_price)
 const CH_SRC={tcgplayer:"TCGplayer sales", pricecharting:"eBay · PriceCharting", tcgdex:"TCGplayer market", justtcg:"JustTCG", manual:"Your price"};
-const chart={n:null, key:"", pts:[], salesOnly:0, W:0, H:0, X:null, Y:null, at:null, idx:-1, show:null, reset:null,
+const chart={n:null, cond:"price", key:"", pts:[], salesOnly:0, W:0, H:0, X:null, Y:null, at:null, idx:-1, show:null, reset:null,
              lineEl:null, dotEl:null, samples:null, anim:0, quiet:false, Wprev:0};
 const chMotion = () => !matchMedia("(prefers-reduced-motion: reduce)").matches;
 const dayStr = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
@@ -57,7 +57,8 @@ function drawSpark(n){
   const fresh=chart.n!==n, quiet=chart.quiet; chart.quiet=false;
   box.replaceChildren();
   chart.n=n; chart.pts=[]; chart.idx=-1; chart.lineEl=null; chart.salesOnly=0;
-  let mode=recall("nd-chart-cond")||"price"; if(mode!=="price" && mode!=="MKT" && !CH_CONDS.includes(mode)) mode="price";
+  if(fresh) chart.cond="price";   // each card opens on Price (the binder's price); a tile you tap lasts while it's open
+  let mode=chart.cond||"price"; if(mode!=="price" && mode!=="MKT" && !CH_CONDS.includes(mode)) mode="price";
   let range=+(recall("nd-chart-range")||0); if(!CH_RANGES.some(r=>r[1]===range)) range=0;
   const priceLine=series(n);   // also asks the server for this card's history when it isn't loaded yet
   const info=state.info[n]||{}, got=/** @type {any} */ (Array.isArray(state.seriesCache[n]) ? state.seriesCache[n] : null), sales=got && got.sales || {};
@@ -83,10 +84,11 @@ function drawSpark(n){
     if(c!=="price" && v==null && !(c==="MKT" ? got && got.market && Object.keys(got.market).length : got && got.cond && got.cond[c])) b.classList.add("none");
     const l=document.createElement("small"); l.textContent=c==="price" ? "Price" : c==="MKT" ? "Market" : c;
     const p=document.createElement("b"); p.textContent=v ? money(v) : "–";
-    b.append(l,p); b.onclick=()=>{ store("nd-chart-cond", c==="price" ? undefined : c); drawSpark(n); };
+    b.append(l,p); b.onclick=()=>{ chart.cond=c; drawSpark(n); };
     tiles.append(b);
   }
   const cap=document.createElement("div"); cap.className="cap";
+  cap.append(chWhat(mode, info, got)+" ");   // what the chosen tile's line is, so Price and Market aren't a puzzle
   box.append(top,plot,ranges,tiles,cap);
   // slide the tiles row only when the chosen tile would be hidden
   requestAnimationFrame(()=>{ const on=/** @type {HTMLElement} */ (tiles.querySelector('[aria-pressed="true"]')); if(!on) return; const r=tiles.getBoundingClientRect(), o=on.getBoundingClientRect(); if(o.right>r.right+1) tiles.scrollLeft+=o.left-r.left-r.width/2+o.width/2; });
@@ -217,7 +219,13 @@ function drawSpark(n){
   const srcDays=got && got.src || [], mktName=info.mkt && info.mkt.tp==null && got && got.market && got.market.Cardmarket ? "Cardmarket" : "TCGplayer market";
   const srcOn=d=>{ if(d===todayStr() && info.src) return CH_SRC[info.src]||""; let s=""; for(const [k,v] of srcDays){ if(k>d) break; s=v; } return CH_SRC[s]||""; };
   const jtUntil=(got && got.jt && got.jt.until) || {};   // days before these come from JustTCG's history
-  const from=(p,i)=>i<salesOnly ? "TCGplayer sale" : mode==="price" ? srcOn(p[0]) : mode==="MKT" ? mktName : jtUntil[mode] && p[0]<jtUntil[mode] ? "JustTCG" : "TCGplayer sales";
+  const jtFrom=(got && got.jt && got.jt.priceFrom || []).join("/");   // which conditions the JustTCG part of Price averages
+  const from=(p,i)=>{
+    if(i<salesOnly) return "TCGplayer sale";
+    if(mode==="MKT") return mktName;
+    if(mode!=="price") return jtUntil[mode] && p[0]<jtUntil[mode] ? "JustTCG "+mode : "TCGplayer sales";
+    const s=srcOn(p[0]); return s==="JustTCG" && jtFrom ? "JustTCG "+jtFrom : s;
+  };
   let unknown=false;
   for(let i=pts.length-1;i>=0;i--){
     const p=pts[i]; if(!(i<salesOnly || i===0 || i===pts.length-1 || p[1]!==pts[i-1][1])) continue;
@@ -255,6 +263,16 @@ function drawSpark(n){
     chart.anim=requestAnimationFrame(step);
   }
   chart.Wprev=W;
+}
+// One line under the tiles saying what the chosen line is
+function chWhat(mode, info, got){
+  const sold=activeSlots().map(sl=>sl.t==="raw" ? sl.c+" ("+COND_NAME[sl.c]+")" : slotName(sl)+" (eBay sales via PriceCharting)");
+  if(mode==="price") return "Price is this binder's price: "+(sold.length>1 ? "the average of recent sales in "+sold.join(" and ") : "recent sales in "+sold[0])
+    +". You can change which in Settings → Prices.";
+  if(mode==="MKT") return info.mkt && info.mkt.tp==null && got && got.market && got.market.Cardmarket
+    ? "Market is Cardmarket's 30-day average in Europe (via TCGdex, turned into dollars), for any condition. It's a second opinion, not your price."
+    : "Market is TCGplayer's own market price (via TCGdex), usually for a Near Mint copy, so it's often above Price. It's a second opinion, not your price.";
+  return mode+" is the average of recent TCGplayer sales in "+COND_NAME[mode]+".";
 }
 // Fill the past year from JustTCG's price history (1 request), for the days before the binder saved this card
 function jtFillLink(n){

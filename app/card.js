@@ -405,7 +405,7 @@ function openCard(n){
   $("dNote").value=r.note||"";
   resetBuyForm();
   bSugList=[]; drawBSug(); loadSellers().then(list=>{ if(state.open!==n) return; bSugList=list; drawBSug(); });
-  drawBuys(n); drawSpark(n);
+  drawBuys(n); chart.n=null; drawSpark(n);   // opening a card (even the same one again) starts its chart on Price
   photoSide="front"; drawPhoto(n);
   $("dSaved").textContent=state.ready ? "" : "Can't reach "+srv()+" right now, so changes won't save.";
   $("dUpMsg").textContent="";

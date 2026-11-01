@@ -10,7 +10,7 @@ const SKINS = [
 ];
 const RSYM = {"Common":"●","Uncommon":"◆","Rare":"★","Rare Holo":"★ Holo","Rare Shining":"★ Shining","Rare Secret":"★ Secret"};
 const DEFAULT_SLOTS=[{t:"raw",c:"LP"},{t:"raw",c:"MP"}];
-const state = { serverName:"", slots:DEFAULT_SLOTS, slotOpts:null, trends:{}, histFirst:"", seriesCache:{}, view:"cards", spend:null, sid:null, set:{}, cards:[], own:{}, prices:{}, info:{}, updated:"", sets:[], catalog:null,
+const state = { serverName:"", slots:DEFAULT_SLOTS, slotOpts:null, defSlots:null, ownSlots:[], trends:{}, histFirst:"", seriesCache:{}, view:"cards", spend:null, sid:null, set:{}, cards:[], own:{}, prices:{}, info:{}, updated:"", sets:[], catalog:null,
                 filter:"all", rar:"", sort:"num", q:"", ready:false, open:null };
 /** @type {(id: string) => any} any page element: an input, a dialog, a list... */
 const $ = id => document.getElementById(id);

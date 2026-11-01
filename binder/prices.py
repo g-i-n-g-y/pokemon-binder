@@ -219,6 +219,15 @@ def main_price(info_n, slots, backup=None):
     return None
 
 
+def own_slots(sid):
+    """Does this binder have its own price options (not following the default in Settings > Prices)?"""
+    own = read_json(sdir(sid, "slots.json"), None)
+    try:
+        return bool(own) and bool(clean_slots(own))
+    except ValueError:
+        return False
+
+
 def set_slots(sid):
     """This binder's two price options. Sets without their own choice use the default from settings.json."""
     own = read_json(sdir(sid, "slots.json"), None)

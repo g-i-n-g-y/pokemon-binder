@@ -198,7 +198,7 @@ assert server.main_price({"jt": {"LP": [40.0, "2020-01-01"]}}, slots, False) is 
 st = server.read_json(server.SETTINGS, {}); st.update(jtDay=10); server.write_json(server.SETTINGS, st)
 server.write_json(server.sdir("neo4", "tcg_ids.json"), {"neo4-1": "5001", "neo4-2": "5002", "neo4-3": "5003"})
 plan = server.jt_fill_plan("neo4")
-assert plan == {"cards": 3, "requests": 2}, plan
+assert plan["cards"] == 3 and plan["requests"] == 2 and plan["got"] == {"filled": 0}, plan
 before = server.jt_counts()["dayUsed"]
 assert server.jt_start_fill("neo4")
 while server.jt_fill["running"]:
@@ -215,6 +215,12 @@ assert pts[-1] == [own_start, 50.0] and len(pts) >= 299 and pts[0][1] == 38.0 an
 assert all(p[0] < own_start for p in pts[:-1]) and cond["LP"][-1] == [own_start, 51.0] and cond["LP"][0][1] == 43.0
 assert src[0] == [pts[0][0], "justtcg"] and src[1] == [own_start, ""] and about["until"] == {"LP": own_start, "MP": server.today_local(), "price": own_start}, (src, about)
 assert server.jt_chart("neo4", "9", [], {}, [], slots)[3] == {"filled": False}
+assert about["priceFrom"] == ["LP", "MP"] and about["conds"] == ["LP", "MP"], about
+lp_only = {"2": {"LP": [["2026-01-01", 40.0]]}}   # JustTCG had only LP history: Price still fills, from LP alone
+server.jt_keep_history("neo4", lp_only)
+pts, cond, src, about = server.jt_chart("neo4", "2", [[own_start, 50.0]], {}, [], slots)
+assert pts[0] == ["2026-01-01", 40.0] and about["priceFrom"] == ["LP"] and "MP" not in cond, (pts[:1], about)
+assert server.jt_fill_plan("neo4")["got"] == {"filled": 3, "LP": 3, "MP": 2}, server.jt_fill_plan("neo4")
 print("ok")
 """
 
@@ -468,6 +474,23 @@ def main():
         call(base, "PUT", "/api/settings", {"jtBinder": {"sid": "neo4", "mode": "off"}})
         _, jt = call(base, "GET", "/api/justtcg")
         check("turning JustTCG off for a binder", jt.get("binders") == {}, jt)
+        # the default price average, and binders with their own choice going back to it
+        lp_only = [{"t": "raw", "c": "LP"}, {"t": "none"}]
+        call(base, "PUT", "/api/set/neo4/slots", {"slots": [{"t": "raw", "c": "MP"}, {"t": "none"}]})
+        _, sett = call(base, "GET", "/api/settings")
+        check("settings list binders with their own price average", sett.get("ownSlots") == ["neo4"], sett.get("ownSlots"))
+        call(base, "PUT", "/api/settings", {"slots": lp_only})
+        _, st = call(base, "GET", "/api/set/neo4/state")
+        check("a binder with its own price average keeps it when the default changes", st.get("slots", [{}])[0].get("c") == "MP", st.get("slots"))
+        code, ans = call(base, "PUT", "/api/set/neo4/slots", {"useDefault": True})
+        _, sett = call(base, "GET", "/api/settings")
+        check("a binder can go back to the default price average", code == 200 and ans.get("slots") == lp_only and sett.get("ownSlots") == [], (ans, sett.get("ownSlots")))
+        call(base, "PUT", "/api/set/neo4/slots", {"slots": [{"t": "raw", "c": "MP"}, {"t": "none"}]})
+        call(base, "PUT", "/api/settings", {"slotsAll": True})
+        _, st = call(base, "GET", "/api/set/neo4/state")
+        _, sett = call(base, "GET", "/api/settings")
+        check("every binder can be switched to the default at once", st.get("slots") == lp_only and sett.get("ownSlots") == [], st.get("slots"))
+        call(base, "PUT", "/api/settings", {"slots": [{"t": "raw", "c": "LP"}, {"t": "raw", "c": "MP"}]})
         bad = io.BytesIO()
         with zipfile.ZipFile(io.BytesIO(keyless)) as zin, zipfile.ZipFile(bad, "w") as zout:
             for n in zin.namelist():

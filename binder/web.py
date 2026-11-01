@@ -386,6 +386,7 @@ class Handler(BaseHTTPRequestHandler):
             out["refreshAll"] = bool(st.get("refreshAll"))
             out["showBinders"] = list(st.get("showBinders") or [])
             out["psa"] = bool((st.get("psaToken") or "").strip())   # only whether it's set; the code itself never leaves the server
+            out["ownSlots"] = [sid for sid in sets_list()["order"] if own_slots(sid)]   # binders not following the default
             out["justtcg"] = justtcg_key()[1]   # only where it's set ("docker", "settings" or ""), never the key
             out["options"] = {"raw": RAW_CONDS, "graders": GRADERS, "grades": GRADES}
             out["next"] = next_run(st).isoformat() if st["auto"] else ""
@@ -627,13 +628,14 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             return self.send(400, {"error": "Invalid price options"})
         try:
-            slots = clean_slots(new.get("slots"))
+            slots = [] if new.get("useDefault") is True else clean_slots(new.get("slots"))   # []: follow the default
         except ValueError as e:
             return self.send(400, {"error": str(e) or "Invalid price options"})
         except Exception:
             return self.send(400, {"error": "Invalid price options"})
         with lock:
             write_json(sdir(sid, "slots.json"), slots)
+            slots = set_slots(sid)
         return self.send(200, {"ok": True, "slots": slots, "needsRefresh": recompute_prices([sid])})
 
     def do_PUT_settings(self):
@@ -657,6 +659,11 @@ class Handler(BaseHTTPRequestHandler):
                 slots_changed = "slots" in new or "backup" in new
                 if "slots" in new:
                     st["slots"] = clean_slots(new["slots"])
+                if new.get("slotsAll") is True:   # every binder follows the default from now on
+                    slots_changed = True
+                    for sid in sets_list()["order"]:
+                        if own_slots(sid):
+                            write_json(sdir(sid, "slots.json"), [])
                 if "backup" in new:
                     st["backup"] = bool(new["backup"])
                 if "refreshAll" in new:
