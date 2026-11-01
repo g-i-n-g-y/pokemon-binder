@@ -159,7 +159,7 @@ def _restore_from(z, names):
             for n in names:
                 if DOC_RE.fullmatch(n):
                     obj = json.loads(z.read(n))
-                    if n == "settings.json" and isinstance(obj, dict):   # backups leave out the PSA key: keep yours
+                    if n == "settings.json" and isinstance(obj, dict):   # backups leave out the PSA and JustTCG keys: keep yours
                         now = db_read("settings.json")
                         obj.update({s: now[s] for s in SECRET_SETTINGS if isinstance(now, dict) and s in now and s not in obj})
                     db_write(n, obj)

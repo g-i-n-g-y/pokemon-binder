@@ -35,6 +35,7 @@
    "binder/core.py": "<time>",
    "binder/history.py": "<time>",
    "binder/images.py": "<time>",
+   "binder/justtcg.py": "<time>",
    "binder/prices.py": "<time>",
    "binder/pricetest.py": "<time>",
    "binder/psa.py": "<time>",
@@ -109,6 +110,7 @@
   "body": {
    "auto": false,
    "backup": true,
+   "justtcg": "",
    "lastAuto": "",
    "lastSync": null,
    "next": "",
@@ -1332,6 +1334,7 @@
   "body": {
    "auto": false,
    "backup": true,
+   "justtcg": "",
    "lastAuto": "",
    "lastSync": {
     "at": "<time>",

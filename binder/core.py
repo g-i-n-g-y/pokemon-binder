@@ -40,11 +40,20 @@ shows_job = {"running": False, "error": "", "done": 0, "total": 0}
 # ---------- small helpers ----------
 
 LOG_TAIL = []   # the latest log lines, for Settings > About > Status
+SECRETS = set()   # keys the server has used (like the JustTCG key): blanked out of every log line
+
+
+def hide_secrets(text):
+    for s in SECRETS:
+        if s:
+            text = text.replace(s, "***")
+    return text
 
 
 def log(msg):
+    msg = hide_secrets(str(msg))
     print(msg, flush=True)
-    LOG_TAIL.append((time.time(), str(msg)))
+    LOG_TAIL.append((time.time(), msg))
     del LOG_TAIL[:-300]
 
 

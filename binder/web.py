@@ -386,6 +386,7 @@ class Handler(BaseHTTPRequestHandler):
             out["refreshAll"] = bool(st.get("refreshAll"))
             out["showBinders"] = list(st.get("showBinders") or [])
             out["psa"] = bool((st.get("psaToken") or "").strip())   # only whether it's set; the code itself never leaves the server
+            out["justtcg"] = justtcg_key()[1]   # only where it's set ("docker", "settings" or ""), never the key
             out["options"] = {"raw": RAW_CONDS, "graders": GRADERS, "grades": GRADES}
             out["next"] = next_run(st).isoformat() if st["auto"] else ""
             out["lastAuto"] = st.get("lastAuto", "")
@@ -421,6 +422,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(400, {"error": "bad date"})
         if path == "/api/sellers":
             return self.send(200, {"sellers": all_sellers()}, cache="no-store")
+        if path == "/api/justtcg":
+            return self.send(200, justtcg_status(), cache="no-store")
         m = re.fullmatch(r"/api/psa/(\d{1,14})", path)
         if m:
             try:
@@ -665,6 +668,28 @@ class Handler(BaseHTTPRequestHandler):
                         raise ValueError("That doesn't look like a PSA access code. Copy the whole code from psacard.com/publicapi")
                     st["psaToken"] = tok
                     psa_state["denied"] = 0   # a new code gets tried right away
+                if "justtcgKey" in new:   # JustTCG price key (a Docker variable, when set, wins over this)
+                    key = str(new["justtcgKey"] or "").strip().strip('"\'').strip()
+                    if key and not re.fullmatch(JT_KEY_RE, key):
+                        raise ValueError("That doesn't look like a JustTCG key. Copy the whole key from your JustTCG dashboard")
+                    SECRETS.add(key)
+                    st["justtcgKey"] = key
+                    jt_usage.clear()
+                if "jtMonth" in new or "jtDay" in new:   # the most JustTCG requests the binder may make
+                    month, day = int(new.get("jtMonth", jt_limits(st)[0])), int(new.get("jtDay", jt_limits(st)[1]))
+                    if not (0 <= month <= 100000 and 0 <= day <= 10000):
+                        raise ValueError("Pick a request limit from the list")
+                    st["jtMonth"], st["jtDay"] = month, day
+                if "jtBinder" in new:   # {"sid": ..., "mode": "off" | "refresh" | "nightly"}
+                    b = new["jtBinder"] if isinstance(new["jtBinder"], dict) else {}
+                    if b.get("sid") not in sets_list()["order"] or b.get("mode") not in JT_MODES:
+                        raise ValueError("Unknown binder or JustTCG choice")
+                    modes = {k: v for k, v in (st.get("jtBinders") or {}).items() if k in sets_list()["order"] and v != "off"}
+                    if b["mode"] == "off":
+                        modes.pop(b["sid"], None)
+                    else:
+                        modes[b["sid"]] = b["mode"]
+                    st["jtBinders"] = modes
                 if "showBinders" in new:   # card show mode: the binders you're working on
                     order = sets_list()["order"]
                     st["showBinders"] = [x for x in dict.fromkeys(new["showBinders"] or []) if isinstance(x, str) and x in order]
@@ -731,6 +756,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, dict(apply_sync(new["changes"]), ok=True))
             except ValueError as e:
                 return self.send(400, {"error": str(e)})
+        if path == "/api/justtcg/check":   # tries the key with one request and answers how many are left
+            try:
+                return self.send(200, justtcg_check())
+            except JustTcgError as e:
+                return self.send(e.code, dict(justtcg_status(), error=str(e)))
         if path == "/api/sync/undo":
             try:
                 return self.send(200, dict(undo_sync(), ok=True))

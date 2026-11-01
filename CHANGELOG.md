@@ -13,6 +13,8 @@ The binder shows these in **Settings → About → Check for updates**.
 ## Unreleased
 
 - **New:** the chart's **View price data** list has a **From** column that says where each price came from: a TCGplayer sale, the average of TCGplayer sales, eBay sales through PriceCharting, TCGplayer's market price, or a price you typed. The binder starts saving this with this version, so older days show –.
+- **New:** **Settings → Prices → JustTCG prices** takes a free JustTCG key, the first step toward using JustTCG's prices. On Docker you can set it as the `JUSTTCG_API_KEY` variable instead (on Unraid, turn on Password Mask). **Check key** tries it and shows how many requests are left today and this month. The key stays on the server: the page is only told that one is set, backups leave it out, it's only ever sent to JustTCG, and it's blanked out of the server's log.
+- **New:** a binder can use JustTCG's price when a card has no recent TCGplayer sales for your price options, before falling back to TCGplayer's market price. Pick it per binder in **Settings → Prices**: Off (the default), When I refresh, or Also nightly. It only asks about cards with no recent sales, 20 cards to a request, and each card at most once a week. **Most requests a month** (600) and **a day** (25) cap what the binder uses, it always leaves JustTCG's last 100 for the month unused, and the page shows how many it has used. The card window and the chart's price list say "JustTCG" when the price came from there.
 
 ## v4.6.2 (October 31, 2026)
 

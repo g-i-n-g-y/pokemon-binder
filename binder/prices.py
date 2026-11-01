@@ -190,8 +190,9 @@ def slot_value(info_n, sl):
 
 def main_price(info_n, slots, backup=None):
     """The price used in the grid and totals. Both slots raw: their combined average. Otherwise slot 1,
-    falling back to slot 2. With no sales for either, TCGplayer's market price from TCGdex (if the
-    backup setting is on). Returns (price, count, latest, source) or None."""
+    falling back to slot 2. With no sales for either, JustTCG's price for the same conditions (binders that
+    use JustTCG), then TCGplayer's market price from TCGdex (if the backup setting is on).
+    Returns (price, count, latest, source) or None."""
     vals = [(sl, slot_value(info_n, sl)) for sl in slots if sl["t"] != "none"]
     if all(sl["t"] == "raw" for sl, _ in vals):
         got = [v for _, v in vals if v]
@@ -202,6 +203,12 @@ def main_price(info_n, slots, backup=None):
         for sl, v in vals:
             if v:
                 return (v[0], v[1], v[2], "pricecharting" if sl["t"] == "graded" else "tcgplayer")
+    jt = info_n.get("jt") if isinstance(info_n.get("jt"), dict) else {}
+    fresh_from = time.strftime("%Y-%m-%d", time.gmtime(time.time() - JT_STALE * DAY))
+    got = [jt[sl["c"]] for sl in slots if sl["t"] == "raw" and isinstance(jt.get(sl["c"]), list) and len(jt[sl["c"]]) == 2
+           and str(jt[sl["c"]][1]) >= fresh_from]
+    if got:
+        return (round(sum(v[0] for v in got) / len(got), 2), 0, max(v[1] for v in got), "justtcg")
     if backup is None:
         backup = get_settings().get("backup", True)
     mkt = info_n.get("mkt") or {}
@@ -253,7 +260,7 @@ def recompute_prices(sids=None):
                     p[n] = [mp[0]]
                     inf.update(count=mp[1], last=mp[2], src=mp[3])
                     inf.pop("note", None)
-                elif inf.get("src") == "tcgdex":
+                elif inf.get("src") in ("tcgdex", "justtcg"):
                     inf["note"] = "No recent sales for your price options; kept last price"
             if info:
                 write_json(sdir(sid, "prices.json"), prices)
@@ -543,6 +550,7 @@ def refresh_prices(sid, reason="daily", only_daily=False, only=None):
             prices = read_json(sdir(sid, "prices.json"), {})
         info = prices.get("info") or {}
         fresh = {}   # what this refresh found; merged into the newest prices.json at the end
+        pids = {}    # each card's TCGplayer id, for JustTCG
         priced = 0
         for i, c in enumerate(cards):
             job["done"] = i
@@ -557,6 +565,7 @@ def refresh_prices(sid, reason="daily", only_daily=False, only=None):
                 else:
                     pid = product_id(card_ref(sid, c)[0], ids)
                 if pid:
+                    pids[n] = pid
                     sales = condition_sales(pid)
                     inf["cond"] = by_condition(sales)
                     inf["recent"] = recent_by_condition(sales)
@@ -591,6 +600,10 @@ def refresh_prices(sid, reason="daily", only_daily=False, only=None):
                 job["priced"] = priced
             fresh[n] = inf
             time.sleep(1)
+        wanted = jt_wanted(sid, reason, fresh, slots, cards, pids)
+        if wanted and sid in sets_list()["order"]:
+            for n, got in jt_backup_prices(sid, wanted).items():
+                fresh[n].update(got)
         job["done"] = len(cards)
         write_json(sdir(sid, "tcg_ids.json"), ids)
         if graded_on:

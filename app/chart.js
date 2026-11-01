@@ -8,7 +8,7 @@
 const CH_CONDS=["NM","LP","MP","HP","DMG"];
 const CH_RANGES=[["2W",14],["1M",30],["3M",91],["6M",182],["1Y",365],["All",0]];
 // where a card's main price came from, as the server saves it (see main_price)
-const CH_SRC={tcgplayer:"TCGplayer sales", pricecharting:"eBay · PriceCharting", tcgdex:"TCGplayer market", manual:"Your price"};
+const CH_SRC={tcgplayer:"TCGplayer sales", pricecharting:"eBay · PriceCharting", tcgdex:"TCGplayer market", justtcg:"JustTCG", manual:"Your price"};
 const chart={n:null, key:"", pts:[], salesOnly:0, W:0, H:0, X:null, Y:null, at:null, idx:-1, show:null, reset:null,
              lineEl:null, dotEl:null, samples:null, anim:0, quiet:false, Wprev:0};
 const chMotion = () => !matchMedia("(prefers-reduced-motion: reduce)").matches;

@@ -16,6 +16,7 @@ const STALE_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 function staleWhy(n){
   const i=state.info[n]; if(!i || !priceOf(n)) return "";
   if(i.src==="tcgdex") return "No recent sales, so this is TCGplayer's market price";
+  if(i.src==="justtcg") return "No recent sales, so this is JustTCG's price";
   if((i.src==="tcgplayer"||i.src==="pricecharting") && i.last){
     const d=(new Date(todayStr())-new Date(i.last.slice(0,10)+"T00:00:00"))/864e5;
     if(d>STALE_DAYS) return "Last sold "+when(i.last.slice(0,10));
@@ -35,6 +36,7 @@ function priceSource(n){
   if(i && i.src==="tcgplayer") return "from "+sales+late+". Used for set totals.";
   if(i && i.src==="manual") return "the price you typed for this custom card"+(customOf(n)&&customOf(n).tcg ? " (no recent TCGplayer sales yet)" : ". Add its TCGplayer link to use real sales instead")+". Used for set totals.";
   if(i && i.src==="tcgdex") return "no recent sales for your price options, so this uses TCGplayer's market price (via TCGdex)"+(i.last?", updated "+when(i.last):"")+". Used for set totals.";
+  if(i && i.src==="justtcg") return "no recent sales for your price options, so this uses JustTCG's price for the same conditions"+(i.last?", updated "+when(i.last):"")+". Used for set totals.";
   if(i && i.note) return i.note+".";
   return priceOf(n) ? "starting price from PriceCharting. Replaced on the next price check." : "fills in after the next price check.";
 }

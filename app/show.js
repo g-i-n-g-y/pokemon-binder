@@ -88,6 +88,7 @@ function showCards(){
 function showStale(c){
   if(!c.price) return "";
   if(c.src==="tcgdex") return "market price";
+  if(c.src==="justtcg") return "JustTCG price";
   if((c.src==="tcgplayer"||c.src==="pricecharting") && c.last){
     const d=(new Date(todayStr())-new Date(c.last.slice(0,10)+"T00:00:00"))/864e5;
     if(d>STALE_DAYS) return "last sold "+new Date(c.last.slice(0,10)+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});

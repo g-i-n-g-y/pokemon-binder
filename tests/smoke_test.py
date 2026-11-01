@@ -7,7 +7,8 @@ starts the binder on a spare port (nothing outside the temporary folder is touch
 and checks that the main pages answer, data moves into the database, saves stick, and backups restore.
 Prints PASS or FAIL for each check (--quiet: only the failures and the summary) and exits with 1 if anything failed. Python standard library only.
 """
-import ast, io, json, os, re, shutil, socket, subprocess, sys, tempfile, time, urllib.error, urllib.request, zipfile
+import ast, io, json, os, re, shutil, socket, subprocess, sys, tempfile, threading, time, urllib.error, urllib.request, zipfile
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
@@ -171,8 +172,74 @@ assert "x1" not in str(server._img_fail) and "x2" not in str(server._img_fail), 
 for m in ("image neo4-1: timed out", "Pokémon art 158: timed out", "neo3: set logo: HTTP Error 404"):
     assert server.PICTURE_MISS_RE.search(m), m
 assert not server.PICTURE_MISS_RE.search("neo4: price refresh failed: timed out")
+# JustTCG: the right copy's price, only for binders that use it, only cards with no sales, within the limits
+st = server.read_json(server.SETTINGS, {}); st.update(justtcgKey="jt-good-key-1234567890", jtDay=2, jtMonth=600)
+server.write_json(server.SETTINGS, st)
+slots = [{"t": "raw", "c": "LP"}, {"t": "raw", "c": "MP"}]
+fresh = {str(i): {} for i in range(1, 46)}; fresh["1"] = {"cond": {"LP": [25.0, 5, "2026-10-01"]}}
+fresh["2"] = {"jtAt": server.today_local()}
+cards = [{"n": n, "rarity": "Rare Holo"} for n in fresh]
+pids = {n: "1000" + n for n in fresh}
+assert server.jt_wanted("neo4", "manual", fresh, slots, cards, pids) == {}, "a binder that's off asked JustTCG"
+st["jtBinders"] = {"neo4": "refresh"}; server.write_json(server.SETTINGS, st)
+assert server.jt_wanted("neo4", "scheduled", fresh, slots, cards, pids) == {}, "'When I refresh' asked in the nightly check"
+want = server.jt_wanted("neo4", "manual", fresh, slots, cards, pids)
+assert "1" not in want and "2" not in want and len(want) == 43, sorted(want)   # sales, or asked this week
+got = server.jt_backup_prices("neo4", want)
+assert len(got) == 40 and server.jt_counts()["dayUsed"] == 2, (len(got), server.jt_counts())   # 20 a request, 2 a day
+assert server.justtcg_left() == 0
+assert got["3"] == {"jt": {"LP": [40.0, server.time.strftime("%Y-%m-%d")], "MP": [30.0, server.time.strftime("%Y-%m-%d")]},
+                    "jtAt": server.today_local()}, got["3"]   # Unlimited, not 1st Edition; the month-old NM price left out
+mp = server.main_price(got["3"], slots, backup=False)
+assert mp[0] == 35.0 and mp[3] == "justtcg", mp
+assert server.main_price(dict(got["3"], cond={"LP": [25.0, 5, "2026-10-01"]}), slots, False)[3] == "tcgplayer"
+assert server.main_price({"jt": {"LP": [40.0, "2020-01-01"]}}, slots, False) is None, "a stale JustTCG price was used"
 print("ok")
 """
+
+
+JT_GOOD, JT_BAD = "jt-good-key-1234567890", "jt-bad-key-0987654321"
+
+
+class FakeJustTcg(BaseHTTPRequestHandler):
+    """Stands in for JustTCG. A wrong key gets an error that repeats the key back (the worst case for leaks)."""
+    seen = []
+
+    def do_GET(self):
+        key = self.headers.get("x-api-key", "")
+        FakeJustTcg.seen.append((self.path, key))
+        if key == JT_GOOD:
+            code, body = 200, {"data": [], "_metadata": {"apiDailyLimit": 100, "apiDailyRequestsRemaining": 97, "apiRequestLimit": 1000,
+                                                     "apiRequestsRemaining": 990, "apiRateLimit": 10, "apiPlan": "Free Tier"}}
+        else:
+            code, body = 401, {"error": f"Invalid API key: {key}"}
+        data = json.dumps(body).encode()
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def do_POST(self):   # batch lookup: a holo card with Unlimited and 1st Edition copies for each TCGplayer id
+        key = self.headers.get("x-api-key", "")
+        items = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"[]")
+        FakeJustTcg.seen.append(("POST /cards", key, len(items)))
+        now = int(time.time())
+        cards = [{"tcgplayerId": it["tcgplayerId"], "variants": [
+            {"condition": "Lightly Played", "printing": "1st Edition Holofoil", "price": 999.0, "lastUpdated": now},
+            {"condition": "Lightly Played", "printing": "Unlimited Holofoil", "price": 40.0, "lastUpdated": now},
+            {"condition": "Moderately Played", "printing": "Unlimited Holofoil", "price": 30.0, "lastUpdated": now},
+            {"condition": "Near Mint", "printing": "Unlimited Holofoil", "price": 80.0, "lastUpdated": now - 30 * 86400}]}
+            for it in items if it.get("tcgplayerId") != "404"]
+        data = json.dumps({"data": cards, "_metadata": {"apiRequestsRemaining": 900, "apiDailyRequestsRemaining": 90}}).encode()
+        self.send_response(200 if key == JT_GOOD else 401)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def log_message(self, *args):
+        pass
 
 
 def main():
@@ -186,9 +253,12 @@ def main():
             port = s.getsockname()[1]
         base = f"http://127.0.0.1:{port}"
         log = open(os.path.join(tmp, "server.log"), "w+")
+        fake_jt = ThreadingHTTPServer(("127.0.0.1", 0), FakeJustTcg)
+        threading.Thread(target=fake_jt.serve_forever, daemon=True).start()
         # BINDER_TRIAL: answer pages only (no downloads, no schedule), like the update test start
         proc = subprocess.Popen([sys.executable, "-u", "server.py"], cwd=tmp, stdout=log, stderr=subprocess.STDOUT,
-                                env=dict(os.environ, BINDER_PORT=str(port), BINDER_TRIAL="1", GITHUB_REPO=""))
+                                env=dict({k: v for k, v in os.environ.items() if k != "JUSTTCG_API_KEY"}, BINDER_PORT=str(port), BINDER_TRIAL="1",
+                                         GITHUB_REPO="", JUSTTCG_API=f"http://127.0.0.1:{fake_jt.server_address[1]}"))
         for _ in range(60):
             try:
                 OPENER.open(base + "/", timeout=2)
@@ -259,8 +329,10 @@ def main():
         check("get pictures for a missing binder is turned down", code == 404, f"got {code}")
         _, sl = call(base, "GET", "/api/sets")
         check("sets list says how many pictures are saved", "pics" in sl["sets"][0], sl["sets"][0].keys())
-        unit = subprocess.run([sys.executable, "-c", UNIT], cwd=tmp, capture_output=True, text=True, timeout=60)
-        check("nightly check picks owned cards plus a third of the rest", unit.stdout.strip().splitlines()[-1:] == ["ok"], (unit.stdout + unit.stderr)[-600:])
+        unit = subprocess.run([sys.executable, "-c", UNIT], cwd=tmp, capture_output=True, text=True, timeout=90,
+                              env=dict({k: v for k, v in os.environ.items() if k != "JUSTTCG_API_KEY"},
+                                       JUSTTCG_API=f"http://127.0.0.1:{fake_jt.server_address[1]}"))
+        check("small helpers: nightly picks, big jobs, chart history, JustTCG limits", unit.stdout.strip().splitlines()[-1:] == ["ok"], (unit.stdout + unit.stderr)[-600:])
 
         rec = {"qty": 2, "purchases": [{"d": "2026-10-13", "price": 7.5, "where": "Card show"}, {"d": "", "price": None, "where": ""}], "cond": "MP"}
         code, _ = call(base, "PUT", "/api/set/neo4/card/2", rec)
@@ -322,6 +394,46 @@ def main():
         code, _ = call(base, "POST", "/api/restore", keyless, "application/zip")
         _, sett = call(base, "GET", "/api/settings")
         check("restoring a backup keeps your PSA access code", code == 200 and sett.get("psa") is True, sett.get("psa"))
+
+        # JustTCG key: the page is only told where it's set, and the key never comes back out of the server
+        code, _ = call(base, "PUT", "/api/settings", {"justtcgKey": "has spaces in it"})
+        check("a JustTCG key with odd characters is turned down", code == 400, code)
+        call(base, "PUT", "/api/settings", {"justtcgKey": JT_GOOD})
+        _, sett = call(base, "GET", "/api/settings")
+        check("settings say a JustTCG key is saved, not what it is", sett.get("justtcg") == "settings" and JT_GOOD not in json.dumps(sett), sett.get("justtcg"))
+        code, jt = call(base, "POST", "/api/justtcg/check")
+        u = (jt.get("usage") or {}) if isinstance(jt, dict) else {}
+        check("checking the JustTCG key shows requests left", code == 200 and u.get("apiDailyRequestsRemaining") == 97
+              and u.get("apiRequestsRemaining") == 990 and JT_GOOD not in json.dumps(jt), jt)
+        check("the JustTCG key is sent only in the x-api-key header", FakeJustTcg.seen[-1:] == [("/games", JT_GOOD)], FakeJustTcg.seen)
+        code, jt_zip = call(base, "GET", "/api/backup")
+        check("backups leave the JustTCG key out", code == 200 and JT_GOOD.encode() not in jt_zip
+              and all(JT_GOOD.encode() not in zipfile.ZipFile(io.BytesIO(jt_zip)).read(n) for n in zipfile.ZipFile(io.BytesIO(jt_zip)).namelist()))
+        code, _ = call(base, "POST", "/api/restore", jt_zip, "application/zip")
+        _, sett = call(base, "GET", "/api/settings")
+        check("restoring a backup keeps your JustTCG key", code == 200 and sett.get("justtcg") == "settings", sett.get("justtcg"))
+        call(base, "PUT", "/api/settings", {"justtcgKey": JT_BAD})
+        code, jt = call(base, "POST", "/api/justtcg/check")
+        check("a wrong JustTCG key gets a plain error without the key", code == 502 and JT_BAD not in json.dumps(jt)
+              and "didn't accept" in str(jt.get("error")), jt)
+        _, status = call(base, "GET", "/api/status")
+        log.flush(); log.seek(0)
+        server_log = log.read()
+        check("the server log and status never show a JustTCG key", "JustTCG: error 401" in server_log
+              and JT_BAD not in server_log and JT_GOOD not in server_log and JT_BAD not in json.dumps(status), server_log[-500:])
+        call(base, "PUT", "/api/settings", {"justtcgKey": ""})
+        _, sett = call(base, "GET", "/api/settings")
+        check("the JustTCG key can be removed", sett.get("justtcg") == "", sett.get("justtcg"))
+        call(base, "PUT", "/api/settings", {"jtBinder": {"sid": "neo4", "mode": "nightly"}, "jtMonth": 400, "jtDay": 10})
+        _, jt = call(base, "GET", "/api/justtcg")
+        check("each binder's JustTCG choice and the request limits are saved", jt.get("binders") == {"neo4": "nightly"}
+              and jt.get("limits") == {"month": 400, "day": 10}, jt)
+        code, _ = call(base, "PUT", "/api/settings", {"jtBinder": {"sid": "nope", "mode": "nightly"}})
+        code2, _ = call(base, "PUT", "/api/settings", {"jtBinder": {"sid": "neo4", "mode": "always"}})
+        check("a JustTCG choice for an unknown binder or mode is turned down", code == 400 and code2 == 400, (code, code2))
+        call(base, "PUT", "/api/settings", {"jtBinder": {"sid": "neo4", "mode": "off"}})
+        _, jt = call(base, "GET", "/api/justtcg")
+        check("turning JustTCG off for a binder", jt.get("binders") == {}, jt)
         bad = io.BytesIO()
         with zipfile.ZipFile(io.BytesIO(keyless)) as zin, zipfile.ZipFile(bad, "w") as zout:
             for n in zin.namelist():

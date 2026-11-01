@@ -197,8 +197,66 @@ $("icUp").onchange=e=>{
     .catch(err=>{ $("icMsg").textContent=(err&&err.message&&err.message!=="Failed to fetch") ? err.message : "Couldn't save. Check that "+srv()+" is online."; });
 };
 $("icReset").onclick=()=>fetch("api/icon",{method:"DELETE"}).then(()=>{ setIcon(); $("icMsg").textContent="Back to the default icon."; });
+// Settings > Prices: the JustTCG key (only where it's set ever comes back from the server) and requests left
+let jtWhere="";
+function loadJtSetting(){
+  fetch("api/justtcg").then(r=>r.json()).then(drawJtSetting).catch(()=>{});
+}
+function drawJtSetting(s){
+  jtWhere=(s&&s.key)||"";
+  const docker=jtWhere==="docker", inp=$("stJt");
+  inp.value=""; inp.disabled=docker;
+  inp.placeholder=docker ? "Set by the server's Docker settings" : jtWhere ? "Saved · paste a new key to replace it" : "Paste your key";
+  $("stJtRm").hidden=jtWhere!=="settings"; $("stJtCheck").hidden=!jtWhere;
+  const u=s&&s.usage, used=s&&s.used, lim=s&&s.limits, n=v=>Number(v).toLocaleString();
+  $("stJtModeRow").hidden=!jtWhere || !state.sid; $("stJtMonthRow").hidden=$("stJtDayRow").hidden=!jtWhere;
+  $("stJtSet").textContent=state.set.name || "this binder";
+  $("stJtMode").value=(s&&s.binders&&s.binders[state.sid]) || "off";
+  if(lim){ jtPick($("stJtMonth"), lim.month); jtPick($("stJtDay"), lim.day); }
+  $("stJtUse").hidden=!jtWhere || !used;
+  if(jtWhere && used) $("stJtUseS").textContent=[
+    "The binder used "+n(used.month)+" of its "+n(lim.month)+" this month, "+n(used.day)+" of "+n(lim.day)+" today",
+    u && u.at && u.apiRequestLimit!=null ? "JustTCG says "+n(u.apiRequestsRemaining)+" of "+n(u.apiRequestLimit)+" left this month"+(u.apiDailyLimit!=null ? ", "+n(u.apiDailyRequestsRemaining)+" of "+n(u.apiDailyLimit)+" today" : "")
+      +" (as of "+new Date(u.at).toLocaleString([], {month:"short", day:"numeric", hour:"numeric", minute:"2-digit"})+")" : ""
+  ].filter(Boolean).join(". ")+".";
+  if(!$("stJtMsg").dataset.keep) $("stJtMsg").textContent=docker ? "A key is set in Docker." : jtWhere ? "A key is saved." : "";
+  delete $("stJtMsg").dataset.keep;
+}
+function jtSay(t){ $("stJtMsg").textContent=t; $("stJtMsg").dataset.keep=1; }
+function jtPick(sel, v){   // a limit typed into settings.json by hand still shows
+  if(![...sel.options].some(o=>o.value===String(v))){ const o=document.createElement("option"); o.textContent=String(v); sel.append(o); }
+  sel.value=String(v);
+}
+function saveJtSetting(body, done){
+  fetch("api/settings",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
+    .then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error||"Couldn't save"); return j; }))
+    .then(()=>{ jtSay(done); loadJtSetting(); })
+    .catch(e=>{ jtSay((e&&e.message&&e.message!=="Failed to fetch") ? e.message+"." : "Couldn't save. Check that "+srv()+" is online."); loadJtSetting(); });
+}
+$("stJtMode").onchange=()=>{
+  const m=$("stJtMode").value;
+  saveJtSetting({jtBinder:{sid:state.sid, mode:m}}, m==="off" ? "JustTCG is off for "+(state.set.name||"this binder")+"."
+    : "Saved. "+(state.set.name||"This binder")+" asks JustTCG "+(m==="nightly" ? "on Refresh prices and in the nightly check." : "only when you tap Refresh prices."));
+};
+$("stJtMonth").onchange=()=>saveJtSetting({jtMonth:+$("stJtMonth").value}, "Saved.");
+$("stJtDay").onchange=()=>saveJtSetting({jtDay:+$("stJtDay").value}, "Saved.");
+function saveJt(v){
+  fetch("api/settings",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({justtcgKey:v})})
+    .then(r=>r.json().then(j=>{ if(!r.ok) throw new Error(j.error||"Couldn't save"); return j; }))
+    .then(()=>{ jtSay(v ? "Saved. Tap Check key to try it." : "Removed."); loadJtSetting(); })
+    .catch(e=>{ jtSay(e.message+"."); loadJtSetting(); });
+}
+$("stJt").addEventListener("change",()=>{ const v=$("stJt").value.trim(); if(v) saveJt(v); });
+$("stJtRm").onclick=()=>saveJt("");
+$("stJtCheck").onclick=()=>{
+  $("stJtMsg").textContent="Checking…";
+  fetch("api/justtcg/check",{method:"POST"}).then(r=>r.json().then(j=>{
+    jtSay(r.ok ? "The key works." : (j.error||"Couldn't check the key."));
+    drawJtSetting(j.key!==undefined ? j : {key:jtWhere});
+  })).catch(()=>jtSay("Can't reach "+srv()+"."));
+};
 function loadSettings(){
-  loadPsaSetting();
+  loadPsaSetting(); loadJtSetting();
   $("stSaved").textContent=""; $("slotMsg").textContent=""; drawSlots(); setIcon(Date.now()); loadAutoBackups(); importSetup();
   $("slotSet").textContent=state.set.name ? "for "+state.set.name : "";
   getSlots().then(s=>{ if(!s) throw 0; drawSlots(); return s; }).then(s=>{

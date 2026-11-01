@@ -74,14 +74,14 @@ APP_FILES = ("server.py", "index.html", "fonts.css", "sw.js", "icon-192.png", "i
              "app/style.css", "app/core.js", "app/grid.js", "app/card.js", "app/copy.js", "app/chart.js",
              "app/settings.js", "app/updates.js", "app/sets.js", "app/data.js", "app/shop.js", "app/stats.js", "app/find.js",
              "app/pages.js", "app/show.js", "app/psa.js", "app/offline.js", "app/start.js",
-             "binder/core.py", "binder/cards.py", "binder/psa.py", "binder/images.py", "binder/prices.py", "binder/history.py",
+             "binder/core.py", "binder/cards.py", "binder/psa.py", "binder/images.py", "binder/prices.py", "binder/justtcg.py", "binder/history.py",
              "binder/shows.py", "binder/spreadsheet.py", "binder/backup.py", "binder/sync.py", "binder/web.py", "binder/pricetest.py",
              "binder/updater.py")
 UPDATE_FILES = APP_FILES
 
 # The rest of the server is in binder/, one file per part. They run here, in this order, exactly as if they were
 # written in this file: they share its names, so a part can use anything from the parts before it.
-SERVER_PARTS = ("core", "cards", "psa", "images", "prices", "history", "shows", "spreadsheet", "backup", "sync", "web", "pricetest", "updater")
+SERVER_PARTS = ("core", "cards", "psa", "images", "prices", "justtcg", "history", "shows", "spreadsheet", "backup", "sync", "web", "pricetest", "updater")
 for _part in SERVER_PARTS:
     _path = os.path.join(APP, "binder", _part + ".py")
     with open(_path, encoding="utf-8") as _f:

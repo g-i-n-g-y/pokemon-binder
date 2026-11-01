@@ -4,6 +4,7 @@ Part of the server: server.py runs the files in binder/ in order, as if they wer
 so they all share one set of names."""
 
 def test_card(card_id):
+    pid = None
     try:
         print(f"Card {card_id}: looking up the TCGplayer product (fresh, not the saved one)")
         pid = product_id(card_id, {}, verbose=True)
@@ -31,6 +32,23 @@ def test_card(card_id):
             print(f"  Cardmarket 30-day avg ${mkt.get('cm30')}, trend ${mkt.get('cmTrend')} (converted from euros), updated {mkt.get('cmUpd')}")
     except Exception as e:
         print(f"  Couldn't reach TCGdex: {e}")
+    print("JustTCG (uses 1 request):")
+    if not justtcg_key()[0]:
+        print("  No JustTCG key set")
+    elif not pid:
+        print("  Needs the TCGplayer product id")
+    elif justtcg_left() <= 0:
+        print("  The binder's JustTCG request limit is used up")
+    else:
+        try:
+            ans = justtcg_call("/cards?" + urllib.parse.urlencode({"tcgplayerId": pid}))
+            got = jt_prices((ans.get("data") or [None])[0], card.get("rarity", ""))
+            for short in [c for c in COND_SHORT.values() if c in got]:
+                print(f"  {short:<4} ${got[short][0]}  updated {got[short][1]}")
+            if not got:
+                print("  No recent prices for this card")
+        except JustTcgError as e:
+            print(f"  {e}")
     print("Graded (PriceCharting sold listings, Unlimited only):")
     try:
         groups, url, _ = graded_for(sid, card, {})

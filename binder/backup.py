@@ -29,7 +29,7 @@ def backup_files():
     return [n for n in out if BACKUP_RE.fullmatch(n)]
 
 
-SECRET_SETTINGS = ("psaToken",)   # kept out of backups, so a backup file is safe to keep anywhere
+SECRET_SETTINGS = ("psaToken", "justtcgKey")   # kept out of backups, so a backup file is safe to keep anywhere
 
 
 def make_backup(target, photos=True):
