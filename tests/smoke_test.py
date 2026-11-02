@@ -188,7 +188,7 @@ assert "1" not in want and "2" not in want and len(want) == 43, sorted(want)   #
 got = server.jt_backup_prices("neo4", want)
 assert len(got) == 40 and server.jt_counts()["dayUsed"] == 2, (len(got), server.jt_counts())   # 20 a request, 2 a day
 assert server.justtcg_left() == 0
-assert got["3"] == {"jt": {"LP": [40.0, server.time.strftime("%Y-%m-%d")], "MP": [30.0, server.time.strftime("%Y-%m-%d")]},
+assert got["3"] == {"jt": {"LP": [40.0, server.time.strftime("%Y-%m-%d", server.time.gmtime())], "MP": [30.0, server.time.strftime("%Y-%m-%d", server.time.gmtime())]},
                     "jtAt": server.today_local()}, got["3"]   # Unlimited, not 1st Edition; the month-old NM price left out
 mp = server.main_price(got["3"], slots, backup=False)
 assert mp[0] == 35.0 and mp[3] == "justtcg", mp

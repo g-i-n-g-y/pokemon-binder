@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v4.8.1 (November 1, 2026)
 
 - The price chart no longer repeats your price in a second big number when **Price** is picked: the price at the top says it, and the chart shows how it changed. Dragging along the chart still shows the price and date.
 - Dragging along the chart now stops on the days the price changed, and the dot sits right on that day's price, so the dot and the number always match. Before, the dot could sit a little above or below the number shown.
