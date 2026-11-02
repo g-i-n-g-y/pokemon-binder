@@ -78,9 +78,9 @@ function drawSpark(n){
   }
   // the condition tiles, each with its latest average; the row swipes sideways if it doesn't fit
   const tiles=document.createElement("div"); tiles.className="ch-tiles"; tiles.setAttribute("role","group"); tiles.setAttribute("aria-label","Which price");
-  for(const c of ["price","MKT"].concat(CH_CONDS)){
+  for(const c of ["price"].concat(CH_CONDS,["MKT"])){
     const v=c==="price" ? basePrice(n) : c==="MKT" ? marketNow(n) : ((info.cond||{})[c]||[])[0];
-    const b=document.createElement("button"); b.type="button"; b.className="ch-tile"; b.setAttribute("aria-pressed",String(c===mode));
+    const b=document.createElement("button"); b.type="button"; b.className="ch-tile"+(c==="MKT" ? " ref" : ""); b.setAttribute("aria-pressed",String(c===mode));
     if(c!=="price" && v==null && !(c==="MKT" ? got && got.market && Object.keys(got.market).length : got && got.cond && got.cond[c])) b.classList.add("none");
     const l=document.createElement("small"); l.textContent=c==="price" ? "Price" : c==="MKT" ? "Market" : c;
     const p=document.createElement("b"); p.textContent=v ? money(v) : "–";
@@ -90,8 +90,11 @@ function drawSpark(n){
   const cap=document.createElement("div"); cap.className="cap";
   cap.append(chWhat(mode, info, got)+" ");   // what the chosen tile's line is, so Price and Market aren't a puzzle
   box.append(top,plot,ranges,tiles,cap);
+  // a fade on the right edge while more tiles are off screen, so it's clear the row swipes
+  const moreTiles=()=>tiles.classList.toggle("more", tiles.scrollLeft+tiles.clientWidth<tiles.scrollWidth-2);
+  tiles.addEventListener("scroll",moreTiles,{passive:true});
   // slide the tiles row only when the chosen tile would be hidden
-  requestAnimationFrame(()=>{ const on=/** @type {HTMLElement} */ (tiles.querySelector('[aria-pressed="true"]')); if(!on) return; const r=tiles.getBoundingClientRect(), o=on.getBoundingClientRect(); if(o.right>r.right+1) tiles.scrollLeft+=o.left-r.left-r.width/2+o.width/2; });
+  requestAnimationFrame(()=>{ moreTiles(); const on=/** @type {HTMLElement} */ (tiles.querySelector('[aria-pressed="true"]')); if(!on) return; const r=tiles.getBoundingClientRect(), o=on.getBoundingClientRect(); if(o.right>r.right+1) tiles.scrollLeft+=o.left-r.left-r.width/2+o.width/2; moreTiles(); });
   // the line to draw, cut to the chosen range
   const all=mode==="price" ? priceLine : condLine(n,mode);
   let pts=all;
@@ -115,6 +118,8 @@ function drawSpark(n){
   }
   const salesOnly=chart.salesOnly;
   chart.reset=()=>{
+    // on Price the big number above the chart already says it, so the readout only shows the changes until you drag
+    big.hidden=mode==="price";
     bv.textContent=latest ? money(latest[1]) : (mode==="price" && basePrice(n) ? money(basePrice(n)) : "–");
     sub.replaceChildren();
     if(pts.length<2){ const d=document.createElement("div"); d.textContent=latest ? when(latest[0]) : ""; sub.append(d); return; }
@@ -123,7 +128,7 @@ function drawSpark(n){
   };
   chart.show=i=>{
     const p=chart.pts[i]; if(!p) return;
-    bv.textContent=money(p[1]);
+    big.hidden=false; bv.textContent=money(p[1]);
     sub.replaceChildren(); const d=document.createElement("div"); d.textContent=(i<salesOnly ? "Sale · " : "")+when(p[0]); sub.append(d);
   };
   chart.reset();
@@ -137,14 +142,14 @@ function drawSpark(n){
   }
   // size the drawing to the space it has, so text and dots stay crisp (redrawn if that changes)
   // PR: room on the right for the price axis; DB: room at the bottom for dates; B: where the plot ends
-  const W=Math.round(plot.clientWidth)||340, H=W<500 ? 204 : 224, PT=34, PB=56, PX=8, PR=44, DB=18, B=H-DB;
+  const W=Math.round(plot.clientWidth)||340, H=W<500 ? 204 : 224, PT=34, PB=56, PX=8, PR=52, DB=18, B=H-DB;
   const t0=Date.parse(pts[0][0]+"T12:00:00"), t1=Date.parse(pts[pts.length-1][0]+"T12:00:00");
   const k0=pts[0][0];
   const dots=salesOnly ? [] : dotConds.flatMap(c=>(sales[c]||[]).filter(s=>s[0]>=k0));
   const ys=pts.map(p=>p[1]).concat(dots.map(s=>s[1])), y0=Math.min(...ys), y1=Math.max(...ys);
   const X=d=>PX+(t1===t0?0.5:(Date.parse(d+"T12:00:00")-t0)/(t1-t0))*(W-PX-PR), Y=v=>H-PB-(y1===y0?0.5:(v-y0)/(y1-y0))*(H-PT-PB);
   // the curve goes through each day the price changed (plus the first and last), so it eases from one price to the next
-  const keyPts=pts.filter((p,i)=>i===0 || i===pts.length-1 || p[1]!==pts[i-1][1]).map(p=>[X(p[0]),Y(p[1])]);
+  const keyDays=pts.filter((p,i)=>i===0 || i===pts.length-1 || p[1]!==pts[i-1][1]), keyPts=keyDays.map(p=>[X(p[0]),Y(p[1])]);
   // while a condition's daily prices build up, the line goes through its saved sales (one point per day, the
   // average when there were several), ending at today's average
   const byDay=[];
@@ -160,7 +165,7 @@ function drawSpark(n){
   const mk=(tag,attrs)=>{ const e=document.createElementNS(ns,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); return e; };
   const gid="chg"+Date.now();
   const defs=mk("defs",{}), grad=mk("linearGradient",{id:gid, x1:"0", y1:"0", x2:"0", y2:"1"});
-  grad.append(mk("stop",{offset:"0", "stop-color":color, "stop-opacity":"0.28"}), mk("stop",{offset:"1", "stop-color":color, "stop-opacity":"0"}));
+  grad.append(mk("stop",{offset:"0", "stop-color":color, "stop-opacity":"0.12"}), mk("stop",{offset:"1", "stop-color":color, "stop-opacity":"0"}));
   const clip=mk("clipPath",{id:gid+"c"}), clipRect=mk("rect",{x:"0", y:"0", width:String(W), height:String(H)});
   clip.append(clipRect); defs.append(grad,clip); svg.append(defs);
   // the price axis: a few round prices as faint lines with their value on the right, and dates along the bottom
@@ -206,8 +211,9 @@ function drawSpark(n){
   chart.lineEl=mk("line",{y1:"0", y2:String(B), stroke:"var(--ink)", "stroke-width":"1", opacity:"0.35", visibility:"hidden"});
   chart.dotEl=mk("circle",{r:"6", fill:color, stroke:"var(--surface)", "stroke-width":"2.5", visibility:"hidden"});
   svg.append(chart.lineEl, chart.dotEl);
-  plot.append(svg); plot.tabIndex=0; plot.setAttribute("aria-label",(salesOnly ? "Sales chart" : "Price chart")+". Use the left and right arrow keys to read each "+(salesOnly ? "sale" : "day")+".");
-  chart.pts=pts; chart.X=X; chart.Y=Y; chart.W=W; chart.H=H; chart.at=curve ? curve.at : null;
+  plot.append(svg); plot.tabIndex=0; plot.setAttribute("aria-label",(salesOnly ? "Sales chart" : "Price chart")+". Use the left and right arrow keys to read each "+(salesOnly ? "sale" : "price change")+".");
+  // dragging stops on the days the price changed (or each sale), where the line passes exactly through the real price
+  chart.pts=salesOnly ? pts : keyDays; chart.X=X; chart.Y=Y; chart.W=W; chart.H=H; chart.at=curve ? curve.at : null;
   // View price data: every day the price changed (and each saved sale), newest first
   const det=document.createElement("details"); det.className="ch-data"; det.open=!!chart.tableOpen;
   det.addEventListener("toggle",()=>{ chart.tableOpen=det.open; });
@@ -237,6 +243,7 @@ function drawSpark(n){
   det.append(sum,wrap); box.append(det);
   if(unknown){ const nt=document.createElement("div"); nt.className="ch-note"; nt.textContent="– means that day is from before the binder saved where prices came from."; det.append(nt); }
   if(got && got.jt && got.jt.can && !got.jt.filled) box.append(jtFillLink(n));
+  if(dots.length) cap.append("Dots are single sales. ");
   if(salesOnly) cap.append("For now the line goes through the "+salesOnly+" sale"+(salesOnly===1 ? "" : "s")+" saved since "+fmtDay(pts[0][0])+". "
     +(mode==="price" ? "It switches to your saved prices after a few days." : "It switches to "+mode+"'s saved daily prices once they build up (from "+fmtDay(all.length ? all[0][0] : todayStr())+")."));
   // movement: a new card's line draws itself in; switching condition or range slides the line into its new shape
@@ -293,8 +300,8 @@ function chartGlide(x){
   if(!chart.pts.length || !chart.lineEl) return;
   x=Math.max(0,Math.min(chart.W,x));
   let best=0, bd=Infinity; chart.pts.forEach((p,i)=>{ const d=Math.abs(chart.X(p[0])-x); if(d<bd){ bd=d; best=i; } });
-  const snap=!chart.at;   // sales only: the dot sits on each sale
-  const px=snap ? chart.X(chart.pts[best][0]) : x, py=snap ? chart.Y(chart.pts[best][1]) : chart.at(x);
+  // the dot snaps to the nearest price change (or sale) and sits on its price, so it always matches the number shown
+  const px=chart.X(chart.pts[best][0]), py=chart.Y(chart.pts[best][1]);
   chart.lineEl.setAttribute("x1",px); chart.lineEl.setAttribute("x2",px); chart.lineEl.setAttribute("visibility","visible");
   chart.dotEl.setAttribute("cx",px); chart.dotEl.setAttribute("cy",py); chart.dotEl.setAttribute("visibility","visible");
   if(best!==chart.idx){ chart.idx=best; chart.show(best); return true; }

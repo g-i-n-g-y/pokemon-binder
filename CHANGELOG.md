@@ -10,6 +10,13 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+
+- The price chart no longer repeats your price in a second big number when **Price** is picked: the price at the top says it, and the chart shows how it changed. Dragging along the chart still shows the price and date.
+- Dragging along the chart now stops on the days the price changed, and the dot sits right on that day's price, so the dot and the number always match. Before, the dot could sit a little above or below the number shown.
+- **Market** moved to the end of the price tiles and has a dashed border, since it's a second opinion and not your price. When more tiles are off to the right, the row fades at the edge so it's clear you can swipe.
+- The line under the tiles now says **Dots are single sales** when the chart shows sale dots. The shading under the line is lighter, and the prices and dates along the edges are a bit bigger.
+
 ## v4.8 (November 1, 2026)
 
 - **Settings → Prices → JustTCG prices** has a **Binder** list now: pick any binder there to set whether it uses JustTCG and to fill its chart history, from the home page or any binder. The list shows which binders use JustTCG. Before, it only showed the binder you had open.
