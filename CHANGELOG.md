@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v4.9 (November 5, 2026)
 - Tips: a small lightbulb next to a few spots that aren't obvious opens a short note about how they work. On a phone it slides up from the bottom; on a computer it's a small window. Tap Got it, tap outside or press Esc to close it. Tips so far: where a card's price comes from, reading the price chart, the vendor's price check, JustTCG prices and using the binder offline.
 
 ## v4.8.1 (November 1, 2026)
