@@ -133,5 +133,46 @@ function openHow(){
 $("howBtn").onclick=openHow;
 $("howClose").onclick=$("howDone").onclick=()=>$("howDlg").close();
 $("howDlg").addEventListener("click",e=>{ if(e.target===$("howDlg")) $("howDlg").close(); });   // tap outside the window closes it
+// Tips: a small lightbulb next to a spot that isn't obvious opens a short note about it (a sheet from the bottom on
+// phones, a small window on computers). Static ones in index.html are <button class="tip-btn" data-tip="key">.
+const TIP_BULB='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 21.5h4"/><path d="M12 2.5a6.5 6.5 0 0 0-3.8 11.8c.5.4.8 1 .8 1.6V18h6v-2.1c0-.6.3-1.2.8-1.6A6.5 6.5 0 0 0 12 2.5z"/></svg>';
+const TIPS={
+  price:()=>["Where this price comes from",[
+    "It's the average of the newest TCGplayer sales for your price options (pick them in Settings, Prices). Only Unlimited English sales count.",
+    "No recent sales? It uses JustTCG's price if you set that up, then TCGplayer's market price.",
+    "A clock mark means the price is old, so check eBay sold before you trust it."]],
+  chart:()=>["Reading the chart",[
+    "Drag a finger sideways along the line to see the price on any day. Press and hold works too. On a computer, point at it.",
+    "Swiping up or down on the chart still scrolls the page.",
+    "Tap a box to see one condition. Dots are single sales. Market is TCGplayer's market price, for comparison. Each condition's line grows a little with every price check."]],
+  offer:()=>["What to counter with",[
+    "Type what the vendor is asking and pick the condition of their copy. The binder compares it with recent sales for that condition.",
+    "Open at is your first counter. Walk away above is the most it's worth paying.",
+    "Once the card has a few weeks of saved prices, it goes by the card's usual and lowest prices, so a short spike doesn't set what you pay."]],
+  jt:()=>["JustTCG prices",[
+    "A second price source for cards with no recent TCGplayer sales. It's optional and needs a free key.",
+    "The free key allows only so many requests a month, so the binder asks about each card at most once a week and stops at the limits you set here.",
+    "Fill adds up to a year of past prices to the chart, for the days before the binder started saving that card."]],
+  sync:()=>["Using the binder offline",[
+    "With no signal, the phone app still opens and shows what's saved on this phone.",
+    "You can add a copy or a purchase while offline. It waits on this phone until you're connected to "+srv()+".",
+    "Review & sync then lists what will be sent, so you can check it first. A backup is made before syncing, and Undo last sync takes the whole batch back."]]
+};
+function tipBtn(key, label){ const b=document.createElement("button"); b.type="button"; b.className="tip-btn"; b.dataset.tip=key; b.setAttribute("aria-label","Tip: "+label); b.innerHTML=TIP_BULB; return b; }
+document.querySelectorAll(".tip-btn").forEach(b=>{ b.innerHTML=TIP_BULB; });
+function openTip(key){
+  const t=TIPS[key]; if(!t) return;
+  const [title,paras]=t(), B=$("tipBody"); B.replaceChildren();
+  $("tipTitle").textContent=title;
+  for(const x of paras){ const q=document.createElement("p"); q.textContent=x; B.append(q); }
+  $("tipDlg").showModal(); $("tipDone").focus();
+}
+// one listener for every lightbulb; it stops the tap so a lightbulb inside a row or tab doesn't also press that
+document.addEventListener("click",e=>{
+  const b=/** @type {HTMLElement|null} */ (/** @type {HTMLElement} */ (e.target).closest && /** @type {HTMLElement} */ (e.target).closest(".tip-btn"));
+  if(!b) return; e.preventDefault(); e.stopPropagation(); openTip(b.dataset.tip||"");
+}, true);
+$("tipDone").onclick=$("tipClose").onclick=()=>$("tipDlg").close();
+$("tipDlg").addEventListener("click",e=>{ if(e.target===$("tipDlg")) $("tipDlg").close(); });   // tap outside the window closes it
 function renderView(){ if(state.view==="pages") drawPages(); else if(state.view==="shop") drawShop(); else if(state.view==="upg") drawUpg(); else if(state.view==="stats") loadStats(); }
 $("views").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b && b.dataset.v!==state.view) withTransition("fade", ()=>setView(b.dataset.v)); });

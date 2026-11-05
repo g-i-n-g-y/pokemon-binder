@@ -203,6 +203,15 @@
   </div>
 </dialog>
 
+<dialog id="tipDlg" class="float pop tip" aria-labelledby="tipTitle">
+  <div class="sheet">
+    <button class="close" type="button" id="tipClose">Close ✕</button>
+    <h2 id="tipTitle"></h2>
+    <div class="how" id="tipBody"></div>
+    <div class="sheet-foot"><button class="btn primary" type="button" id="tipDone">Got it</button></div>
+  </div>
+</dialog>
+
 <main class="wrap home" id="home" hidden aria-labelledby="hmTitle">
   <header class="hm-top">
     <button class="icon-btn" type="button" id="hmMenu" aria-label="Your binders menu" title="Your binders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
@@ -381,7 +390,7 @@
     </div>
     <div class="tabpane" id="tabInfo">
     <div class="box">
-      <span class="k">Price to buy one</span>
+      <span class="k">Price to buy one<button class="tip-btn" type="button" data-tip="price" aria-label="Tip: where this price comes from"></button></span>
       <b class="v px-main" id="dP"></b>
       <span class="s"><span id="dPk">Combined LP/MP</span>, <span id="dPsrc"></span></span>
       <span class="s yours" id="dYours" hidden></span>
@@ -394,7 +403,7 @@
         <span class="s mkt" id="dMkt" hidden></span>
       </details></div>
     <div class="box offer" id="dOffer">
-      <span class="k">Vendor's price</span>
+      <span class="k">Vendor's price<button class="tip-btn" type="button" data-tip="offer" aria-label="Tip: how the counter offer works"></button></span>
       <span class="s">Type what they're asking to see what to counter with.</span>
       <span class="of-price"><span aria-hidden="true">$</span><input id="oAsk" inputmode="decimal" autocomplete="off" placeholder="0.00" aria-label="Vendor's price in dollars"></span>
       <div class="of-cond" id="oCond" role="group" aria-label="Condition of the vendor's copy"></div>
@@ -704,7 +713,7 @@
       <div class="ui-group">
         <label class="ui-row" for="stBackup"><span class="ui-l"><b>Use the market price when there are no recent sales</b><small id="stBackupMsg">TCGplayer's market price from TCGdex, for every binder</small></span><input type="checkbox" class="ui-switch" id="stBackup" checked></label>
       </div>
-      <h3 class="ui-h">JustTCG prices</h3>
+      <h3 class="ui-h">JustTCG prices<button class="tip-btn" type="button" data-tip="jt" aria-label="Tip: what JustTCG is for"></button></h3>
       <div class="ui-group">
         <label class="ui-row ui-static ui-stack" for="stJt"><span class="ui-l"><b>JustTCG key (optional)</b><small>Get a free key at <a href="https://justtcg.com" target="_blank" rel="noopener noreferrer">justtcg.com</a>. It's kept only on <span class="srv">the server</span>. On Docker you can set it as the JUSTTCG_API_KEY variable instead, with Password Mask on.</small></span><input class="field" id="stJt" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your key"></label>
         <label class="ui-row ui-static" for="stJtBinder" id="stJtBinderRow" hidden><span class="ui-l"><b>Binder</b><small>Pick a binder to set up below</small></span><select id="stJtBinder" class="ui-ctl"></select></label>
@@ -763,7 +772,7 @@
         <label class="ui-row ui-static ui-stack" for="stSrv"><span class="ui-l"><b>Server name</b><small>What the binder calls the computer it runs on</small></span><input class="field" id="stSrv" maxlength="24" autocomplete="off" placeholder="the server"></label>
       </div>
       <div class="note" id="stSrvMsg">Used in messages like &ldquo;Saved on Attic&rdquo;. Leave it empty to say &ldquo;the server&rdquo;.</div>
-      <h3 class="ui-h">Connection</h3>
+      <h3 class="ui-h">Connection<button class="tip-btn" type="button" data-tip="sync" aria-label="Tip: using the binder offline"></button></h3>
       <div class="ui-group">
         <div class="ui-row ui-static"><span class="conn" role="img" aria-label="Connection"></span><span class="ui-l"><b id="stConnT">Checking&hellip;</b><small id="stConnS"></small></span><button class="btn" type="button" id="stConnBtn">Check connection</button></div>
         <div class="ui-row ui-static"><span class="ui-l"><b>Clear saved copy</b><small id="stClearS">Deletes the copy of the app and its pictures kept on this device, then downloads a fresh one. Your binders are safe on <span class="srv">the server</span>, and changes waiting to sync stay.</small></span><button class="btn" type="button" id="stClear">Clear</button></div>

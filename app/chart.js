@@ -89,7 +89,7 @@ function drawSpark(n){
   }
   const cap=document.createElement("div"); cap.className="cap";
   cap.append(chWhat(mode, info, got)+" ");   // what the chosen tile's line is, so Price and Market aren't a puzzle
-  box.append(top,plot,ranges,tiles,cap);
+  box.append(top,tipBtn("chart","reading the chart"),plot,ranges,tiles,cap);
   // a fade on the right edge while more tiles are off screen, so it's clear the row swipes
   const moreTiles=()=>tiles.classList.toggle("more", tiles.scrollLeft+tiles.clientWidth<tiles.scrollWidth-2);
   tiles.addEventListener("scroll",moreTiles,{passive:true});
