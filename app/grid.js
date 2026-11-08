@@ -225,23 +225,20 @@ $("fSort").addEventListener("change",e=>{state.sort=e.target.value;render();});
 $("fQ").addEventListener("input",e=>{state.q=e.target.value.trim().toLowerCase();render();});
 $("grid").addEventListener("click",e=>{
   const b=e.target.closest(".sleeve"); if(!b) return;
-  if(heldTag){ heldTag=false; return; }   // a press-and-hold just did its job (added a copy, or started selecting)
+  if(heldTag){ heldTag=false; return; }   // a press-and-hold on the tag just added a copy
   if(selOn){ toggleSel(b.dataset.n); return; }
   if(e.target.closest(".tag")){ quickToggle(b.dataset.n); return; }
   openCard(b.dataset.n);
 });
-// Press and hold an Owned tag to add another copy without opening the card.
+// Press and hold an Owned tag to add another copy without opening the card. (Holding the card itself opens a price site: see offline.js.)
 let heldTag=false, holdTimer=null, holdAt=null, holdId=null;
 function stopHold(){ clearTimeout(holdTimer); holdTimer=null; }
 $("grid").addEventListener("pointerdown",e=>{
   heldTag=false; stopHold();
   if(isPrivate()) return;
-  const t=e.target.closest(".tag.own"), c=e.target.closest(".sleeve"); if(!c) return;
-  if(!selOn && t){ holdAt=[e.clientX,e.clientY]; holdId=e.pointerId; holdTimer=setTimeout(()=>{ holdTimer=null; heldTag=true; quickAddCopy(c.dataset.n); },500); return; }
-  if(!selOn && !t && e.pointerType!=="mouse"){   // on a touch screen, holding a card starts selecting (a computer uses the Select button)
-    holdAt=[e.clientX,e.clientY]; holdId=e.pointerId;
-    holdTimer=setTimeout(()=>{ holdTimer=null; heldTag=true; if(navigator.vibrate) navigator.vibrate(15); setSelect(true); toggleSel(c.dataset.n); },500);
-  }
+  const t=e.target.closest(".tag.own"), c=e.target.closest(".sleeve"); if(!c || selOn || !t) return;   // holding the card itself is the price-site hold in offline.js
+  holdAt=[e.clientX,e.clientY]; holdId=e.pointerId;
+  holdTimer=setTimeout(()=>{ holdTimer=null; heldTag=true; quickAddCopy(c.dataset.n); },500);
 });
 $("grid").addEventListener("pointermove",e=>{ if(holdTimer && holdAt && e.pointerId===holdId && Math.hypot(e.clientX-holdAt[0],e.clientY-holdAt[1])>8) stopHold(); });   // moving means scrolling
 ["pointerup","pointercancel","pointerleave"].forEach(ev=>$("grid").addEventListener(ev,e=>{ if(e.pointerId===holdId) stopHold(); }));   // only the finger that pressed counts, not a stray mouse move after a scroll
@@ -276,7 +273,7 @@ function quickToggle(n){
 }
 
 // ---------- select several cards ----------
-// Select button (or press and hold a card on a phone), tap cards to pick them, then mark them all owned or needed at once.
+// The Select button starts it: tap cards to pick them, then mark them all owned or needed at once.
 let selOn=false, selSid=null; const selected=new Set();
 let selBar=null;
 function drawSelBar(){

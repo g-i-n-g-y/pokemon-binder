@@ -10,6 +10,9 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
+## Unreleased
+- **Fix:** holding a card on a phone used to start picking cards and also open the price site, because two press-and-holds fought over the same touch. Now holding a card only opens the price site, as it did before v4.11. To pick several cards, use the **Select** button. While you're picking, holding a card no longer opens a price site. Holding the **Owned** tag still adds a copy.
+
 ## v4.11 (November 7, 2026)
 - **New:** pick several cards at once. Tap the **Select** button (a check mark on a phone) next to the search box, or press and hold a card on a phone, then tap the cards you want. A bar at the bottom says how many you've picked and has **All shown** (every card the filters show), **Mark owned**, **Mark needed** and **Done**. **Mark owned** adds one copy dated today to each picked card that isn't owned yet, with **Undo**, and works with no signal like any other copy you add offline. **Mark needed** asks first and says how many purchase records it will remove. Press Esc, tap **Done** or leave the Cards tab to stop selecting.
 - **New:** the card window has **‹** and **›** buttons next to the close icon that step to the previous or next card, in the same order and filters as the cards behind it (so with **Owned** picked, they step through just your owned cards). On a phone you can also swipe sideways on the picture side of the window, and on a computer the Left and Right arrow keys work too. The chart, the price tiles and the text boxes keep their own sideways drags and arrow keys.

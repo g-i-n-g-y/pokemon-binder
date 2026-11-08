@@ -233,7 +233,7 @@ document.addEventListener("contextmenu",e=>{
   const stop=()=>{ clearTimeout(t); t=0; };
   document.addEventListener("pointerdown",e=>{
     stop(); armed=null; swallow=false;
-    if(e.pointerType!=="touch" || lpMode()==="off" || !e.target.closest) return;
+    if(e.pointerType!=="touch" || lpMode()==="off" || selOn || !e.target.closest) return;   // not while picking several cards
     const el=e.target; if(!target(el)) return;
     x0=e.clientX; y0=e.clientY;
     t=setTimeout(()=>{
