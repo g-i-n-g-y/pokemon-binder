@@ -444,7 +444,7 @@ $("dlg").addEventListener("keydown",e=>{
   e.preventDefault(); stepCard(e.key==="ArrowRight" ? 1 : -1);
 });
 { let sx=0, sy=0, sOn=false;
-  const side=document.querySelector("#dlg .cs-side");
+  const side=$("dlg").querySelector(".cs-side");
   side.addEventListener("touchstart",e=>{ sOn=e.touches.length===1; if(sOn){ sx=e.touches[0].clientX; sy=e.touches[0].clientY; } },{passive:true});
   side.addEventListener("touchend",e=>{
     if(!sOn || !e.changedTouches.length) return; sOn=false;
