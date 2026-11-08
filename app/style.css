@@ -1370,6 +1370,8 @@ html,body{overscroll-behavior-y:none}
 }
 /* Phones: long-pressing a picture doesn't open the browser's copy / save / share menu (v3.18.1) */
 @media (pointer:coarse){img,canvas,svg{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}}
+/* Phones: the card tiles and their Need / Owned tags can't be highlighted, so press and hold can add a copy without the text selecting */
+@media (pointer:coarse){.sleeve,.sleeve *{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}}
 /* Tips: the lightbulb next to a spot that isn't obvious, and the short note it opens */
 .tip-btn{display:inline-grid;place-items:center;width:28px;height:28px;margin:-6px -4px -6px 4px;padding:0;border:0;border-radius:50%;
   background:none;color:var(--muted);cursor:pointer;vertical-align:middle;flex:none}
