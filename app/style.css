@@ -1398,3 +1398,7 @@ dialog.tip.float{width:min(460px,calc(100% - 32px))}
 #grid .sleeve{content-visibility:auto;contain-intrinsic-size:auto 272px}
 @media (max-width:640px){#grid .sleeve{contain-intrinsic-size:auto calc((100vw - 42px)*.6985 + 30px)}}
 @media (min-width:3000px){#grid .sleeve{contain-intrinsic-size:auto 393px}}
+
+/* Card window: previous / next arrows sit beside the close icon */
+.fbar .cnav[hidden]{display:none}
+.fbar .cnav:disabled{opacity:.35;cursor:default;pointer-events:none}

@@ -409,7 +409,48 @@ function openCard(n){
   photoSide="front"; drawPhoto(n);
   $("dSaved").textContent=state.ready ? "" : "Can't reach "+srv()+" right now, so changes won't save.";
   $("dUpMsg").textContent="";
-  $("dlg").showModal();
+  syncCardNav(n);
+  if(!$("dlg").open) $("dlg").showModal();   // stepping to another card keeps the window open
+}
+// Previous / next card: arrows in the title bar, a sideways swipe on the picture side, and the Left / Right keys step through
+// the cards the grid shows right now (same filters and order). Never changes anything on a card.
+const shownCards=()=>[...$("grid").querySelectorAll(".sleeve[data-n]")].map(b=>b.dataset.n);
+let cardNav=null;
+function ensureCardNav(){
+  if(cardNav) return cardNav;
+  const bar=document.querySelector("#dlg .fbar"), close=$("dClose"); if(!bar || !close) return null;
+  const mk=(dir,label,path)=>{
+    const b=document.createElement("button"); b.type="button"; b.className="fclose cnav"; b.setAttribute("aria-label",label); b.title=label;
+    b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+path+'"/></svg>';
+    b.onclick=()=>stepCard(dir); bar.insertBefore(b,close); return b;
+  };
+  cardNav={prev:mk(-1,"Previous card","M15 5l-7 7 7 7"), next:mk(1,"Next card","M9 5l7 7-7 7")};
+  return cardNav;
+}
+function syncCardNav(n){
+  const nv=ensureCardNav(); if(!nv) return;
+  const list=shownCards(), i=list.indexOf(n), show=i>=0 && list.length>1;
+  nv.prev.hidden=nv.next.hidden=!show; nv.prev.disabled=i<=0; nv.next.disabled=i<0 || i>=list.length-1;
+}
+function stepCard(dir){
+  const list=shownCards(), i=list.indexOf(state.open); if(i<0) return;
+  const j=i+dir; if(j<0 || j>=list.length) return;
+  openCard(list[j]);
+  const t=document.querySelector('.sleeve[data-n="'+CSS.escape(list[j])+'"]'); if(t && t.scrollIntoView) t.scrollIntoView({block:"nearest"});   // the page behind follows along
+}
+$("dlg").addEventListener("keydown",e=>{
+  if((e.key!=="ArrowLeft" && e.key!=="ArrowRight") || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+  if(e.target.closest("input,textarea,select,[contenteditable],#dSpark")) return;   // the chart and the text boxes keep their arrow keys
+  e.preventDefault(); stepCard(e.key==="ArrowRight" ? 1 : -1);
+});
+{ let sx=0, sy=0, sOn=false;
+  const side=document.querySelector("#dlg .cs-side");
+  side.addEventListener("touchstart",e=>{ sOn=e.touches.length===1; if(sOn){ sx=e.touches[0].clientX; sy=e.touches[0].clientY; } },{passive:true});
+  side.addEventListener("touchend",e=>{
+    if(!sOn || !e.changedTouches.length) return; sOn=false;
+    const dx=e.changedTouches[0].clientX-sx, dy=e.changedTouches[0].clientY-sy;
+    if(Math.abs(dx)>=70 && Math.abs(dx)>=2*Math.abs(dy)) stepCard(dx<0 ? 1 : -1);   // a clear sideways swipe: left is next
+  },{passive:true});
 }
 $("dClose").onclick=()=>$("dlg").close();
 $("dlg").addEventListener("click",e=>{ if(e.target===$("dlg")) $("dlg").close(); });
