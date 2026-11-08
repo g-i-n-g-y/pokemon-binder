@@ -10,7 +10,7 @@ Versions up to v2.11 went up by 0.1 for every update, including small fixes, and
 
 The binder shows these in **Settings → About → Check for updates**.
 
-## Unreleased
+## v4.10 (November 7, 2026)
 - **New:** press and hold a card's **Owned** tag to add another copy without opening the card. A short note says which copy you added, with **Undo**, and on a phone you feel a small buzz. A quick tap on the tag works as before. It also works with no signal: the copy waits on the phone like any other purchase you add offline.
 - Big binders open and scroll faster: cards that are off screen aren't drawn until you scroll to them, and card pictures load in the background. In a test binder of 240 cards, drawing the grid took about a third of the time. Nothing looks different.
 
