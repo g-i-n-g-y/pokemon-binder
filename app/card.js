@@ -456,7 +456,7 @@ $("dClose").onclick=()=>$("dlg").close();
 $("dlg").addEventListener("click",e=>{ if(e.target===$("dlg")) $("dlg").close(); });
 
 let saveChain=Promise.resolve();
-function saveCard(n, patch, done){
+function saveCard(n, patch, done, quiet){   // quiet: the caller redraws once after many saves (see redrawAfterSave)
   const sid=state.sid;
   if(isOffline()){ return offlineSave(n, patch, done); }   // no connection: only "owned" + a new purchase, kept on the phone
   const next={...rec(n),...patch}; delete next.ed; delete next.cost;
@@ -464,10 +464,13 @@ function saveCard(n, patch, done){
   const allOwned=()=>state.cards.length>0 && state.cards.every(c=>qty(c.n)>0);
   const wasDone=allOwned();
   state.own[n]=next;
-  if(!wasDone && allOwned() && celeOn() && !isPrivate()) setTimeout(()=>celebrate((state.set.name||"Your binder")+" · all "+state.cards.length+" cards"),350); render(); if(state.open===n && $("dlg").open) ownLine(n); if(state.view==="pages") drawPages(); if(state.view==="shop") drawShop(); if(state.view==="upg") drawUpg(); if(state.view==="stats") state.spendStale=true;
+  if(!wasDone && allOwned() && celeOn() && !isPrivate()) setTimeout(()=>celebrate((state.set.name||"Your binder")+" · all "+state.cards.length+" cards"),350); if(!quiet) redrawAfterSave(n);
   saveChain=saveChain.then(()=>fetch("api/set/"+enc(sid)+"/card/"+enc(n),{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(next)}))
     .then(r=>{ if(!r.ok) throw 0; const s=state.sets.find(x=>x.id===sid); if(s){ s.owned=state.cards.filter(c=>qty(c.n)>0).length; } done&&done(true); })
     .catch(()=>{ done&&done(false); const c=state.cards.find(x=>x.n===n); toast("Couldn't save "+(c?c.name:"that card")+".", "Try again", ()=>saveCard(n, patch, done)); });
+}
+function redrawAfterSave(n){
+  render(); if(state.open===n && $("dlg").open) ownLine(n); if(state.view==="pages") drawPages(); if(state.view==="shop") drawShop(); if(state.view==="upg") drawUpg(); if(state.view==="stats") state.spendStale=true;
 }
 function save(patch){
   const n=state.open; if(n==null) return;

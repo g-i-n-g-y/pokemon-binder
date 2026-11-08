@@ -85,6 +85,7 @@ function rarityOptions(){
   sel.value=""; state.rar="";
 }
 function render(){
+  if(selOn && selSid!==state.sid) leaveSelect();   // another binder opened: the old selection doesn't apply
   let list=state.cards.filter(c=>{
     if(state.filter==="own" && qty(c.n)===0) return false;
     if(state.filter==="need" && qty(c.n)>0) return false;
@@ -119,9 +120,10 @@ function render(){
   let anyStale=false;
   for(const c of list){
     const b=document.createElement("div");
-    b.className="sleeve"+(qty(c.n)>0?"":" need"); b.dataset.n=c.n;
+    b.className="sleeve"+(qty(c.n)>0?"":" need")+(selOn && selected.has(c.n)?" sel":""); b.dataset.n=c.n;
     const f=document.createElement("div"); f.className="face "+(c.custom?"custom":tint(c));
-    f.setAttribute("role","button"); f.tabIndex=0; f.setAttribute("aria-label",c.name+" "+label(c)+" details");
+    f.setAttribute("role","button"); f.tabIndex=0; f.setAttribute("aria-label",c.name+" "+label(c)+(selOn?" select":" details"));
+    if(selOn) f.setAttribute("aria-pressed",String(selected.has(c.n)));
     if(c.custom){ const ct=document.createElement("span"); ct.className="ctag"; ct.textContent="Custom"; f.append(ct); }
     const no=document.createElement("div"); no.className="no"; no.textContent=label(c);
     const nm=document.createElement("div"); nm.className="nm"; nm.textContent=c.name;
@@ -223,7 +225,9 @@ $("fSort").addEventListener("change",e=>{state.sort=e.target.value;render();});
 $("fQ").addEventListener("input",e=>{state.q=e.target.value.trim().toLowerCase();render();});
 $("grid").addEventListener("click",e=>{
   const b=e.target.closest(".sleeve"); if(!b) return;
-  if(e.target.closest(".tag")){ if(heldTag){ heldTag=false; return; } quickToggle(b.dataset.n); return; }   // a press-and-hold already added a copy
+  if(heldTag){ heldTag=false; return; }   // a press-and-hold just did its job (added a copy, or started selecting)
+  if(selOn){ toggleSel(b.dataset.n); return; }
+  if(e.target.closest(".tag")){ quickToggle(b.dataset.n); return; }
   openCard(b.dataset.n);
 });
 // Press and hold an Owned tag to add another copy without opening the card.
@@ -231,13 +235,17 @@ let heldTag=false, holdTimer=null, holdAt=null, holdId=null;
 function stopHold(){ clearTimeout(holdTimer); holdTimer=null; }
 $("grid").addEventListener("pointerdown",e=>{
   heldTag=false; stopHold();
-  const t=e.target.closest(".tag.own"), b=t && t.closest(".sleeve"); if(!b || isPrivate()) return;
-  holdAt=[e.clientX,e.clientY]; holdId=e.pointerId;
-  holdTimer=setTimeout(()=>{ holdTimer=null; heldTag=true; quickAddCopy(b.dataset.n); },500);
+  if(isPrivate()) return;
+  const t=e.target.closest(".tag.own"), c=e.target.closest(".sleeve"); if(!c) return;
+  if(!selOn && t){ holdAt=[e.clientX,e.clientY]; holdId=e.pointerId; holdTimer=setTimeout(()=>{ holdTimer=null; heldTag=true; quickAddCopy(c.dataset.n); },500); return; }
+  if(!selOn && !t && e.pointerType!=="mouse"){   // on a touch screen, holding a card starts selecting (a computer uses the Select button)
+    holdAt=[e.clientX,e.clientY]; holdId=e.pointerId;
+    holdTimer=setTimeout(()=>{ holdTimer=null; heldTag=true; if(navigator.vibrate) navigator.vibrate(15); setSelect(true); toggleSel(c.dataset.n); },500);
+  }
 });
 $("grid").addEventListener("pointermove",e=>{ if(holdTimer && holdAt && e.pointerId===holdId && Math.hypot(e.clientX-holdAt[0],e.clientY-holdAt[1])>8) stopHold(); });   // moving means scrolling
 ["pointerup","pointercancel","pointerleave"].forEach(ev=>$("grid").addEventListener(ev,e=>{ if(e.pointerId===holdId) stopHold(); }));   // only the finger that pressed counts, not a stray mouse move after a scroll
-$("grid").addEventListener("contextmenu",e=>{ if(heldTag && e.target.closest(".tag")) e.preventDefault(); });
+$("grid").addEventListener("contextmenu",e=>{ if(heldTag && e.target.closest(".sleeve")) e.preventDefault(); });   // no "save image" menu after a hold
 function quickAddCopy(n){
   const c=state.cards.find(x=>x.n===n); if(!c || isPrivate()) return;
   const before=buys(n).slice();
@@ -246,7 +254,7 @@ function quickAddCopy(n){
   toast("Added copy "+(before.length+1)+" of "+c.name+". Tap the card to add what you paid.", isOffline()?null:"Undo", ()=>saveCard(n,{purchases:before}));
 }
 $("grid").addEventListener("keydown",e=>{
-  if((e.key==="Enter"||e.key===" ") && e.target.classList.contains("face")){ const b=e.target.closest(".sleeve"); if(b){ e.preventDefault(); openCard(b.dataset.n); } }
+  if((e.key==="Enter"||e.key===" ") && e.target.classList.contains("face")){ const b=e.target.closest(".sleeve"); if(b){ e.preventDefault(); if(selOn) toggleSel(b.dataset.n); else openCard(b.dataset.n); } }
 });
 async function clearCard(n){
   const c=state.cards.find(x=>x.n===n); if(!c) return;
@@ -265,6 +273,64 @@ function quickToggle(n){
   const list=[{d:todayStr(), price:null, where:""}];
   saveCard(n,{purchases:list}, ok=>{ $("sync").textContent = ok ? (owned ? c.name+" marked as needed" : c.name+" marked as owned today. Tap the card to add what you paid.") : "Couldn't save. Check that "+srv()+" is online."; });
   const t=document.querySelector('.sleeve[data-n="'+CSS.escape(n)+'"] .tag'); if(t) t.focus();
+}
+
+// ---------- select several cards ----------
+// Select button (or press and hold a card on a phone), tap cards to pick them, then mark them all owned or needed at once.
+let selOn=false, selSid=null; const selected=new Set();
+let selBar=null;
+function drawSelBar(){
+  if(!selOn){ if(selBar) selBar.hidden=true; return; }
+  if(!selBar){
+    selBar=document.createElement("div"); selBar.id="selBar"; selBar.setAttribute("role","region"); selBar.setAttribute("aria-label","Selected cards");
+    selBar.innerHTML='<span class="sb-n" id="sbN" aria-live="polite"></span><span class="sb-btns"><button type="button" class="btn" id="sbAll"></button><button type="button" class="btn" id="sbOwn">Mark owned</button><button type="button" class="btn" id="sbNeed">Mark needed</button></span><button type="button" class="btn sb-done" id="sbDone">Done</button>';
+    document.body.append(selBar);
+    $("sbAll").onclick=()=>{ const all=shownCards(); if(all.every(n=>selected.has(n))) selected.clear(); else all.forEach(n=>selected.add(n)); markSel(); };
+    $("sbOwn").onclick=()=>bulkOwned();
+    $("sbNeed").onclick=()=>bulkNeeded();
+    $("sbDone").onclick=()=>setSelect(false);
+  }
+  selBar.hidden=false;
+  const k=selected.size, all=shownCards();
+  $("sbN").textContent=k ? k+" selected" : "Tap cards to pick them";
+  $("sbAll").textContent=all.length && all.every(n=>selected.has(n)) ? "None" : "All shown";
+  $("sbOwn").disabled=$("sbNeed").disabled=!k;
+}
+function markSel(){   // paint the picks without redrawing the whole grid
+  $("grid").querySelectorAll(".sleeve[data-n]").forEach(b=>{ const on=selected.has(b.dataset.n); b.classList.toggle("sel",on); const f=b.querySelector(".face"); if(f) f.setAttribute("aria-pressed",String(on)); });
+  drawSelBar();
+}
+function toggleSel(n){ if(selected.has(n)) selected.delete(n); else selected.add(n); markSel(); }
+function leaveSelect(){   // back to normal, without redrawing
+  selOn=false; selected.clear(); $("grid").classList.remove("selecting"); $("selBtn").setAttribute("aria-pressed","false"); drawSelBar();
+}
+function setSelect(on){
+  if(on && (isPrivate() || state.view!=="cards")) return;
+  if(!on){ leaveSelect(); render(); return; }
+  selOn=true; selSid=state.sid; $("grid").classList.add("selecting"); $("selBtn").setAttribute("aria-pressed","true"); render(); drawSelBar();
+}
+$("selBtn").onclick=()=>setSelect(!selOn);
+document.addEventListener("keydown",e=>{ if(e.key==="Escape" && selOn && !document.querySelector("dialog[open]")) setSelect(false); });
+function bulkOwned(){
+  const todo=[...selected].filter(n=>qty(n)===0), had=selected.size-todo.length;
+  if(!todo.length){ toast("Those cards are already marked as owned."); return; }
+  const day=todayStr();
+  for(const n of todo) saveCard(n,{purchases:[{d:day, price:null, where:""}]}, null, true);
+  const offline=isOffline();
+  leaveSelect(); redrawAfterSave("");
+  toast("Marked "+todo.length+" card"+(todo.length===1?"":"s")+" as owned today"+(had?" ("+had+" already were)":"")+". Tap a card to add what you paid.",
+    offline ? null : "Undo", ()=>{ for(const n of todo) saveCard(n,{purchases:[]}, null, true); redrawAfterSave(""); });
+}
+async function bulkNeeded(){
+  const todo=[...selected].filter(n=>qty(n)>0);
+  if(!todo.length){ toast("Those cards are already marked as needed."); return; }
+  if(isOffline()){ toast("Marking cards as needed waits for a connection to "+srv()+"."); return; }
+  const copies=todo.reduce((a,n)=>a+qty(n),0);
+  const ok=await askConfirm("Mark "+todo.length+" card"+(todo.length===1?"":"s")+" as needed?", "This removes the purchase records for "+(todo.length===1?"this card":"these cards")+" ("+copies+" cop"+(copies===1?"y":"ies")+" in all), including dates, prices and sellers. This can't be undone.", "Remove");
+  if(!ok) return;
+  for(const n of todo) saveCard(n,{purchases:[]}, null, true);
+  leaveSelect(); redrawAfterSave("");
+  toast(todo.length+" card"+(todo.length===1?"":"s")+" marked as needed.");
 }
 
 // ---------- custom cards ----------

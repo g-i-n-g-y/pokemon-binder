@@ -110,6 +110,7 @@ $("stPriv").onchange=e=>setPrivate(e.target.checked);
 const PRIVATE_HIDES=["shop","upg","stats"];   // privacy mode keeps Cards and Pages (all in color, no prices or owned counts)
 function setView(v){
   if(isPrivate() && PRIVATE_HIDES.includes(v)) v="cards";
+  if(selOn && v!=="cards") leaveSelect();   // leaving the Cards tab ends selecting
   state.view=v; store("nd-view",v); $("binderMain").dataset.view=v;
   [...$("views").children].forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===v));
   $("vCards").hidden=v!=="cards"; $("vPages").hidden=v!=="pages"; $("vShop").hidden=v!=="shop"; $("vUpg").hidden=v!=="upg"; $("vStats").hidden=v!=="stats";

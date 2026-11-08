@@ -1402,3 +1402,26 @@ dialog.tip.float{width:min(460px,calc(100% - 32px))}
 /* Card window: previous / next arrows sit beside the close icon */
 .fbar .cnav[hidden]{display:none}
 .fbar .cnav:disabled{opacity:.35;cursor:default;pointer-events:none}
+
+/* Selecting several cards */
+#selBtn[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+:root[data-private] #selBtn{display:none}
+#grid.selecting .sleeve{-webkit-touch-callout:none}
+#grid.selecting .sleeve .tag{pointer-events:none;opacity:.55}
+.sleeve.sel{outline:3px solid var(--ink);outline-offset:-3px}
+.sleeve.sel::after{content:"";position:absolute;top:7px;right:7px;width:26px;height:26px;border-radius:50%;background:var(--ink) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l4 4 10-10'/%3E%3C/svg%3E") center/16px no-repeat;box-shadow:0 2px 8px rgba(0,0,0,.5);pointer-events:none}
+#selBar{position:fixed;z-index:45;left:50%;bottom:18px;transform:translateX(-50%);width:min(620px,calc(100% - 24px));display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 12px;padding:10px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--dark);box-shadow:0 10px 30px rgba(0,0,0,.45)}
+#selBar[hidden]{display:none}
+#selBar .sb-n{font-weight:600}
+#selBar .sb-n{order:1;flex:1}
+#selBar .sb-btns{order:2;display:flex;gap:8px}
+#selBar .sb-done{order:3}
+#selBar .btn:disabled{opacity:.4;pointer-events:none}
+@media (max-width:640px){#selBar{bottom:calc(74px + env(safe-area-inset-bottom))}
+  #selBar .sb-n{order:1}#selBar .sb-done{order:2}   /* count and Done on the first row, the three actions across the second */
+  #selBar .sb-btns{order:3;flex:1 1 100%}#selBar .sb-btns .btn{flex:1;padding-left:6px;padding-right:6px;font-size:14px;white-space:nowrap}}
+@media (prefers-reduced-motion:no-preference){.sleeve.sel::after{animation:selPop .15s ease-out}}
+@keyframes selPop{from{transform:scale(.4);opacity:0}}
+#selBtn{flex:none;display:inline-flex;gap:8px;align-items:center}
+#selBtn svg{width:18px;height:18px}
+@media (max-width:640px){#selBtn{height:42px;width:42px;padding:0;justify-content:center}#selBtn span{display:none}}   /* phones: just the check mark, so the search box keeps its room */
