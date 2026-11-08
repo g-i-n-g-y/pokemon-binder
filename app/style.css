@@ -1393,3 +1393,8 @@ dialog.tip.float{width:min(460px,calc(100% - 32px))}
   dialog.float.pop.tip[open]{animation:tipUp .26s cubic-bezier(.2,.8,.2,1)}
 }
 @keyframes tipUp{from{transform:translateY(100%)}}
+
+/* Big binders: cards off screen aren't drawn until you scroll to them. The sizes are a card's inner height at each screen size, so the page doesn't jump while you scroll. */
+#grid .sleeve{content-visibility:auto;contain-intrinsic-size:auto 272px}
+@media (max-width:640px){#grid .sleeve{contain-intrinsic-size:auto calc((100vw - 42px)*.6985 + 30px)}}
+@media (min-width:3000px){#grid .sleeve{contain-intrinsic-size:auto 393px}}

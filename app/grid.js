@@ -134,7 +134,7 @@ function render(){
     else if(tr && Math.abs(tr.pct)>=5) p.append(trendEl(tr,true));
     const t=document.createElement("button"); t.type="button"; t.className="tag"+(qty(c.n)>0?" own":"");
     t.textContent=qty(c.n)>0 ? (qty(c.n)>1?"Owned ×"+qty(c.n):"Owned") : "Need";
-    t.title=qty(c.n)>0 ? "Tap to mark as needed" : "Tap to mark as owned";
+    t.title=qty(c.n)>0 ? "Tap to mark as needed. Press and hold to add another copy." : "Tap to mark as owned";
     t.setAttribute("aria-label",(qty(c.n)>0?"Owned. Mark "+c.name+" as needed":"Needed. Mark "+c.name+" as owned"));
     m.append(p,t); b.append(f);
     if(c.set){ const ed=document.createElement("div"); ed.className="ed"; ed.textContent=c.set; ed.title=c.set+(showEd?" · Unlimited":""); b.append(ed); }
@@ -223,9 +223,28 @@ $("fSort").addEventListener("change",e=>{state.sort=e.target.value;render();});
 $("fQ").addEventListener("input",e=>{state.q=e.target.value.trim().toLowerCase();render();});
 $("grid").addEventListener("click",e=>{
   const b=e.target.closest(".sleeve"); if(!b) return;
-  if(e.target.closest(".tag")){ quickToggle(b.dataset.n); return; }
+  if(e.target.closest(".tag")){ if(heldTag){ heldTag=false; return; } quickToggle(b.dataset.n); return; }   // a press-and-hold already added a copy
   openCard(b.dataset.n);
 });
+// Press and hold an Owned tag to add another copy without opening the card.
+let heldTag=false, holdTimer=null, holdAt=null, holdId=null;
+function stopHold(){ clearTimeout(holdTimer); holdTimer=null; }
+$("grid").addEventListener("pointerdown",e=>{
+  heldTag=false; stopHold();
+  const t=e.target.closest(".tag.own"), b=t && t.closest(".sleeve"); if(!b || isPrivate()) return;
+  holdAt=[e.clientX,e.clientY]; holdId=e.pointerId;
+  holdTimer=setTimeout(()=>{ holdTimer=null; heldTag=true; quickAddCopy(b.dataset.n); },500);
+});
+$("grid").addEventListener("pointermove",e=>{ if(holdTimer && holdAt && e.pointerId===holdId && Math.hypot(e.clientX-holdAt[0],e.clientY-holdAt[1])>8) stopHold(); });   // moving means scrolling
+["pointerup","pointercancel","pointerleave"].forEach(ev=>$("grid").addEventListener(ev,e=>{ if(e.pointerId===holdId) stopHold(); }));   // only the finger that pressed counts, not a stray mouse move after a scroll
+$("grid").addEventListener("contextmenu",e=>{ if(heldTag && e.target.closest(".tag")) e.preventDefault(); });
+function quickAddCopy(n){
+  const c=state.cards.find(x=>x.n===n); if(!c || isPrivate()) return;
+  const before=buys(n).slice();
+  saveCard(n,{purchases:[...before,{d:todayStr(), price:null, where:""}]});
+  if(navigator.vibrate) navigator.vibrate(15);
+  toast("Added copy "+(before.length+1)+" of "+c.name+". Tap the card to add what you paid.", isOffline()?null:"Undo", ()=>saveCard(n,{purchases:before}));
+}
 $("grid").addEventListener("keydown",e=>{
   if((e.key==="Enter"||e.key===" ") && e.target.classList.contains("face")){ const b=e.target.closest(".sleeve"); if(b){ e.preventDefault(); openCard(b.dataset.n); } }
 });

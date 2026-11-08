@@ -170,7 +170,7 @@ let showEd = recall("nd-ed")!=="off";
 // The card database's small picture (the grid needs no more); the full scan is only for card details.
 const smallImg = u => /_hires\.png$/.test(u||"") ? u.replace(/_hires\.png$/,".png") : u;
 function cardImg(c){
-  const im=document.createElement("img"); im.alt=c.name; im.loading="lazy"; im.src=base()+"/img/"+enc(c.n)+".png";
+  const im=document.createElement("img"); im.alt=c.name; im.loading="lazy"; im.decoding="async"; im.src=base()+"/img/"+enc(c.n)+".png";
   im.onerror=()=>{ if(!im.dataset.r && c.img){ im.dataset.r=1; im.src=smallImg(c.img); } else im.remove(); };
   return im;
 }
